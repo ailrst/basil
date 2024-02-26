@@ -39,7 +39,6 @@ case object StarBLiteral extends BoolBLiteral {
   override def toString: String = "*"
 }
 
-
 case object FalseBLiteral extends BoolBLiteral {
   override val getType: BType = BoolBType
   override def toString: String = "false"
@@ -87,7 +86,6 @@ case class BVExtract(end: Int, start: Int, body: BExpr) extends BExpr {
 
 case class BVRepeat(repeats: Int, body: BExpr) extends BExpr {
   override def getType: BitVecBType = BitVecBType(bodySize * repeats)
-
 
   private def bodySize: Int = body.getType match {
     case bv: BitVecBType => bv.size
@@ -181,7 +179,6 @@ case class BVSignExtend(extension: Int, body: BExpr) extends BExpr {
     body.serialiseBoogie(w)
     w.append(")")
   }
-
 
   override def functionOps: Set[FunctionOp] = {
     val thisFn = BVFunctionOp(fnName, s"sign_extend $extension", List(BParam(BitVecBType(bodySize))), BParam(getType))
@@ -300,19 +297,19 @@ case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
   }
   override def resolveSpecInv: UnaryBExpr = op match {
     case i: IntUnOp => copy(op = i.toBV, arg = arg.resolveSpecInv)
-    case _ => copy(arg = arg.resolveSpecInv)
+    case _          => copy(arg = arg.resolveSpecInv)
   }
   override def resolveSpecInvOld: UnaryBExpr = op match {
     case i: IntUnOp => copy(op = i.toBV, arg = arg.resolveSpecInvOld)
-    case _ => copy(arg = arg.resolveSpecInvOld)
+    case _          => copy(arg = arg.resolveSpecInvOld)
   }
   override def resolveSpecParam: UnaryBExpr = op match {
     case i: IntUnOp => copy(op = i.toBV, arg = arg.resolveSpecParam)
-    case _ => copy(arg = arg.resolveSpecParam)
+    case _          => copy(arg = arg.resolveSpecParam)
   }
   override def resolveSpecParamOld: UnaryBExpr = op match {
     case i: IntUnOp => copy(op = i.toBV, arg = arg.resolveSpecParamOld)
-    case _ => copy(arg = arg.resolveSpecParamOld)
+    case _          => copy(arg = arg.resolveSpecParamOld)
   }
   override def resolveSpecL: UnaryBExpr = op match {
     case i: IntUnOp => copy(op = i.toBV, arg = arg.resolveSpecL)
@@ -384,20 +381,22 @@ case class BinaryBExpr(op: BinOp, arg1: BExpr, arg2: BExpr) extends BExpr {
       val next = traversalQueue.pop()
 
       def infix(b: BinaryBExpr): Unit = traversalQueue.pushAll(Seq("(", b.arg1, s" ${b.op} ", b.arg2, ")").reverse)
-      def prefix(b: BinaryBExpr): Unit = traversalQueue.pushAll(Seq(s"bv${b.op}${b.inSize}(", b.arg1, ",", b.arg2, ")").reverse)
+      def prefix(b: BinaryBExpr): Unit =
+        traversalQueue.pushAll(Seq(s"bv${b.op}${b.inSize}(", b.arg1, ",", b.arg2, ")").reverse)
 
       next match
         case b: BinaryBExpr =>
           b.op match {
             case bOp: BoolBinOp => infix(b)
-            case bOp: BVBinOp => bOp match {
+            case bOp: BVBinOp =>
+              bOp match {
                 case BVEQ | BVNEQ | BVCONCAT => infix(b)
-                case _ => prefix(b)
+                case _                       => prefix(b)
               }
             case bOp: IntBinOp => infix(b)
           }
-        case b: BExpr => b.serialiseBoogie(w)
-        case b: BinOp => w.append(b.toString)
+        case b: BExpr  => b.serialiseBoogie(w)
+        case b: BinOp  => w.append(b.toString)
         case s: String => w.append(s)
     }
   }
@@ -413,8 +412,6 @@ case class BinaryBExpr(op: BinOp, arg1: BExpr, arg2: BExpr) extends BExpr {
       }
     case bOp: IntBinOp => s"($arg1 $bOp $arg2)"
   }
-
-
 
   override def functionOps: Set[FunctionOp] = {
     val thisFn = op match {
@@ -443,22 +440,22 @@ case class BinaryBExpr(op: BinOp, arg1: BExpr, arg2: BExpr) extends BExpr {
 
   override def resolveSpecInv: BinaryBExpr = op match {
     case i: IntBinOp => copy(op = i.toBV, arg1 = arg1.resolveSpecInv, arg2 = arg2.resolveSpecInv)
-    case _ => copy(arg1 = arg1.resolveSpecInv, arg2 = arg2.resolveSpecInv)
+    case _           => copy(arg1 = arg1.resolveSpecInv, arg2 = arg2.resolveSpecInv)
   }
 
   override def resolveSpecInvOld: BinaryBExpr = op match {
     case i: IntBinOp => copy(op = i.toBV, arg1 = arg1.resolveSpecInvOld, arg2 = arg2.resolveSpecInvOld)
-    case _ => copy(arg1 = arg1.resolveSpecInvOld, arg2 = arg2.resolveSpecInvOld)
+    case _           => copy(arg1 = arg1.resolveSpecInvOld, arg2 = arg2.resolveSpecInvOld)
   }
 
   override def resolveSpecParamOld: BinaryBExpr = op match {
     case i: IntBinOp => copy(op = i.toBV, arg1 = arg1.resolveSpec, arg2 = arg2.resolveSpecParamOld)
-    case _ => copy(arg1 = arg1.resolveSpecParamOld, arg2 = arg2.resolveSpecParamOld)
+    case _           => copy(arg1 = arg1.resolveSpecParamOld, arg2 = arg2.resolveSpecParamOld)
   }
 
   override def resolveSpecParam: BinaryBExpr = op match {
     case i: IntBinOp => copy(op = i.toBV, arg1 = arg1.resolveSpecParam, arg2 = arg2.resolveSpecParam)
-    case _ => copy(arg1 = arg1.resolveSpecParam, arg2 = arg2.resolveSpecParam)
+    case _           => copy(arg1 = arg1.resolveSpecParam, arg2 = arg2.resolveSpecParam)
   }
 
   override def resolveSpecL: BinaryBExpr = op match {
@@ -508,7 +505,11 @@ case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BE
   override def resolveSpecParam: IfThenElse =
     copy(guard = guard.resolveSpecParam, thenExpr = thenExpr.resolveSpecParam, elseExpr = elseExpr.resolveSpecParam)
   override def resolveSpecParamOld: IfThenElse =
-    copy(guard = guard.resolveSpecParamOld, thenExpr = thenExpr.resolveSpecParamOld, elseExpr = elseExpr.resolveSpecParamOld)
+    copy(
+      guard = guard.resolveSpecParamOld,
+      thenExpr = thenExpr.resolveSpecParamOld,
+      elseExpr = elseExpr.resolveSpecParamOld
+    )
   override def resolveSpecL: IfThenElse =
     copy(guard = guard.resolveSpecL, thenExpr = thenExpr.resolveSpecL, elseExpr = elseExpr.resolveSpecL)
   override def resolveOld: IfThenElse =
@@ -520,7 +521,7 @@ case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BE
   override def loads: Set[BExpr] = guard.loads ++ thenExpr.loads ++ elseExpr.loads
 }
 
-trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends BExpr {
+trait BPredicateExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends BExpr {
   override def toString: String = {
     val boundString = bound.map(_.withType).mkString(", ")
     s"($sort $boundString :: ($body))"
@@ -534,17 +535,11 @@ trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends B
   override def loads: Set[BExpr] = body.loads
 }
 
-enum Quantifier {
-  case forall
-  case exists
-  case lambda
-}
+case class BForAll(bound: List[BVar], body: BExpr) extends BPredicateExpr(Quantifier.forall, bound, body)
 
-case class ForAll(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.forall, bound, body)
+case class BExists(bound: List[BVar], body: BExpr) extends BPredicateExpr(Quantifier.exists, bound, body)
 
-case class Exists(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.exists, bound, body)
-
-case class Lambda(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.lambda, bound, body)
+case class BLambda(bound: List[BVar], body: BExpr) extends BPredicateExpr(Quantifier.lambda, bound, body)
 
 case class Old(body: BExpr) extends BExpr {
   override def toString: String = s"old($body)"
@@ -610,9 +605,8 @@ case class GammaStoreOp(addressSize: Int, bits: Int, accesses: Int) extends Func
 }
 case class LOp(memoryType: BType, indexType: BType) extends FunctionOp
 
-/**
- * Utility to extract a particular byte from a bitvector.
- */
+/** Utility to extract a particular byte from a bitvector.
+  */
 case class ByteExtract(valueSize: Int, offsetSize: Int) extends FunctionOp {
   val fnName: String = s"byte_extract${valueSize}_${offsetSize}"
 }
@@ -640,17 +634,15 @@ case class BByteExtract(value: BExpr, offset: BExpr) extends BExpr {
   override def loads: Set[BExpr] = value.loads ++ offset.loads
 }
 
-/**
- * Utility to test if a particular value i is within the bounds of a base variable
- * and some length. Factors in the problem of wrap around, given the base + length
- * exceeds the bitvector size.
- *
- * Assumes all inputs are of the same bitvector width.
- */
+/** Utility to test if a particular value i is within the bounds of a base variable and some length. Factors in the
+  * problem of wrap around, given the base + length exceeds the bitvector size.
+  *
+  * Assumes all inputs are of the same bitvector width.
+  */
 case class InBounds(bits: Int, endian: Endian) extends FunctionOp {
   val fnName: String = endian match {
     case Endian.LittleEndian => s"in_bounds${bits}_le"
-    case Endian.BigEndian=> s"in_bounds${bits}_be"
+    case Endian.BigEndian    => s"in_bounds${bits}_be"
   }
 }
 
@@ -667,9 +659,9 @@ case class BInBounds(base: BExpr, len: BExpr, endian: Endian, i: BExpr) extends 
   override val getType: BType = BoolBType
   override def functionOps: Set[FunctionOp] =
     base.functionOps ++ len.functionOps ++ i.functionOps + InBounds(baseSize, endian)
-  override def locals: Set[BVar]  = base.locals ++ len.locals ++ i.locals
-  override def globals: Set[BVar] = base.globals ++ len.globals ++ i.globals 
-  override def loads: Set[BExpr]  = base.loads ++ len.loads ++ i.loads 
+  override def locals: Set[BVar] = base.locals ++ len.locals ++ i.locals
+  override def globals: Set[BVar] = base.globals ++ len.globals ++ i.globals
+  override def loads: Set[BExpr] = base.loads ++ len.loads ++ i.loads
 }
 
 case class BMemoryLoad(memory: BMapVar, index: BExpr, endian: Endian, bits: Int) extends BExpr {

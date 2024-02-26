@@ -151,6 +151,31 @@ sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
 }
 
+
+enum Quantifier {
+  case forall
+  case exists
+  case lambda
+}
+
+
+trait PredicateExpr(sort: Quantifier, bound : List[Variable], body: Expr) extends Expr {
+  override def acceptVisit(visitor: Visitor): Variable =
+    throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+
+  def getType: ir.IRType = BoolType
+}
+
+case class ForAll(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.forall, bound, body) {
+  def toBoogie: boogie.BExpr = BForAll(bound.map(_.toBoogie), body.toBoogie)
+}
+
+case class Exists(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.exists, bound, body) {
+  def toBoogie: boogie.BExpr = BExists(bound.map(_.toBoogie), body.toBoogie)
+}
+
+
+
 case object BVNOT extends BVUnOp("not")
 case object BVNEG extends BVUnOp("neg")
 

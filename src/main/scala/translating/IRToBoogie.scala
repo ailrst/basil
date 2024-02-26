@@ -119,7 +119,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
     }
     val relyEnsures = if (relies.nonEmpty) {
       val i = BVariable("i", BitVecBType(64), Scope.Local)
-      val rely2 = ForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem, i), Old(MapAccess(mem, i))), BinaryBExpr(BVEQ, MapAccess(Gamma_mem, i), Old(MapAccess(Gamma_mem, i)))))
+      val rely2 = BForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem, i), Old(MapAccess(mem, i))), BinaryBExpr(BVEQ, MapAccess(Gamma_mem, i), Old(MapAccess(Gamma_mem, i)))))
       List(rely2) ++ reliesUsed
     } else {
       reliesUsed
@@ -144,7 +144,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
     }
     val relyEnsures = if (reliesParam.nonEmpty) {
       val i = BVariable("i", BitVecBType(64), Scope.Local)
-      val rely2 = ForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem_out, i), MapAccess(mem_in, i)), BinaryBExpr(BVEQ, MapAccess(Gamma_mem_out, i), MapAccess(Gamma_mem_in, i))))
+      val rely2 = BForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem_out, i), MapAccess(mem_in, i)), BinaryBExpr(BVEQ, MapAccess(Gamma_mem_out, i), MapAccess(Gamma_mem_in, i))))
       List(rely2) ++ reliesUsed
     } else {
       reliesUsed
@@ -164,7 +164,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
     }
     val relyEnsures = if (reliesParam.nonEmpty) {
       val i = BVariable("i", BitVecBType(64), Scope.Local)
-      val rely2 = ForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem_out, i), MapAccess(mem_in, i)), BinaryBExpr(BVEQ, MapAccess(Gamma_mem_out, i), MapAccess(Gamma_mem_in, i))))
+      val rely2 = BForAll(List(i), BinaryBExpr(BoolIMPLIES, BinaryBExpr(BVEQ, MapAccess(mem_out, i), MapAccess(mem_in, i)), BinaryBExpr(BVEQ, MapAccess(Gamma_mem_out, i), MapAccess(Gamma_mem_in, i))))
       List(rely2) ++ reliesUsed
     } else {
       reliesUsed
@@ -302,7 +302,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
               MapUpdate(memVar, indexVar, valueVar)
             else {
               val i = BVariable("i", BitVecBType(m.addressSize), Scope.Local)
-              Lambda(List(i), IfThenElse(
+              BLambda(List(i), IfThenElse(
                 BInBounds(indexVar, BitVecBLiteral(m.accesses, m.addressSize), m.endian, i),
                 BByteExtract(valueVar, BinaryBExpr(BVSUB, i, indexVar)),
                 MapAccess(memVar, i)))
@@ -325,7 +325,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
               MapUpdate(gammaMapVar, indexVar, valueVar)
             else {
               val i = BVariable("i", BitVecBType(g.addressSize), Scope.Local)
-              Lambda(List(i), IfThenElse(
+              BLambda(List(i), IfThenElse(
                 BInBounds(indexVar, BitVecBLiteral(g.accesses, g.addressSize), Endian.LittleEndian, i),
                 valueVar,
                 MapAccess(gammaMapVar, i)))
