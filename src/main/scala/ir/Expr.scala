@@ -152,6 +152,19 @@ sealed trait BVUnOp(op: String) extends UnOp {
 }
 
 
+case class IfThenElse(cond: Expr, thenCase: Expr, elseCase: Expr) extends Expr {
+  require (cond.getType == BoolType)
+  require (thenCase.getType == elseCase.getType)
+
+  override def acceptVisit(visitor: Visitor): Variable =
+    throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+
+  def getType: ir.IRType = thenCase.getType
+
+  def toBoogie: BExpr = BIfThenElse(cond.toBoogie, thenCase.toBoogie, elseCase.toBoogie)
+}
+
+
 enum Quantifier {
   case forall
   case exists
@@ -173,7 +186,6 @@ case class ForAll(bound: List[Variable], body: Expr) extends PredicateExpr(Quant
 case class Exists(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.exists, bound, body) {
   def toBoogie: boogie.BExpr = BExists(bound.map(_.toBoogie), body.toBoogie)
 }
-
 
 
 case object BVNOT extends BVUnOp("not")

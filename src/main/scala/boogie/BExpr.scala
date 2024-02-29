@@ -480,7 +480,7 @@ case class BinaryBExpr(op: BinOp, arg1: BExpr, arg2: BExpr) extends BExpr {
   override def loads: Set[BExpr] = arg1.loads ++ arg2.loads
 }
 
-case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BExpr {
+case class BIfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BExpr {
   override def getType: BType = {
     if (thenExpr.getType == elseExpr.getType) {
       thenExpr.getType
@@ -496,27 +496,27 @@ case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BE
   override def specGlobals: Set[SpecGlobalOrAccess] = guard.specGlobals ++ thenExpr.specGlobals ++ elseExpr.specGlobals
   override def oldSpecGlobals: Set[SpecGlobalOrAccess] =
     guard.oldSpecGlobals ++ thenExpr.oldSpecGlobals ++ elseExpr.oldSpecGlobals
-  override def resolveSpec: IfThenElse =
+  override def resolveSpec: BIfThenElse =
     copy(guard = guard.resolveSpec, thenExpr = thenExpr.resolveSpec, elseExpr = elseExpr.resolveSpec)
-  override def resolveSpecInv: IfThenElse =
+  override def resolveSpecInv: BIfThenElse =
     copy(guard = guard.resolveSpecInv, thenExpr = thenExpr.resolveSpecInv, elseExpr = elseExpr.resolveSpecInv)
-  override def resolveSpecInvOld: IfThenElse =
+  override def resolveSpecInvOld: BIfThenElse =
     copy(guard = guard.resolveSpecInvOld, thenExpr = thenExpr.resolveSpecInvOld, elseExpr = elseExpr.resolveSpecInvOld)
-  override def resolveSpecParam: IfThenElse =
+  override def resolveSpecParam: BIfThenElse =
     copy(guard = guard.resolveSpecParam, thenExpr = thenExpr.resolveSpecParam, elseExpr = elseExpr.resolveSpecParam)
-  override def resolveSpecParamOld: IfThenElse =
+  override def resolveSpecParamOld: BIfThenElse =
     copy(
       guard = guard.resolveSpecParamOld,
       thenExpr = thenExpr.resolveSpecParamOld,
       elseExpr = elseExpr.resolveSpecParamOld
     )
-  override def resolveSpecL: IfThenElse =
+  override def resolveSpecL: BIfThenElse =
     copy(guard = guard.resolveSpecL, thenExpr = thenExpr.resolveSpecL, elseExpr = elseExpr.resolveSpecL)
-  override def resolveOld: IfThenElse =
+  override def resolveOld: BIfThenElse =
     copy(guard = guard.resolveOld, thenExpr = thenExpr.resolveOld, elseExpr = elseExpr.resolveOld)
-  override def resolveInsideOld: IfThenElse =
+  override def resolveInsideOld: BIfThenElse =
     copy(guard = guard.resolveInsideOld, thenExpr = thenExpr.resolveInsideOld, elseExpr = elseExpr.resolveInsideOld)
-  override def removeOld: IfThenElse =
+  override def removeOld: BIfThenElse =
     copy(guard = guard.removeOld, thenExpr = thenExpr.removeOld, elseExpr = elseExpr.removeOld)
   override def loads: Set[BExpr] = guard.loads ++ thenExpr.loads ++ elseExpr.loads
 }

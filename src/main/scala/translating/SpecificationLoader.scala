@@ -301,8 +301,8 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
       ctx: IfThenElseExprContext,
       nameToGlobals: Map[String, SpecGlobal],
       params: Map[String, Parameter] = Map()
-  ): IfThenElse = {
-    IfThenElse(
+  ): BIfThenElse = {
+    BIfThenElse(
       visitExpr(ctx.guard, nameToGlobals, params),
       visitExpr(ctx.thenExpr, nameToGlobals, params),
       visitExpr(ctx.elseExpr, nameToGlobals, params)

@@ -302,7 +302,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
               MapUpdate(memVar, indexVar, valueVar)
             else {
               val i = BVariable("i", BitVecBType(m.addressSize), Scope.Local)
-              BLambda(List(i), IfThenElse(
+              BLambda(List(i), BIfThenElse(
                 BInBounds(indexVar, BitVecBLiteral(m.accesses, m.addressSize), m.endian, i),
                 BByteExtract(valueVar, BinaryBExpr(BVSUB, i, indexVar)),
                 MapAccess(memVar, i)))
@@ -325,7 +325,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
               MapUpdate(gammaMapVar, indexVar, valueVar)
             else {
               val i = BVariable("i", BitVecBType(g.addressSize), Scope.Local)
-              BLambda(List(i), IfThenElse(
+              BLambda(List(i), BIfThenElse(
                 BInBounds(indexVar, BitVecBLiteral(g.accesses, g.addressSize), Endian.LittleEndian, i),
                 valueVar,
                 MapAccess(gammaMapVar, i)))
@@ -374,7 +374,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
           } else {
             LPreds(next)
           } */
-            IfThenElse(guard, LPred, ite)
+            BIfThenElse(guard, LPred, ite)
           }
         }
         BFunction("L", List(memoryVar, indexVar), BParam(BoolBType), Some(body), List(externAttr))
@@ -408,7 +408,7 @@ class IRToBoogie(var program: Program, var spec: Specification) {
         val above = BinaryBExpr(BVULE, begin, iVar)
         val below = BinaryBExpr(BVULT, iVar, end)
         val wrap = BinaryBExpr(BVULE, baseVar, end)
-        val body = IfThenElse(wrap, BinaryBExpr(BoolAND, above, below), BinaryBExpr(BoolOR, above, below))
+        val body = BIfThenElse(wrap, BinaryBExpr(BoolAND, above, below), BinaryBExpr(BoolOR, above, below))
         BFunction(b.fnName, in, out, Some(body), List(inlineAttr))
     }
   }
