@@ -1,6 +1,6 @@
 grammar SpecificationsNeue;
 
-specification: (lPreds | relies | guarantees | directFunctions) * subroutine* EOF;
+specification: (lPreds | relies | guarantees | procedure | block)* EOF;
 
 
 lPreds: 'classification' lPred (COMMA lPred)*;
@@ -15,21 +15,20 @@ boogieTypeName: BVSIZE #bvBType
 relies: 'rely' expr (COMMA expr)*;
 guarantees: 'guarantee' expr (COMMA expr)*;
 
-directFunctions: 'DIRECT functions:' directFunction (COMMA directFunction)*;
-directFunction: MEMORY_LOAD_DIRECT #memoryLoad
-              | MEMORY_STORE_DIRECT #memoryStore
-              | GAMMA_LOAD_DIRECT #gammaLoad
-              | GAMMA_STORE_DIRECT #gammaStore
-              | ZERO_EXTEND_DIRECT #zeroExtend
-              | SIGN_EXTEND_DIRECT #signExtend
-              | BVOP_DIRECT #bvOp
-              ;
+procedure: 'procedure' id ';' (modifies | requires | ensures | relies | guarantees | lPreds)*;
+block: 'block' (pos=(BEGIN | END)) (name=id) SCOLON (ASSUME | ASSERT)+ ;
 
-subroutine: 'procedure' id ';' (modifies | requires | ensures | relies | guarantees)*;
+assume_stmt : ASSUME arg=expr SCOLON ;
+assert_stmt : ASSERT arg=expr SCOLON ;
+
+BEGIN: 'begin';
+END: 'end';
+ASSUME: 'assume';
+ASSERT: 'assert';
 
 modifies: 'modifies' id (COMMA id)* ';';
 requires: 'requires' expr #parsedRequires ;
-ensures: 'ensures' expr #parsedEnsures ';';
+ensures: 'ensures' expr #parsedEnsures ;
 
 boolLit : TRUE | FALSE;
 
@@ -134,6 +133,7 @@ NOT_OP : '!';
 
 COLON: ':';
 DCOLON: '::';
+SCOLON: ';';
 fragment UNDERSCORE: '_';
 fragment LE: '_le';
 fragment BE: '_be';
