@@ -1,18 +1,10 @@
 grammar SpecificationsNeue;
 
-specification: (globals | lPreds | relies | guarantees | directFunctions) * subroutine* EOF;
+specification: (lPreds | relies | guarantees | directFunctions) * subroutine* EOF;
 
-globals: 'Globals:' globalDef*;
-globalDef: id COLON typeName arraySize?;
-lPreds: 'L:' lPred (COMMA lPred)*;
+
+lPreds: 'classification' lPred (COMMA lPred)*;
 lPred: id MAPSTO expr;
-typeName: BVSIZE #bvType
-        | LONG #longType
-        | SHORT #shortType
-        | INT #intType
-        | CHAR #charType
-        ;
-arraySize: '[' size=nat ']';
 
 boogieTypeName: BVSIZE #bvBType
         | INT #intBType
@@ -20,8 +12,8 @@ boogieTypeName: BVSIZE #bvBType
         | '[' (keyT=boogieTypeName) ']' (valT=boogieTypeName) #mapBType
         ;
 
-relies: 'Rely:' expr (COMMA expr)*;
-guarantees: 'Guarantee:' expr (COMMA expr)*;
+relies: 'rely' expr (COMMA expr)*;
+guarantees: 'guarantee' expr (COMMA expr)*;
 
 directFunctions: 'DIRECT functions:' directFunction (COMMA directFunction)*;
 directFunction: MEMORY_LOAD_DIRECT #memoryLoad
@@ -33,14 +25,11 @@ directFunction: MEMORY_LOAD_DIRECT #memoryLoad
               | BVOP_DIRECT #bvOp
               ;
 
-subroutine: 'Subroutine:' id modifies? requires* ensures* relies? guarantees?;
-modifies: 'Modifies:' id (COMMA id)*;
-requires: 'Requires:' expr #parsedRequires
-        | 'Requires DIRECT:' QUOTESTRING #directRequires
-        ;
-ensures: 'Ensures:' expr #parsedEnsures
-       | 'Ensures DIRECT:' QUOTESTRING #directEnsures
-       ;
+subroutine: 'procedure' id ';' (modifies | requires | ensures | relies | guarantees)*;
+
+modifies: 'modifies' id (COMMA id)* ';';
+requires: 'requires' expr #parsedRequires ;
+ensures: 'ensures' expr #parsedEnsures ';';
 
 boolLit : TRUE | FALSE;
 
@@ -51,6 +40,7 @@ bv: value=nat BVSIZE;
 
 // based upon boogie grammar: https://boogie-docs.readthedocs.io/en/latest/LangRef.html#grammar
 expr : impliesExpr ( EQUIV_OP impliesExpr )* ;
+boolExpr : impliesExpr ;
 impliesExpr : arg1=logicalExpr ( IMPLIES_OP arg2=impliesExpr )? ;
 logicalExpr : relExpr ( AND_OP relExpr ( AND_OP relExpr )* | OR_OP relExpr ( OR_OP relExpr )* )? ;
 relExpr : arg1=term ( op=relOp arg2=term )? ;
