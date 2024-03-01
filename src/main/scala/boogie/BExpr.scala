@@ -541,8 +541,9 @@ case class BExists(bound: List[BVar], body: BExpr) extends BPredicateExpr(Quanti
 
 case class BLambda(bound: List[BVar], body: BExpr) extends BPredicateExpr(Quantifier.lambda, bound, body)
 
-case class Old(body: BExpr) extends BExpr {
-  override def toString: String = s"old($body)"
+
+trait WrapperExpr(body: BExpr) extends BExpr {
+  override def toString: String = s"($body)"
   override def getType: BType = body.getType
   override def functionOps: Set[FunctionOp] = body.functionOps
   override def locals: Set[BVar] = body.locals
@@ -550,11 +551,21 @@ case class Old(body: BExpr) extends BExpr {
   override def oldSpecGlobals: Set[SpecGlobalOrAccess] = body.specGlobals
   override def resolveSpecParam: BExpr = body.resolveSpecParamOld
   override def resolveSpecInv: BExpr = body.resolveSpecInvOld
-  override def resolveSpec: BExpr = copy(body = body.resolveSpec)
-  override def resolveSpecL: BExpr = copy(body = body.resolveSpecL)
   override def resolveOld: BExpr = body.resolveInsideOld
   override def removeOld: BExpr = body.resolveSpec
   override def loads: Set[BExpr] = body.loads
+}
+
+case class BParenExpr(body: BExpr) extends WrapperExpr(body) {
+  override def toString: String = s"($body)"
+  override def resolveSpec: BExpr = copy(body = body.resolveSpec)
+  override def resolveSpecL: BExpr = copy(body = body.resolveSpecL)
+}
+
+case class Old(body: BExpr) extends WrapperExpr(body) {
+  override def toString: String = s"old($body)"
+  override def resolveSpec: BExpr = copy(body = body.resolveSpec)
+  override def resolveSpecL: BExpr = copy(body = body.resolveSpecL)
 }
 
 case class MapAccess(mapVar: BMapVar, index: BExpr) extends BExpr {

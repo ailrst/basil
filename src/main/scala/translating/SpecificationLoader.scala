@@ -254,7 +254,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
     case b: BoolLitExprContext     => visitBoolLit(b.boolLit)
     case i: IdExprContext          => visitId(i.id, nameToGlobals, params)
     case o: OldExprContext         => visitOldExpr(o, nameToGlobals, params)
-    case p: ParenExprContext       => visitExpr(p.expr, nameToGlobals, params)
+    case p: ParenExprContext       => visitExpr(p.expr, nameToGlobals, params) // TODO: shouldn't just discard parenth
     case i: IfThenElseExprContext  => visitIfThenElseExpr(i, nameToGlobals, params)
     case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess, nameToGlobals, params)
     case b: BvExprContext          => visitBv(b.bv)

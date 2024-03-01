@@ -105,6 +105,42 @@ case class SignExtend(extension: Int, body: Expr) extends Expr {
   override def loads: Set[MemoryLoad] = body.loads
 }
 
+
+case class ParenExpr(body: Expr) extends Expr  {
+  override def toBoogie: BExpr = BParenExpr(body.toBoogie)
+  override def gammas: Set[Expr] = body.gammas
+  override def variables: Set[Variable] = body.variables
+  override def getType: IRType = body.getType
+  override def toString: String = body.toString
+  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
+  override def loads: Set[MemoryLoad] = body.loads
+}
+
+
+case class OldExpr(body: Expr) extends Expr  {
+  override def toBoogie: BExpr = Old(body.toBoogie)
+  override def gammas: Set[Expr] = body.gammas
+  override def variables: Set[Variable] = body.variables
+  override def getType: IRType = body.getType
+  override def toString: String = body.toString
+  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
+  override def loads: Set[MemoryLoad] = body.loads
+}
+
+/**
+ * Expression describing two-state predicate, used in postcondition, precondition etc..
+ */
+case class TwoStateExpr(body: Expr, oldState: Option[CFGPosition] = None, 
+    newState: Option[CFGPosition] = None) extends Expr  {
+  override def toBoogie: BExpr = body.toBoogie
+  override def gammas: Set[Expr] = body.gammas
+  override def variables: Set[Variable] = body.variables
+  override def getType: IRType = body.getType
+  override def toString: String = body.toString
+  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
+  override def loads: Set[MemoryLoad] = body.loads
+}
+
 case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
   override def toBoogie: BExpr = UnaryBExpr(op, arg.toBoogie)
   override def gammas: Set[Expr] = arg.gammas
@@ -180,11 +216,15 @@ trait PredicateExpr(sort: Quantifier, bound : List[Variable], body: Expr) extend
 }
 
 case class ForAll(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.forall, bound, body) {
+  require (body.getType == BoolType)
   def toBoogie: boogie.BExpr = BForAll(bound.map(_.toBoogie), body.toBoogie)
+  override def variables: Set[Variable] = body.variables -- bound
 }
 
 case class Exists(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.exists, bound, body) {
+  require (body.getType == BoolType)
   def toBoogie: boogie.BExpr = BExists(bound.map(_.toBoogie), body.toBoogie)
+  override def variables: Set[Variable] = body.variables -- bound
 }
 
 
