@@ -1,13 +1,16 @@
 package translating
 
+
 import Parsers.SpecificationsNeueParser._
 
 import boogie._
 import specification._
 import ir._
 
+import scala.collection.mutable.Stack
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
+import scala.collection.mutable.Buffer
 
 // take symbol table entries as input
 // parse all global defs and check sizes
@@ -16,20 +19,70 @@ import scala.jdk.CollectionConverters._
 //case class SpecificationInfo(variables: Set[Variable]) 
 
 
-case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
+class BindingsStack {
+  val variableBindings : ArrayBuffer[Map[String, Expr]] = ArrayBuffer.empty
 
-  def visitSpecification(ctx: SpecTopLevelContext): Specification = {
+  def push(x: Map[String, Expr]) = variableBindings.append(x)
+  def pop() = variableBindings.remove(variableBindings.length - 1)
 
-    Specification(Set.empty, Map.empty, List.empty, List.empty, List.empty, Set.empty)
+  def resolve(name: String) : Option[Expr] = {
+    def findres(s: String, pos: Int = 0) = {
+      var res: Option[Expr] = None
+      var ind = variableBindings.length - 1 
+      while (ind >= 0 && res == None) {
+        res = variableBindings(ind).get(s)
+        ind -= 1
+      }
+      res
+    }
 
+    findres(name)
   }
 
-  def visitSpecTopLevel(ctx: SpecTopLevelContext) = {
+}
 
+case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGlobal], program: Program) {
+
+  private val idToSymbol = symbols.map(g => (g.name, g)).toMap ++ globals.map(g => g.name -> Register(g.name  + "_addr", BitVecType(64)))
+  val nameToGlobals: Map[String, Variable] = symbols.map(s => s.name -> s).toMap
+  val nameToSpecGlobal: Map[String, SpecGlobal] = globals.map(s => s.name -> s).toMap
+
+  val variableBindings = BindingsStack() 
+
+  val mem = Memory("mem", 64, 8)
+
+
+  def visitSpecification(ctx: SpecTopLevelContext): Specification = {
+    variableBindings.push(Map("mem" -> mem))
+    variableBindings.push(idToSymbol)
+    val spec = visitSpecTopLevel(ctx)
+    variableBindings.pop()
+    variableBindings.pop()
+    spec
+  }
+
+
+  def visitSpecTopLevel(ctx: SpecTopLevelContext) = {
+    val lpreds = ctx.lPreds.asScala.flatMap(visitLPreds)
+    val relies = ctx.relies.asScala.map(visitRelies)
+    val guarantees = ctx.guarantees.asScala.map(visitGuarantees)
+    val procedures = ctx.procedure.asScala.map(visitProcedure)
+    val blocks = ctx.block.asScala.map(visitBlock)
+
+    Specification(globals, lpreds.map((k,v) => nameToSpecGlobal(k) -> v.toBoogie).toMap, relies.map(_.toBoogie).toList, guarantees.map(_.toBoogie).toList, procedures.map(_.toProcSpec).toList, Set.empty)
   }
 
   def visitLPreds(ctx: LPredsContext) : Map[String, Expr] = {
-    ctx.lPred.asScala.map((lp: LPredContext) => (lp.id.getText -> visitExpr(lp.expr))).toMap
+    ctx.lPred.asScala.map((lp: LPredContext) => (lp.ident.getText -> visitExpr(lp.expr))).toMap
+  }
+
+
+  def andAll(el: Iterable[Expr]) = {
+    el match {
+      case Nil => FalseLiteral
+      case x :: Nil => x
+      case x :: xs =>  xs.foldLeft(x)((a: Expr, b: Expr) => BinaryExpr(BoolAND, a, b))
+    }
   }
 
   /**
@@ -37,17 +90,14 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
    * to a single expression. 
    */
   def visitConjunctExprList(ctx:Conjunct_expr_listContext) : Expr = {
-    val el = ctx.expr.asScala.map(visitExpr(_, Map.empty)).toList
-
-    el match {
-      case Nil => FalseLiteral
-      case x :: Nil => x
-      case x :: xs =>  xs.foldLeft(x)((a: Expr, b: Expr) => BinaryExpr(BoolAND, a, b))
-    }
-
+    andAll(ctx.expr.asScala.map(visitExpr(_, Map.empty)).toList)
   }
 
-  def visitRequires(ctx: ParsedRequiresContext) : Expr = {
+  def visitRequires(ctx: RequiresContext) : Expr = {
+    visitConjunctExprList(ctx.conjunct_expr_list)
+  }
+
+  def visitEnsures(ctx: EnsuresContext) : Expr = {
     visitConjunctExprList(ctx.conjunct_expr_list)
   }
 
@@ -55,17 +105,50 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
     visitConjunctExprList(ctx.conjunct_expr_list)
   }
 
-  def visitGuarantees(ctx: GuaranteesContext) : TwoStateExpr = {
-    TwoStateExpr(visitConjunctExprList(ctx.conjunct_expr_list))
+  def visitGuarantees(ctx: GuaranteesContext) : Expr = {
+    visitConjunctExprList(ctx.conjunct_expr_list)
   }
 
-  def visitProcedure(ctx: ProcedureContext) = {
+  def visitDeclaration(ctx: DeclarationContext) : Expr = {
+    val name = ctx.ident.getText
+    val typ = visitTypeName(ctx.boogieTypeName)
+
+    typ match 
+      case MapType(p, r) => LocalVar(name, typ)
+      case _ => LocalVar(name, typ)
 
   }
 
+  case class SubroutineSpecinfo(name: String, relies: Expr, guarantees: Expr, mods: Buffer[String], requires: Expr, ensures: Expr) {
+    def toProcSpec = SubroutineSpec(
+        name,
+        List(relies.toBoogie),
+        List.empty,
+         List(ensures.toBoogie), 
+         List.empty,
+         mods.toList,
+         List(relies.toBoogie),
+         List(guarantees.toBoogie)
+    )
+  }
 
-  private val idToSymbol = symbols.map(g => (g.name, g)).toMap
-  val nameToGlobals: Map[String, Variable] = symbols.map(s => s.name -> s).toMap
+  def visitProcedure(ctx: ProcedureContext) : SubroutineSpecinfo = {
+    val name = ctx.ident.getText
+    val relies: Expr = andAll(ctx.relies.asScala.map(visitRelies))
+    val guarantees: Expr = andAll(ctx.guarantees.asScala.map(visitGuarantees))
+    val mods = (ctx.modifies.asScala.flatMap(c => c.ident.asScala.map(_.getText)))
+    val requries: Expr = andAll(ctx.requires.asScala.map(visitRequires))
+    val ensures: Expr = andAll(ctx.ensures.asScala.map(visitEnsures))
+
+    SubroutineSpecinfo(name, relies, guarantees, mods, requries, ensures)
+  }
+
+
+
+  def visitBlock(ctx: BlockContext) = {
+
+  }
+
 
   def visitTypeName(ctx: BoogieTypeNameContext) : IRType = {
     ctx match {
@@ -138,8 +221,15 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
       ctx: TermContext,
       nameToGlobals: Map[String, Variable],
       params: Map[String, Parameter] = Map()
-  ): Expr = 
-    FalseLiteral
+  ): Expr = Option(ctx.arg2) match {
+    case Some(_) =>
+      BinaryExpr(
+        visitAddSubOp(ctx.op),
+        visitFactor(ctx.arg1, nameToGlobals, params),
+        visitFactor(ctx.arg2, nameToGlobals, params)
+      )
+    case None => visitFactor(ctx.arg1, nameToGlobals, params)
+  }
 
 
   def visitFactor(
@@ -219,25 +309,24 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
       case b: BoolLitExprContext     => visitBoolLit(b.boolLit)
       case b: BvExprContext          => visitBv(b.bv)
       case i: NatExprContext => visitNat(i.nat)
-      case i: IdExprContext          => visitId(i.id, nameToGlobals, params)
-      // case a: ArrayAccessExprContext => visitArrayAccess(a) 
+      case i: IdExprContext          => visitId(i.ident)
+      case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess) 
       case o: OldExprContext => OldExpr(visitExpr(o.expr))
       case p: ParenExprContext       => ParenExpr(visitExpr(p.expr, params))
       case ite: IfThenElseExprContext => visitIfThenElseExpr(ite) 
       case c: FunExprContext => visitFunExpr(c)
+      case c: PredicateExprContext => visitPredicateExpr(c.predicate)
   }
 
-  //def visitArrayAccess(
-  //    ctx: ArrayAccessContext,
-  //    nameToGlobals: Map[String, Variable],
-  //    params: Map[String, Parameter] = Map()
-  //): ArrayAccess = {
-  //  val global = visitId(ctx.id, nameToGlobals, params) match {
-  //    case g: Variable => g
-  //    case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
-  //  }
-  //  ArrayAccess(global, Integer.parseInt(ctx.nat.getText))
-  //}
+  def visitArrayAccess(
+      ctx: ArrayAccessContext,
+  ): MemoryLoad = {
+    val global = visitId(ctx.ident) match {
+      case g: Memory => g
+      case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
+    }
+    MemoryLoad(global, visitExpr(ctx.expr), Endian.LittleEndian, global.valueSize)
+  }
 
   def visitBv(ctx: BvContext): BitVecLiteral = {
     BitVecLiteral(BigInt(ctx.value.getText), Integer.parseInt(ctx.BVSIZE.getText.stripPrefix("bv")))
@@ -252,7 +341,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
 
   def visitPredicateExpr(ctx: PredicateContext) = {
       val bound = ctx.bound.typed_variable.asScala.map(b => LocalVar(b.name.getText, visitTypeName(b.btype)))
+
+      variableBindings.push(bound.map(b => b.name -> b).toMap)
       val body = visitExpr(ctx.body)
+      variableBindings.pop()
 
       ctx.q.getText() match 
         case "forall" => ForAll(bound.toList, body)
@@ -260,7 +352,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
         case _ => ???
   }
 
-  def visitId(ctx: IdContext, nameToGlobals: Map[String, Variable], params: Map[String, Parameter] = Map()): Expr = {
+  def visitId(ctx: IdentContext): Expr = {
     /**
      * TODO
      *
@@ -271,35 +363,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], program: Program) {
      *   - local variables
      */
     val id = ctx.getText
-    //if (id.startsWith("Gamma_")) {
-    //  val gamma_id = id.stripPrefix("Gamma_")
-    //  params.get(gamma_id) match {
-    //    case Some(p: Parameter) => p.value.toGamma
-    //    case None =>
-    //      nameToGlobals.get(gamma_id) match {
-    //        case Some(g: Variable) => SpecGamma(g)
-    //        case None                => throw new Exception(s"unresolvable reference to 'Gamma_$id' in specification")
-    //      }
-    //  }
-    //} else {
-    {  params.get(id) match {
-        case Some(p: Parameter) =>
-          val registerSize = p.value.size
-          val paramSize = p.size
-          if (paramSize == registerSize) {
-            p.value
-          } else if (registerSize > paramSize) {
-            Extract(registerSize - p.size, 0, p.value)
-          } else {
-            throw Exception(s"parameter $p doesn't fit in register ${p.value} for ID $id")
-          }
-        case None =>
-          nameToGlobals.get(ctx.getText) match {
-            case Some(g: Variable) => g
-            case None                => throw new Exception(s"unresolvable reference to '$id' in specification")
-          }
-      }
-    }
+
+      variableBindings.resolve(id) match
+        case Some(x) => x
+        case None => throw Exception(s"Unable to resolve reference to $id")
   }
 
   def visitMulDivModOp(ctx: MulDivModOpContext): BVBinOp = ctx.getText match {

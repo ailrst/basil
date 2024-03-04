@@ -97,15 +97,25 @@ object IRLoading {
     ReadELFLoader.visitSyms(parser.syms(), config)
   }
 
+
+
   def loadSpecification(filename: Option[String], program: Program, globals: Set[SpecGlobal]): Specification = {
     filename match {
-      case Some(s) =>
+      case Some(s) if s.endsWith(".spec2") =>
+        val specLexer = SpecificationsNeueLexer(CharStreams.fromFileName(s))
+        val specTokens = CommonTokenStream(specLexer)
+        val specParser = SpecificationsNeueParser(specTokens)
+        specParser.setBuildParseTree(true)
+        val specLoader = NewSpecificationLoader(Set.empty, globals, program)
+        specLoader.visitSpecTopLevel(specParser.specTopLevel())
+      case Some(s) if s.endsWith(".spec") =>
         val specLexer = SpecificationsLexer(CharStreams.fromFileName(s))
         val specTokens = CommonTokenStream(specLexer)
         val specParser = SpecificationsParser(specTokens)
         specParser.setBuildParseTree(true)
         val specLoader = SpecificationLoader(globals, program)
         specLoader.visitSpecification(specParser.specification())
+      case Some(_) => throw IllegalArgumentException("Specification filename must end in .spec or .spec2")
       case None => Specification(globals, Map(), List(), List(), List(), Set())
     }
   }

@@ -1,18 +1,18 @@
 grammar SpecificationsNeue;
 
-specTopLevel: (lPreds | relies | guarantees | procedure | block)* EOF;
+specTopLevel: (lPreds | relies | guarantees | procedure | block | declaration)* EOF;
 
 
 lPreds: 'classification' lPred (COMMA lPred)* SCOLON;
-lPred: id MAPSTO expr;
+lPred: ident MAPSTO expr;
 
 conjunct_expr_list : expr (COMMA expr)*;
 
 relies: 'rely'  conjunct_expr_list SCOLON;
 guarantees: 'guarantee' conjunct_expr_list SCOLON;
 
-procedure: 'procedure' id SCOLON (modifies | requires | ensures | relies | guarantees | lPreds)*;
-block: 'block' (pos=(BEGIN | END)?) (name=id) SCOLON (assume_stmt | assert_stmt)+;
+procedure: 'procedure' ident SCOLON (modifies | requires | ensures | relies | guarantees | lPreds)*;
+block: 'block' (pos=(BEGIN | END)?) (name=ident) SCOLON (assume_stmt | assert_stmt)+;
 
 FORALL: 'forall';
 EXISTS: 'exists';
@@ -21,17 +21,20 @@ END: 'end';
 assume_stmt : ASSUME (arg=expr) SCOLON ;
 assert_stmt : ASSERT (arg=expr) SCOLON ;
 
+declaration : ident COLON boogieTypeName SCOLON ;
+
+VAR : 'var';
 ASSUME: 'assume';
 ASSERT: 'assert';
 
-modifies: 'modifies' id (COMMA id)* SCOLON;
-requires: 'requires' conjunct_expr_list SCOLON #parsedRequires ;
-ensures: 'ensures' conjunct_expr_list SCOLON #parsedEnsures ;
+modifies: 'modifies' ident (COMMA ident)* SCOLON;
+requires: 'requires' conjunct_expr_list SCOLON ;
+ensures: 'ensures' conjunct_expr_list SCOLON ;
 
 boolLit : TRUE | FALSE;
 
-arrayAccess: id '[' nat ']';
-id : ID;
+arrayAccess: ident '[' expr']';
+ident : ID;
 nat: (DIGIT)+ ;
 bv: value=nat BVSIZE;
 
@@ -55,7 +58,7 @@ mulDivModOp: MUL_OP | DIV_OP | MOD_OP;
 factor : arg1=unaryExpr ( op=mulDivModOp arg2=unaryExpr )? ;
 arglist : expr (',' expr)* ;
 predicate: (q=FORALL|EXISTS) (bound=boundList) DCOLON (body=expr) ;
-typed_variable : (name=id) COLON (btype=boogieTypeName) ;
+typed_variable : (name=ident) COLON (btype=boogieTypeName) ;
 boundList : typed_variable  (COMMA typed_variable)* ;
 
 unaryExpr : atomExpr #atomUnaryExpr
@@ -65,7 +68,7 @@ unaryExpr : atomExpr #atomUnaryExpr
 
 atomExpr : boolLit #boolLitExpr
          | bv #bvExpr
-         | id #idExpr
+         | ident #idExpr
          | nat #natExpr
          | arrayAccess #arrayAccessExpr
          | OLD LPAREN expr RPAREN #oldExpr
