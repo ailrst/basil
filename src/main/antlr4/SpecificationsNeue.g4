@@ -1,39 +1,35 @@
 grammar SpecificationsNeue;
 
-specTopLevel: (lPreds | relies | guarantees | procedure | block | declaration)* EOF;
-
+specTopLevel: sstruct EOF;
 
 lPreds: 'classification' lPred (COMMA lPred)* SCOLON;
 lPred: ident MAPSTO expr;
 
 conjunct_expr_list : expr (COMMA expr)*;
 
-relies: 'rely'  conjunct_expr_list SCOLON;
-guarantees: 'guarantee' conjunct_expr_list SCOLON;
+//relies: 'rely'  conjunct_expr_list SCOLON;
+//guarantees: 'guarantee' conjunct_expr_list SCOLON;
 
-procedure: 'procedure' ident SCOLON (modifies | requires | ensures | relies | guarantees | lPreds)*;
-block: 'block' (pos=(BEGIN | END)?) (name=ident) SCOLON (assume_stmt | assert_stmt)+;
+//procedure: 'procedure' ident SCOLON (modifies | requires | ensures | relies | guarantees | lPreds)*;
+//block: 'block' (pos=(BEGIN | END)?) (name=ident) SCOLON (assume_stmt | assert_stmt)+;
 
-FORALL: 'forall';
-EXISTS: 'exists';
-BEGIN: 'begin';
-END: 'end';
+switchcase: '('test=expr ',' result=expr')';
+switchstmt: 'switch' expr switchcase+ ;
+fundeclaration: 'def' (EXTERN | GHOST)? (type='function'|'macro') (name=ident) (arglist) (EQ_OP sexpr)? ;
+valdeclaration: 'def' (EXTERN | GHOST)? (type='var'|'const') (name=ident) EQ_OP (EQ_OP sexpr)? ;
+declaration : fundeclaration | valdeclaration ; 
+
 assume_stmt : ASSUME (arg=expr) SCOLON ;
 assert_stmt : ASSERT (arg=expr) SCOLON ;
 
-declaration : ident COLON boogieTypeName SCOLON ;
-
-VAR : 'var';
-ASSUME: 'assume';
-ASSERT: 'assert';
-
-modifies: 'modifies' ident (COMMA ident)* SCOLON;
-requires: 'requires' conjunct_expr_list SCOLON ;
-ensures: 'ensures' conjunct_expr_list SCOLON ;
+//modifies: 'modifies' ident (COMMA ident)* SCOLON;
+//requires: 'requires' conjunct_expr_list SCOLON ;
+//ensures: 'ensures' conjunct_expr_list SCOLON ;
 
 boolLit : TRUE | FALSE;
 
 arrayAccess: ident '[' expr']';
+
 ident : ID;
 nat: (DIGIT)+ ;
 bv: value=nat BVSIZE;
@@ -44,38 +40,60 @@ boogieTypeName: BVSIZE #bvBType
         | '[' (keyT=boogieTypeName) ']' (valT=boogieTypeName) #mapBType
         ;
 
+arglist : expr (',' expr)* ;
 
-// based upon boogie grammar: https://boogie-docs.readthedocs.io/en/latest/LangRef.html#grammar
-expr : impliesExpr ( EQUIV_OP impliesExpr )* ;
-boolExpr : impliesExpr ;
-impliesExpr : arg1=logicalExpr ( IMPLIES_OP arg2=impliesExpr )? ;
-logicalExpr : relExpr ( AND_OP relExpr ( AND_OP relExpr )* | OR_OP relExpr ( OR_OP relExpr )* )? ;
-relExpr : arg1=term ( op=relOp arg2=term )? ;
+sexpterm : expr | declaration ;
+sexpdef: ident (COLON sexpTypeName)? '=' (sexpr);
+
+sstruct : '{' (sexpdef (';' sexpdef)*)? '}';
+slist : '(' sexpr (',' sexpr)* ')' ;
+sexpr : <assoc=right> sexpr slist // macro application
+       | sstruct
+       | slist
+       | sexpterm 
+       ;
+
+sexpTypeName : boogieTypeName
+    | '{' (ident COLON sexpTypeName)* '}'
+    | '(' sexpTypeName* ')'
+    | ('bot' | 'void')
+    | ('top' | '_')
+    ;
+
+logOp : IMPLIES_OP | AND_OP | OR_OP ;
 relOp : EQ_OP | LT_OP | GT_OP | LE_OP | GE_OP | NEQ_OP;
 addSubOp : ADD_OP | SUB_OP;
-term : arg1=factor ( op=addSubOp arg2=factor )? ;
 mulDivModOp: MUL_OP | DIV_OP | MOD_OP;
-factor : arg1=unaryExpr ( op=mulDivModOp arg2=unaryExpr )? ;
-arglist : expr (',' expr)* ;
-predicate: (q=FORALL|EXISTS) (bound=boundList) DCOLON (body=expr) ;
-typed_variable : (name=ident) COLON (btype=boogieTypeName) ;
-boundList : typed_variable  (COMMA typed_variable)* ;
+
+// based upon boogie grammar: https://boogie-docs.readthedocs.io/en/latest/LangRef.html#grammar
+expr : arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
+    | arg1=expr ( op=logOp arg2=expr )+ #logicalExpr
+    | arg1=expr ( op=relOp arg2=expr )+ #relExpr
+    | arg1=expr ( op=addSubOp arg2=expr )+ #arithExpr
+    | arg1=expr ( op=mulDivModOp arg2=expr )+ #mathExpr
+    | arg1=expr '[' (pointer=expr) (COMMA (beginslice=expr) (COLON (endslice=expr))? )? ']' #sliceExpr
+    | arg1=expr ('.' ident) #accessExpr
+    | unaryExpr #unexp
+    ;
 
 unaryExpr : atomExpr #atomUnaryExpr
           | SUB_OP unaryExpr #negExpr
           | NOT_OP unaryExpr #notExpr
           ;
 
+predicate: '('(q=FORALL|EXISTS) (bound=boundList) DCOLON (body=expr) ')';
+typed_variable : (name=ident) COLON (btype=boogieTypeName) ;
+boundList : typed_variable  (COMMA typed_variable)* ;
+
 atomExpr : boolLit #boolLitExpr
          | bv #bvExpr
-         | ident #idExpr
          | nat #natExpr
-         | arrayAccess #arrayAccessExpr
          | OLD LPAREN expr RPAREN #oldExpr
-         | LPAREN expr RPAREN #parenExpr
          | IF guard=expr THEN thenExpr=expr ELSE elseExpr=expr #ifThenElseExpr
-         | (name=BVOP_DIRECT) LPAREN (args=arglist) RPAREN #funExpr
          | predicate #predicateExpr
+         | (name=BVOP_DIRECT) LPAREN (args=arglist) RPAREN #funExpr
+         | ident #idExpr
+         | LPAREN expr RPAREN #parenExpr
          ;
 
 QUOTE : '"';
@@ -120,12 +138,26 @@ MOD_OP : 'mod';
 
 BVSIZE: BV DIGIT+;
 
+HOLE: '_';
+PIPE: '|' | 'case';
+EXTERN : 'extern';
+GHOST: 'ghost';
+FORALL: 'forall';
+EXISTS: 'exists';
+BEGIN: 'begin';
+END: 'end';
+VAR : 'var';
+ASSUME: 'assume';
+ASSERT: 'assert';
+
 ID : NON_DIGIT ( NON_DIGIT | DIGIT )* ;
-NON_DIGIT : ( [A-Z] | [a-z] | '\'' | '~' | '#' | '$' | '^' | '_' | '.' | '?' | '`') ;
+NON_DIGIT : ( [A-Z] | [a-z] | '\'' | '~' | '#' | '$' | '^' | '_' | '?' | '`') ;
 DIGIT : [0-9];
 
 COMMA : ',';
 
+LBRACE : '{';
+RBRACE : '}';
 LPAREN : '(';
 RPAREN : ')';
 MAPSTO : '->';
@@ -207,7 +239,9 @@ fragment SGT : 'sgt';
 fragment SGE : 'sge';
 fragment COMP : 'comp';
 
+
+
 // Ignored
 NEWLINE : '\r'? '\n' -> skip;
-WHITESPACE : ' '+ -> skip;
+WHITESPACE : [ \t]+ -> skip;
 COMMENT : '//' ~[\r\n]* -> skip;

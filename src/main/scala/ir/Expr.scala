@@ -210,7 +210,7 @@ case class Function(name: String, args: List[LocalVar], returnType: IRType, body
     body match {
       case None => FunctionCall(this, params)
       case Some(b) => {
-        val s = VariableReplacer(args.indices.map(i => args(i) -> params(i)).toMap)
+        val s = VariableReplacer(args.indices.map(i => args(i).name -> params(i)).toMap)
         s.visitExpr(b)
       }
     }

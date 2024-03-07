@@ -339,14 +339,13 @@ class StackSubstituter extends IntraproceduralControlFlowVisitor {
 
 
 
-class VariableReplacer(variables: Map[Variable, Expr] = Map()) extends Visitor {
+class VariableReplacer(variables: Map[String, Expr] = Map()) extends Visitor {
   override def visitExpr(node: Expr) = {
     node match {
-      case v: Variable => if variables.contains(v) then variables(v) else node
+      case v: Variable => if variables.contains(v.name) then variables(v.name) else node
       case _ => node.acceptVisit(this)
     }
   }
-
 }
 
 class Substituter(variables: Map[Variable, Variable] = Map(), memories: Map[Memory, Memory] = Map()) extends Visitor {
