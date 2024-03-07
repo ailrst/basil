@@ -5,12 +5,14 @@ import Parsers.SpecificationsNeueParser._
 
 import boogie._
 import specification._
+import util.Logger
 import ir._
 
 import scala.collection.mutable.Stack
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 import scala.collection.mutable.Buffer
+import analysis.evaluateExpression
 
 // take symbol table entries as input
 // parse all global defs and check sizes
@@ -18,9 +20,65 @@ import scala.collection.mutable.Buffer
 
 //case class SpecificationInfo(variables: Set[Variable]) 
 
+sealed trait SExpr:
+  def satisfies(o: SExpr) : Boolean = ???
+
+enum SType:
+  case Symbol
+  case Val
+  case SList
+  case SStruct
+  case Fun(args: SSExpr.SList, ret: SType)
+
+enum SSExpr(typ: SType) extends SExpr:
+  case Symbol(e: String) extends SSExpr(SType.Symbol)
+  case Val(e: Expr) extends SSExpr(SType.Val)
+  case SList(e: List[SExpr]) extends SSExpr(SType.SList)
+  case SStruct(e: Map[String, SExpr]) extends SSExpr(SType.SStruct)
+
+  /**
+   * this :< o
+   */
+  override def satisfies(o: SExpr) : Boolean = {
+    (this, o) match 
+      case (Symbol(a), Symbol(b)) => true
+      case (Val(a), Val(b)) => a.getType == b.getType
+      case (SList(a), SList(b)) => {
+        (a.length == b.length) &&
+        a.indices.forall(i => a(i).satisfies(b(i)))
+      }
+      case (SStruct(a), SStruct(b)) => {
+        (a.keySet == b.keySet) && {
+          a.keySet.forall(k => a(k).satisfies(b(k)))
+        }
+      }
+      case _ => false
+  }
+
+import SSExpr._
+
+case class Function(args: List[SType], ret: SType, body: SExpr) extends SExpr {
+
+
+}
+
 
 class BindingsStack {
   val variableBindings : ArrayBuffer[Map[String, Expr]] = ArrayBuffer.empty
+
+  var globalsDisallowed = 0
+
+  def enterPureLocalScope() : Unit = {
+    globalsDisallowed += 1
+  }
+
+  def leavePureLocalScope() : Unit = {
+   require(globalsDisallowed > 0)
+    globalsDisallowed -= 1
+  }
+
+  def canReferenceGlobals: Boolean = globalsDisallowed == 0
+
 
   def push(x: Map[String, Expr]) = variableBindings.append(x)
   def pop() = variableBindings.remove(variableBindings.length - 1)
@@ -30,7 +88,12 @@ class BindingsStack {
       var res: Option[Expr] = None
       var ind = variableBindings.length - 1 
       while (ind >= 0 && res == None) {
-        res = variableBindings(ind).get(s)
+        res = variableBindings(ind).get(s) match  {
+          case Some(s) if !canReferenceGlobals && s.variables.exists(p => p.scope == Scope.Global) 
+            => throw Exception(s"Cannot reference global $name in pure local context.")
+          case x => x
+        }
+
         ind -= 1
       }
       res
@@ -41,44 +104,78 @@ class BindingsStack {
 
 }
 
+//case class MacroDef(name: String, params: List[(String, SType)], body: Expr) {
+//
+//  def toFunction() = {
+//
+//  }
+//
+//  def apply(args: List[SElem]) = {
+//    assert(SList(args).satisfies(params.map(_._2)))
+//
+//
+//  }
+//
+//}
+//
+//object builtinFuns:
+//  // these are prelude scope function definitions
+//  def load(l: SList) = {
+//    assert(l.implements(List(MapType(BitVecType(64), BitVecType(8)), BitVecType(64), BitVecType(64))))
+//
+//  }
+//  def store(l: SList) = {
+//    assert(l.implements(List(MapType(BitVecType(64), BitVecType(8)), BitVecType(64), BitVecType(64), SType.Expr)))
+//  }
+
 case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGlobal], program: Program) {
 
-  private val idToSymbol = symbols.map(g => (g.name, g)).toMap ++ globals.map(g => g.name -> Register(g.name  + "_addr", BitVecType(64)))
+  val mem = Memory("mem", 64, 8)
+  //private val idToSymbol = symbols.map(g => (g.name, g)).toMap ++ globals.map(g => g.name -> MemoryLoad(mem, LocalVar("$" + g.name  + "_addr", BitVecType(64)), Endian.LittleEndian, g.size))
+  private val idToSymbol = symbols.map(g => (g.name, g)).toMap ++ globals.map(g => g.name -> LocalVar("$" + g.name  + "_addr", BitVecType(64)))
+
+  private val idToSymbolNew = symbols.map(g => (g.name, Val(g))).toMap 
+  ++ globals.map(g => g.name -> SSExpr.SStruct(Map("region" -> Val(mem) , "base" -> Val(LocalVar("$" + g.name  + "_addr", BitVecType(64))), "size" -> Val(BitVecLiteral(g.size,64)))))
+
   val nameToGlobals: Map[String, Variable] = symbols.map(s => s.name -> s).toMap
   val nameToSpecGlobal: Map[String, SpecGlobal] = globals.map(s => s.name -> s).toMap
+  val variableBindings = BindingsStack()
 
-  val variableBindings = BindingsStack() 
-
-  val mem = Memory("mem", 64, 8)
 
 
   def visitSpecification(ctx: SpecTopLevelContext): Specification = {
-    variableBindings.push(Map("mem" -> mem))
-    variableBindings.push(idToSymbol)
     val spec = visitSpecTopLevel(ctx)
-    variableBindings.pop()
-    variableBindings.pop()
     spec
   }
 
 
   def visitSpecTopLevel(ctx: SpecTopLevelContext) = {
-    val lpreds = ctx.lPreds.asScala.flatMap(visitLPreds)
+    // construct an SStruct 
+
+    variableBindings.push(Map("mem" -> mem))
+    variableBindings.push(idToSymbol)
+
     val relies = ctx.relies.asScala.map(visitRelies)
     val guarantees = ctx.guarantees.asScala.map(visitGuarantees)
     val procedures = ctx.procedure.asScala.map(visitProcedure)
     val blocks = ctx.block.asScala.map(visitBlock)
+    val lpreds = ctx.lPreds.asScala.flatMap(visitLPreds)
 
+    variableBindings.pop()
+    variableBindings.pop()
     Specification(globals, lpreds.map((k,v) => nameToSpecGlobal(k) -> v.toBoogie).toMap, relies.map(_.toBoogie).toList, guarantees.map(_.toBoogie).toList, procedures.map(_.toProcSpec).toList, Set.empty)
   }
 
   def visitLPreds(ctx: LPredsContext) : Map[String, Expr] = {
-    ctx.lPred.asScala.map((lp: LPredContext) => (lp.ident.getText -> visitExpr(lp.expr))).toMap
+    variableBindings.enterPureLocalScope()
+    val r = ctx.lPred.asScala.map((lp: LPredContext) => (lp.ident.getText -> visitExpr(lp.expr))).toMap
+    variableBindings.leavePureLocalScope()
+    r
   }
 
 
   def andAll(el: Iterable[Expr]) = {
-    el match {
+    el.toList match {
       case Nil => FalseLiteral
       case x :: Nil => x
       case x :: xs =>  xs.foldLeft(x)((a: Expr, b: Expr) => BinaryExpr(BoolAND, a, b))
@@ -132,7 +229,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     )
   }
 
-  def visitProcedure(ctx: ProcedureContext) : SubroutineSpecinfo = {
+  def sVisitProcedure(ctx:ProcedureContext) = {
     val name = ctx.ident.getText
     val relies: Expr = andAll(ctx.relies.asScala.map(visitRelies))
     val guarantees: Expr = andAll(ctx.guarantees.asScala.map(visitGuarantees))
@@ -140,10 +237,26 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     val requries: Expr = andAll(ctx.requires.asScala.map(visitRequires))
     val ensures: Expr = andAll(ctx.ensures.asScala.map(visitEnsures))
 
-    SubroutineSpecinfo(name, relies, guarantees, mods, requries, ensures)
+    SList(
+      List(Symbol("procedure"),
+      Symbol(name), (SStruct(Map(
+        "relies" -> Val(relies),
+        "guarantees" -> Val(guarantees),
+        "modifies" -> SList(mods.map(Symbol(_)).toList),
+        "requires" -> Val(requries),
+        "ensures" -> Val(ensures)
+      )))))
   }
 
-
+  def visitProcedure(ctx: ProcedureContext) : SubroutineSpecinfo = {
+    val name = ctx.ident.getText
+    val relies: Expr = andAll(ctx.relies.asScala.map(visitRelies))
+    val guarantees: Expr = andAll(ctx.guarantees.asScala.map(visitGuarantees))
+    val mods = (ctx.modifies.asScala.flatMap(c => c.ident.asScala.map(_.getText)))
+    val requries: Expr = andAll(ctx.requires.asScala.map(visitRequires))
+    val ensures: Expr = andAll(ctx.ensures.asScala.map(visitEnsures))
+    SubroutineSpecinfo(name, relies, guarantees, mods, requries, ensures)
+  }
 
   def visitBlock(ctx: BlockContext) = {
 
@@ -310,7 +423,8 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case b: BvExprContext          => visitBv(b.bv)
       case i: NatExprContext => visitNat(i.nat)
       case i: IdExprContext          => visitId(i.ident)
-      case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess) 
+      //case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess) 
+      case a : LoadSliceExprContext => visitLoadSlice(a.loadSlice)
       case o: OldExprContext => OldExpr(visitExpr(o.expr))
       case p: ParenExprContext       => ParenExpr(visitExpr(p.expr, params))
       case ite: IfThenElseExprContext => visitIfThenElseExpr(ite) 
@@ -318,15 +432,43 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case c: PredicateExprContext => visitPredicateExpr(c.predicate)
   }
 
-  def visitArrayAccess(
-      ctx: ArrayAccessContext,
+  def visitLoadSlice(
+      ctx: LoadSliceContext,
   ): MemoryLoad = {
-    val global = visitId(ctx.ident) match {
+
+    val global = if ctx.region != null then (visitId(ctx.region) match {
       case g: Memory => g
-      case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
-    }
-    MemoryLoad(global, visitExpr(ctx.expr), Endian.LittleEndian, global.valueSize)
+      case _ => mem
+    }) else mem
+
+    val ptr = visitExpr(ctx.pointer)
+
+    val size = (ctx.endslice, ctx.beginslice) match 
+        case (begin, end) if begin != null && end != null=> 
+          // slice array access returns bitvec of subarray
+          evaluateExpression(BinaryExpr(BVSUB, visitExpr(begin), visitExpr(end)), Map.empty) match
+            case Some(b) => b.value.toInt * mem.valueSize
+            case None => throw IllegalArgumentException("Unable to evaluate expression, load size must be known statically")
+        case (begin, null) if begin != null => mem.valueSize // scalar access of one array cell
+        case (_, _) => ptr.match // infer size from global regions size
+          case v: Variable if globals.exists(_.name == v.name.stripSuffix("_addr").stripPrefix("$")) =>
+            globals.find(_.name == v.name.stripSuffix("_addr").stripPrefix("$")).get.size
+          case _ => throw IllegalArgumentException("Unable to evaluate expression, load size must be known statically")
+
+
+    MemoryLoad(global, ptr, Endian.LittleEndian, size)
   }
+
+
+  //def visitArrayAccess(
+  //    ctx: ArrayAccessContext,
+  //): MemoryLoad = {
+  //  val global = visitId(ctx.ident) match {
+  //    case g: Memory => g
+  //    case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
+  //  }
+  //  MemoryLoad(global, visitExpr(ctx.expr), Endian.LittleEndian, global.valueSize)
+  //}
 
   def visitBv(ctx: BvContext): BitVecLiteral = {
     BitVecLiteral(BigInt(ctx.value.getText), Integer.parseInt(ctx.BVSIZE.getText.stripPrefix("bv")))
@@ -364,7 +506,8 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
      */
     val id = ctx.getText
 
-      variableBindings.resolve(id) match
+      variableBindings.resolve(id.stripPrefix("Gamma_")) match
+        case Some(x) if id.startsWith("Gamma_") => LocalVar(id, x.getType)
         case Some(x) => x
         case None => throw Exception(s"Unable to resolve reference to $id")
   }

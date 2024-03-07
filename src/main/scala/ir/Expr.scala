@@ -1,5 +1,6 @@
 package ir
 
+
 import boogie._
 
 sealed trait Expr {
@@ -22,6 +23,7 @@ sealed trait Expr {
   def variables: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Expr = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 }
+
 
 sealed trait Literal extends Expr {
   override def acceptVisit(visitor: Visitor): Literal = visitor.visitLiteral(this)
@@ -187,6 +189,34 @@ sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
 }
 
+
+
+case class FunctionCall(function: Function, params: List[Expr]) extends Expr {
+  def toBoogie: BExpr = BFunctionCall(function.name, params.map(_.toBoogie), function.returnType.toBoogie)
+  def getType: IRType = function.returnType
+
+  override def acceptVisit(visitor: Visitor): FunctionCall = this
+}
+
+case class Function(name: String, args: List[LocalVar], returnType: IRType, body: Option[Expr]) extends Expr {
+
+  override def toBoogie: BExpr =  ??? // BFunction 
+
+  override def getType: IRType = ??? // unknown
+
+
+  def toCall(params: List[Expr]) = FunctionCall(this, params)
+  def inline(params:List[Expr]) = {
+    body match {
+      case None => FunctionCall(this, params)
+      case Some(b) => {
+        val s = VariableReplacer(args.indices.map(i => args(i) -> params(i)).toMap)
+        s.visitExpr(b)
+      }
+    }
+  }
+
+}
 
 case class IfThenElse(cond: Expr, thenCase: Expr, elseCase: Expr) extends Expr {
   require (cond.getType == BoolType)
@@ -408,20 +438,27 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
 
-sealed trait Global
+sealed trait Global:
+  def scope = Scope.Global
 
-case class Memory(name: String, addressSize: Int, valueSize: Int) extends Expr with Global {
+case class Memory(name: String, addressSize: Int, valueSize: Int) extends Variable with Global {
+
+  override val irType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
+
   override def toBoogie: BMapVar =
     BMapVar(name, MapBType(BitVecBType(addressSize), BitVecBType(valueSize)), Scope.Global)
   override def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
   override val getType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
   override def toString: String = s"Memory($name, $addressSize, $valueSize)"
-  override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemory(this)
+  override def acceptVisit(visitor: Visitor): Variable = visitor.visitMemory(this)
+
+  override def variables: Set[Variable] = Set(this)
 }
 
 sealed trait Variable extends Expr {
   val name: String
   val irType: IRType
+  def scope: Scope
   override def getType: IRType = irType
   override def variables: Set[Variable] = Set(this)
   override def gammas: Set[Expr] = Set(this)
@@ -445,6 +482,7 @@ case class Register(override val name: String, override val irType: IRType) exte
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Global)
   override def toString: String = s"Register($name, $irType)"
   override def acceptVisit(visitor: Visitor): Variable = visitor.visitRegister(this)
+  override def scope = Scope.Global
 }
 
 case class LocalVar(override val name: String, override val irType: IRType) extends Variable {
@@ -452,4 +490,5 @@ case class LocalVar(override val name: String, override val irType: IRType) exte
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
   override def toString: String = s"LocalVar($name, $irType)"
   override def acceptVisit(visitor: Visitor): Variable = visitor.visitLocalVar(this)
+  override def scope = Scope.Local
 }
