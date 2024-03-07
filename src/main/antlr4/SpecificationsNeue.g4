@@ -2,10 +2,10 @@ grammar SpecificationsNeue;
 
 specTopLevel: sstruct EOF;
 
-lPreds: 'classification' lPred (COMMA lPred)* SCOLON;
-lPred: ident MAPSTO expr;
+// lPreds: 'classification' lPred (COMMA lPred)* SCOLON;
+// lPred: ident MAPSTO expr;
 
-conjunct_expr_list : expr (COMMA expr)*;
+// conjunct_expr_list : expr (COMMA expr)*;
 
 //relies: 'rely'  conjunct_expr_list SCOLON;
 //guarantees: 'guarantee' conjunct_expr_list SCOLON;
@@ -15,8 +15,8 @@ conjunct_expr_list : expr (COMMA expr)*;
 
 switchcase: '('test=expr ',' result=expr')';
 switchstmt: 'switch' expr switchcase+ ;
-fundeclaration: 'def' (EXTERN | GHOST)? (type='function'|'macro') (name=ident) (arglist) (EQ_OP sexpr)? ;
-valdeclaration: 'def' (EXTERN | GHOST)? (type='var'|'const') (name=ident) EQ_OP (EQ_OP sexpr)? ;
+fundeclaration: 'def' (EXTERN | GHOST)? (type='function'|'macro') (name=ident) (arglist) (EQ_OP expr)? ;
+valdeclaration: 'def' (EXTERN | GHOST)? (type='var'|'const') (name=ident) EQ_OP (EQ_OP expr)? ;
 declaration : fundeclaration | valdeclaration ; 
 
 assume_stmt : ASSUME (arg=expr) SCOLON ;
@@ -43,15 +43,10 @@ boogieTypeName: BVSIZE #bvBType
 arglist : expr (',' expr)* ;
 
 sexpterm : expr | declaration ;
-sexpdef: ident (COLON sexpTypeName)? '=' (sexpr);
+sexpdef: ident (COLON sexpTypeName)? '=' (expr);
 
 sstruct : '{' (sexpdef (';' sexpdef)*)? '}';
-slist : '(' sexpr (',' sexpr)* ')' ;
-sexpr : <assoc=right> sexpr slist // macro application
-       | sstruct
-       | slist
-       | sexpterm 
-       ;
+slist : '(' expr (',' expr)* ')' ;
 
 sexpTypeName : boogieTypeName
     | '{' (ident COLON sexpTypeName)* '}'
@@ -72,7 +67,10 @@ expr : arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
     | arg1=expr ( op=addSubOp arg2=expr )+ #arithExpr
     | arg1=expr ( op=mulDivModOp arg2=expr )+ #mathExpr
     | arg1=expr '[' (pointer=expr) (COMMA (beginslice=expr) (COLON (endslice=expr))? )? ']' #sliceExpr
-    | arg1=expr ('.' ident) #accessExpr
+    | arg1=expr ('.' (field=ident)) #fieldAccessExpr
+    | <assoc=right> expr slist #sexprApply
+    | sstruct #structExpr
+    | slist #listExpr
     | unaryExpr #unexp
     ;
 

@@ -44,7 +44,13 @@ enum SSExpr(typ: SType) extends SExpr:
   case SStruct(e: List[(String, SExpr)]) extends SSExpr(SType.SStruct(e.map((k,v) => (k , v.getType))))
   case SFunc(name: String, args: List[(String, SType)], ret: SType, body: Option[SExpr]) extends SSExpr(SType.Top)
   case SApply(fun: SFunc, args: SList) extends SSExpr(fun.ret)
-  case SIndirApply(fun: SExpr, args: SList) extends SSExpr(SType.Top)
+  case SIndirApply(fun: SExpr, args: SList) extends SSExpr(fun match 
+    case f: SFunc => f.ret
+    case _ => SType.Top
+    )
+  case SFieldAccess(struct: SExpr, field: String) extends SSExpr(struct match 
+    case s: SStruct => s.e.find(_._1 == field).get._2.getType
+    case _ => SType.Top)
 
 
   override def getType: SType = typ
@@ -142,6 +148,12 @@ enum SSExpr(typ: SType) extends SExpr:
         eval(f) match {
           case s: SFunc => eval(SApply(s, args))
           case _ => throw Exception(s"Expression does not evaluate to a function, cannot apply non-function.")
+        }
+      }
+      case SFieldAccess(s, field) => {
+        eval(s) match {
+          case SStruct(e) => e.find(_._1 == field).get._2
+          case _ => throw Exception("Cannot access field of non-struct.")
         }
       }
   }
@@ -256,12 +268,12 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     Specification(Set.empty, Map.empty, List.empty, List.empty, List.empty, Set.empty)
   }
 
-  def visitLPreds(ctx: LPredsContext) : Map[String, Expr] = {
-    variableBindings.enterPureLocalScope()
-    val r = ctx.lPred.asScala.map((lp: LPredContext) => (lp.ident.getText -> visitExpr(lp.expr))).toMap
-    variableBindings.leavePureLocalScope()
-    r
-  }
+  //def visitLPreds(ctx: LPredsContext) : Map[String, Expr] = {
+  //  variableBindings.enterPureLocalScope()
+  //  val r = ctx.lPred.asScala.map((lp: LPredContext) => (lp.ident.getText -> visitExpr(lp.expr))).toMap
+  //  variableBindings.leavePureLocalScope()
+  //  r
+  //}
 
 
   def andAll(el: Iterable[Expr]) = {
@@ -275,10 +287,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
   /**
    * Convert a comma separated list that represents a conjunction of expressions, 
    * to a single expression. 
-   */
   def visitConjunctExprList(ctx:Conjunct_expr_listContext) : Expr = {
     andAll(ctx.expr.asScala.map(visitExpr(_, Map.empty)).toList)
   }
+   */
 
 
 
@@ -338,22 +350,74 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     }
   }
 
+  /**
+   * We do one pass over the ast to load the IR expression language. 
+   * For SExpressions, we create a temporary variable and bind the sexpr to that variable, returning the variable. 
+   *
+   * In the second evaluation pass these sexpressions are resolved into IR expressions, and are substituted 
+   * back for the temporary variable. 
+   */
+  var tempCount = 0
+  val temporaries = HashMap[Variable, SExpr]()
+
+  /*
+   * Visit an expression and construct an IR expression where possible. 
+   */
+  def visitExprOpt(
+      ctx: ExprContext,
+      params: Map[String, Parameter] = Map()
+  ): Option[Expr] = {
+    ctx match {
+      case c : EquivExprContext => Some(visitEquivExpr(c))
+      case c : LogicalExprContext => Some(visitLogicalExpr(c))
+      case c : RelExprContext => Some(visitRelExpr(c))
+      case c : ArithExprContext => Some(visitArithExpr(c))
+      case c : MathExprContext => Some(visitMathExpr(c))
+      case c : UnexpContext => Some(visitUnaryExpr(c.unaryExpr, nameToGlobals, params))
+      case c : SliceExprContext => None 
+      case c : FieldAccessExprContext => None 
+      case c : SexprApplyContext => None
+      case c : StructExprContext => None
+      case c : ListExprContext => None
+    }
+  }
+
+
   def visitExpr(
       ctx: ExprContext,
       params: Map[String, Parameter] = Map()
   ): Expr = {
-    ctx match {
-      case c : EquivExprContext => visitEquivExpr(c)
-      case c : LogicalExprContext => visitLogicalExpr(c)
-      case c : RelExprContext => visitRelExpr(c)
-      case c : ArithExprContext => visitArithExpr(c)
-      case c : MathExprContext => visitMathExpr(c) 
-      case c : SliceExprContext => FalseLiteral 
-      case c : AccessExprContext => FalseLiteral 
-      case c : UnexpContext => visitUnaryExpr(c.unaryExpr, nameToGlobals, params)
+    visitExprOpt(ctx, params) match {
+      case Some(s) => s
+      case None => {
+        // we will come past and re-substitute the evaluated sexp at eval time
+        val variable = LocalVar(s"temp_$tempCount", BitVecType(-1))
+        temporaries(variable) = visitSExpr(ctx)
+        tempCount += 1
+        variable
+      }
     }
+  }
 
-    FalseLiteral
+
+  /**
+   * Visit an expression and return an S expression; wrapping ir expressions in Val. 
+   */
+  def visitSExpr(ctx: ExprContext): SExpr = {
+      visitExprOpt(ctx) match {
+        case Some(s) => Val(s)
+        case None => ctx match {
+          case c : FieldAccessExprContext => Val(FalseLiteral)
+          case c : SexprApplyContext => Val(FalseLiteral)
+          case c : StructExprContext => Val(FalseLiteral)
+          case c : ListExprContext => Val(FalseLiteral)
+        }
+    }
+  }
+
+
+  def visitFieldAccess(ctx: FieldAccessExprContext) : SFieldAccess = {
+    SFieldAccess(visitSExpr(ctx), ctx.field.getText)
   }
 
   def visitEquivExpr(ctx: EquivExprContext): Expr = {
