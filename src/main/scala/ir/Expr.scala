@@ -300,7 +300,7 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
         case IntEQ | IntNEQ | IntLT | IntLE | IntGT | IntGE => BoolType
       }
     case _ =>
-      throw new Exception("type mismatch, operator " + op + " type doesn't match args: (" + arg1 + ", " + arg2 + ")")
+      throw new Exception(s"type mismatch, operator ${op.getClass.getSimpleName} ($op) type doesn't match args: ($arg1 : ${arg1.getType}, $arg2 : ${arg2.getType})")
   }
 
   private def inSize = arg1.getType match {

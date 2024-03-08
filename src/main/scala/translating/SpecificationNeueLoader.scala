@@ -22,6 +22,10 @@ import analysis.evaluateExpression
 
 //case class SpecificationInfo(variables: Set[Variable]) 
 
+
+class TypeError(msg: String) extends Exception(msg)
+
+
 sealed trait SExpr:
   def satisfies(o: SExpr) : Boolean
   def getType: SType
@@ -32,14 +36,36 @@ enum SType:
   case Top 
   case Bot
   case Symbol
-  case Val
+  case Val(t: IRType)
+  case NumberVal
+  case MapVal
   case SList(typs: List[SType])
-  case SStruct(fields: List[(String, SType)])
+  case SStruct(fields: List[(String, SType)]) // note that any struct satisfies SStruct(List.empty)
   case Fun(args: SSExpr.SList, ret: SType)
+
+  def satisfies(o: SType) : Boolean = {
+    // this satisfies o
+    // o :>  this
+    ((o, this) match {
+      case (Bot, _) => false
+      case (Top, _) => true
+      case (NumberVal, Val(b: BitVecType))  => true
+      case (NumberVal, Val(IntType)) => true
+      case (MapVal, Val(b: MapType)) => true
+      // Any list is compatible with any other list, we dont consider number or type of list elements, for that purpose we have struct.
+      case (SList(a), SList(b)) => true
+      //case (SList(a), SStruct(b)) => b.size >= a.size && a.indices.forall(i => a(i) == b(i)._2)   // coercible not compatible
+      //case (SStruct(a), SList(b)) => b.size >= a.size && a.indices.forall(i => a(i)._2 == b(i))  
+      // Structs b <: a if all fields in b are in a, and have compatible types
+      case (SStruct(a), SStruct(b)) => b.size >= a.size && a.indices.forall(i => a(i)._1 == b(i)._1 && (b(i)._2.satisfies(a(i)._2)))  
+      case (a, b) => a == b
+    })
+}
+
 
 enum SSExpr(typ: SType) extends SExpr:
   case SVariable(name: String, typ: SType) extends SSExpr(typ)
-  case Val(e: Expr) extends SSExpr(SType.Val)
+  case Val(e: Expr) extends SSExpr(SType.Val(e.getType))
   case SList(e: List[SExpr]) extends SSExpr(SType.SList(e.map(_.getType)))
   case SStruct(e: List[(String, SExpr)]) extends SSExpr(SType.SStruct(e.map((k,v) => (k , v.getType))))
   case SFunc(name: String, args: List[(String, SType)], ret: SType, body: Option[SExpr]) extends SSExpr(SType.Top)
@@ -59,19 +85,8 @@ enum SSExpr(typ: SType) extends SExpr:
    * this :< o
    */
   override def satisfies(o: SExpr) : Boolean = {
-    (this, o) match 
-      // case (Symbol(a), Symbol(b)) => true
-      case (Val(a), Val(b)) => a.getType == b.getType
-      case (SList(a), SList(b)) => {
-        (a.length == b.length) &&
-        a.indices.forall(i => a(i).satisfies(b(i)))
-      }
-      case (SStruct(a), SStruct(b)) => {
-        a.size == b.size
-        && a.indices.forall(i => a(i)._1 == b(i)._1 && a(i)._2.satisfies(b(i)._2))
-      }
-      case _ => false
-    }
+    o.getType.satisfies(typ)
+  }
 
 
   override def toExpr: Option[Expr] = {
@@ -86,6 +101,7 @@ enum SSExpr(typ: SType) extends SExpr:
   override def toSList : SList = {
     this match {
       case s: SList => s
+      case s: SStruct => SList(s.e.map(_._2))
       case o => SList(List(o)) 
     }
   }
@@ -110,6 +126,7 @@ enum SSExpr(typ: SType) extends SExpr:
 
     o match {
       case Val(e) => {
+        println(s"val $bindings")
         val replacer = VariableReplacer(bindings.flatMap(_.flatMap((k: String, v: SExpr) => v.toExpr.map(k -> _))).toMap)
         Val(replacer.visitExpr(e))
       } 
@@ -119,8 +136,18 @@ enum SSExpr(typ: SType) extends SExpr:
       } 
       case SList(e) => SList(e.map(eval))
       case SStruct(e) => {
+        // Each successively defined field in the struct gets bound, so can be referred to 
+        // in later terms. 
+        //
+        // This is similar to a regular variable definition in an expression/statement
+        // let x = blah in
+        // let y = x + 1 in 
+        //  ...
+        //
+        //  These are available only for subexpressions of the struct. 
         val evaled = HashMap[String, SExpr]()
         for ((name, value) <- e) {
+          println(s"str $bindings")
           val res = eval(value)
           evaled(name) = res
           bindings.push(Map(name -> res))
@@ -135,7 +162,15 @@ enum SSExpr(typ: SType) extends SExpr:
         fun.body match {
           case None => SApply(fun, eval(args).toSList)
           case Some(body) => {
+            // evaluate arguments, bind them to parameter variables, evaluate body, replace the call with the body
             val bs = args.e.indices.map(i => (fun.args(i)._1 -> eval(args.e(i)))).toMap
+
+            val funparamtypes = SStruct(bs.toList).getType
+            val argumetypes = SType.SStruct(fun.args)
+
+            if (!(argumetypes.satisfies(funparamtypes))) {
+              throw TypeError(s"Function call type mismatch: $argumetypes does not satisfy $funparamtypes")
+            }
             bindings.push(bs)
             val nb = eval(body)
             bindings.pop()
@@ -147,13 +182,13 @@ enum SSExpr(typ: SType) extends SExpr:
       case SIndirApply(f, args) => {
         eval(f) match {
           case s: SFunc => eval(SApply(s, args))
-          case _ => throw Exception(s"Expression does not evaluate to a function, cannot apply non-function.")
+          case _ => throw TypeError(s"Expression does not evaluate to a function, cannot apply non-function.")
         }
       }
       case SFieldAccess(s, field) => {
         eval(s) match {
           case SStruct(e) => e.find(_._1 == field).get._2
-          case _ => throw Exception("Cannot access field of non-struct.")
+          case _ => throw TypeError("Cannot access field of non-struct.")
         }
       }
   }
@@ -256,10 +291,52 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     variableBindings.push(Map("mem" -> mem))
     variableBindings.push(idToSymbol)
 
+    val spec = visitStructExpr(ctx.sstruct)
+    val evaled = spec.eval(spec)
+
+    println(s"$evaled")
+
+
+    val mapped = evaled match {
+      case SStruct(e) => e.toMap
+      case _ => throw Exception("Unreachable.")
+    }
+
+    def getProcedureSpec(name: String, mapped: Map[String, SExpr]) : SubroutineSpec = {
+      // all this should be validated via type-checking first. 
+      val relies = mapped.get("relies").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val guarantees = mapped.get("guarantees").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val requires = mapped.get("requires").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val ensures = mapped.get("ensures").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val mods = mapped.get("modifies").toList.collect(_ match {
+        case SList(e) => e.map(_ match {
+          case Val(v : Variable) => v.name
+          case _ => throw TypeError("non-variable modifies clause")
+        })
+        case _ => throw TypeError("Mods must be a slist")
+      }).flatten
+
+      SubroutineSpecinfo(name, relies, guarantees, mods, requires, ensures).toProcSpec
+    }
+
+    val relies = mapped.get("relies")
+    val guarantees = mapped.get("guarantees")
+    val lpreds = mapped.get("L")
+
+    val procedures = mapped.get("procedures").map(procdefs => procdefs match {
+      case SStruct(e) => e.map((procname, procspec) => procspec match {
+        case SStruct(s) => getProcedureSpec(procname, s.toMap)
+        case _ => throw TypeError("Procedures should be map.")
+      })
+      case _ => throw TypeError("Procedures should be map.")
+    })
+
+
+
+
     //val relies = ctx.relies.asScala.map(visitRelies)
     //val guarantees = ctx.guarantees.asScala.map(visitGuarantees)
     //val procedures = ctx.procedure.asScala.map(visitProcedure)
-    //val blocks = ctx.block.asScala.map(visitBlock)
     //val lpreds = ctx.lPreds.asScala.flatMap(visitLPreds)
 
     variableBindings.pop()
@@ -294,7 +371,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
 
 
 
-  case class SubroutineSpecinfo(name: String, relies: Expr, guarantees: Expr, mods: Buffer[String], requires: Expr, ensures: Expr) {
+  case class SubroutineSpecinfo(name: String, relies: Expr, guarantees: Expr, mods: List[String], requires: Expr, ensures: Expr) {
     def toProcSpec = SubroutineSpec(
         name,
         List(relies.toBoogie),
@@ -306,40 +383,6 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
          List(guarantees.toBoogie)
     )
   }
-
-  // def sVisitProcedure(ctx: ProcedureContext) = {
-  //   val name = ctx.ident.getText
-  //   val relies: Expr = andAll(ctx.relies.asScala.map(visitRelies))
-  //   val guarantees: Expr = andAll(ctx.guarantees.asScala.map(visitGuarantees))
-  //   val mods = (ctx.modifies.asScala.flatMap(c => c.ident.asScala.map(_.getText)))
-  //   val requries: Expr = andAll(ctx.requires.asScala.map(visitRequires))
-  //   val ensures: Expr = andAll(ctx.ensures.asScala.map(visitEnsures))
-
-  //   SList(
-  //     List(Symbol("procedure"),
-  //     Symbol(name), (SStruct(Map(
-  //       "relies" -> Val(relies),
-  //       "guarantees" -> Val(guarantees),
-  //       "modifies" -> SList(mods.map(Symbol(_)).toList),
-  //       "requires" -> Val(requries),
-  //       "ensures" -> Val(ensures)
-  //     )))))
-  // }
-
-  //def visitProcedure(ctx: ProcedureContext) : SubroutineSpecinfo = {
-  //  val name = ctx.ident.getText
-  //  val relies: Expr = andAll(ctx.relies.asScala.map(visitRelies))
-  //  val guarantees: Expr = andAll(ctx.guarantees.asScala.map(visitGuarantees))
-  //  val mods = (ctx.modifies.asScala.flatMap(c => c.ident.asScala.map(_.getText)))
-  //  val requries: Expr = andAll(ctx.requires.asScala.map(visitRequires))
-  //  val ensures: Expr = andAll(ctx.ensures.asScala.map(visitEnsures))
-  //  SubroutineSpecinfo(name, relies, guarantees, mods, requries, ensures)
-  //}
-
-  //def visitBlock(ctx: BlockContext) = {
-
-  //}
-
 
   def visitTypeName(ctx: BoogieTypeNameContext) : IRType = {
     ctx match {
@@ -375,6 +418,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case c : MathExprContext => Some(visitMathExpr(c))
       case c : UnexpContext => Some(visitUnaryExpr(c.unaryExpr, nameToGlobals, params))
       case c : SliceExprContext => None 
+      case c : AccessRangeExprContext => None 
       case c : FieldAccessExprContext => None 
       case c : SexprApplyContext => None
       case c : StructExprContext => None
@@ -391,10 +435,17 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case Some(s) => s
       case None => {
         // we will come past and re-substitute the evaluated sexp at eval time
-        val variable = LocalVar(s"temp_$tempCount", BitVecType(-1))
-        temporaries(variable) = visitSExpr(ctx)
-        tempCount += 1
-        variable
+        val sr = visitSExpr(ctx)
+        sr.toExpr match {
+          case Some(e) => e
+          case None => {
+            val variable = LocalVar(s"temp_$tempCount", BitVecType(-1))
+            temporaries(variable) = sr
+            println(s"Create temp $variable -> ${temporaries(variable)}")
+            tempCount += 1
+            variable
+          }
+        }
       }
     }
   }
@@ -407,18 +458,23 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       visitExprOpt(ctx) match {
         case Some(s) => Val(s)
         case None => ctx match {
-          case c : FieldAccessExprContext => Val(FalseLiteral)
-          case c : SexprApplyContext => Val(FalseLiteral)
-          case c : StructExprContext => Val(FalseLiteral)
-          case c : ListExprContext => Val(FalseLiteral)
+          case c : SliceExprContext => Val(FalseLiteral)
+          case c : AccessRangeExprContext => Val(FalseLiteral)
+          case c : FieldAccessExprContext => visitFieldAccess(c)
+          case c : SexprApplyContext => visitApplyExpr(c)
+          case c : StructExprContext => visitStructExpr(c.sstruct)
+          case c : ListExprContext => visitListExpr(c.slist)
         }
     }
   }
 
+  val accessRangeFunc = SFunc("arrayslice", List(("base", SType.NumberVal), ("size", SType.NumberVal)), SType.NumberVal, None)
+  val accessCellFunc = SFunc("get", List(("base", SType.NumberVal)), SType.NumberVal, None)
+  val bitvecSliceFunc = SFunc("slice", List(("begin", SType.NumberVal), ("end", SType.NumberVal)), SType.NumberVal, None)
+  val binopfun = SFunc("binop", List(("op", SType.Symbol), ("left", SType.Top), ("right", SType.Top)), SType.Top, None)
+  val unopfun = SFunc("unop", List(("op", SType.Symbol), ("arg", SType.Top)), SType.Top, None)
+  val predfun = SFunc("forall", List(("binds", SType.SStruct(List.empty)), ("arg", SType.Top)), SType.Top, None)
 
-  def visitFieldAccess(ctx: FieldAccessExprContext) : SFieldAccess = {
-    SFieldAccess(visitSExpr(ctx), ctx.field.getText)
-  }
 
   def visitEquivExpr(ctx: EquivExprContext): Expr = {
      ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => BinaryExpr(BoolEQUIV, l, visitExpr(r)))
@@ -428,9 +484,6 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
      ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => BinaryExpr(visitLogOp(ctx.op), l, visitExpr(r)))
   }
 
-  def visitRelExpr(ctx: RelExprContext) = {
-     ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => BinaryExpr(visitRelOp(ctx.op), l, visitExpr(r)))
-  }
 
   def visitArithExpr(ctx: ArithExprContext) = {
      ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => BinaryExpr(visitAddSubOp(ctx.op), l, visitExpr(r)))
@@ -441,86 +494,39 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
   }
 
   def visitSliceExpr(ctx: SliceExprContext) = {
-
   }
 
-
-
-  //def visitImpliesExpr(
-  //    ctx: ImpliesExprContext,
-  //    nameToGlobals: Map[String, Variable],
-  //    params: Map[String, Parameter] = Map()
-  //): Expr = Option(ctx.arg2) match {
-  //  case Some(_) =>
-  //    BinaryExpr(
-  //      BoolIMPLIES,
-  //      visitLogicalExpr(ctx.arg1, nameToGlobals, params),
-  //      visitImpliesExpr(ctx.arg2, nameToGlobals, params)
-  //    )
-  //  case None => visitLogicalExpr(ctx.arg1, nameToGlobals, params)
-  //}
-
-  def visitLogicalExpr(
-      ctx: LogicalExprContext,
-      nameToGlobals: Map[String, Variable],
-      params: Map[String, Parameter] = Map()
-  ): Expr = {
-    //val rels = ctx.expr.asScala.map(r => visitRelExpr(r, nameToGlobals, params))
-    //if (rels.size > 1) {
-    //  val op = if (ctx.AND_OP.size > 0) {
-    //    BoolAND
-    //  } else {
-    //    BoolOR
-    //  }
-    //  rels.tail.foldLeft(rels.head)((opExpr: Expr, next: Expr) => BinaryExpr(op, opExpr, next))
-    //} else {
-    //  rels.head
-    //}
-    FalseLiteral
+  def visitFieldAccess(ctx: FieldAccessExprContext) : SFieldAccess = {
+    SFieldAccess(visitSExpr(ctx.arg1), ctx.field.getText)
   }
 
-  def visitRelExpr(
-      ctx: RelExprContext,
-      nameToGlobals: Map[String, Variable],
-      params: Map[String, Parameter] = Map()
-  ): Expr = Option(ctx.arg2) match {
-    case Some(_) =>
-      BinaryExpr(
-        visitRelOp(ctx.op),
-        visitExpr(ctx.arg1,params),
-        visitExpr(ctx.arg2,params)
-      )
-    case None => visitExpr(ctx.arg1, params)
+  def visitStructExpr(ctx: SstructContext) : SStruct = {
+    SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText, visitSExpr(d.expr))).toList)
   }
 
-  //def visitTerm(
-  //    ctx: TermContext,
-  //    nameToGlobals: Map[String, Variable],
-  //    params: Map[String, Parameter] = Map()
-  //): Expr = Option(ctx.arg2) match {
-  //  case Some(_) =>
-  //    BinaryExpr(
-  //      visitAddSubOp(ctx.op),
-  //      visitFactor(ctx.arg1, nameToGlobals, params),
-  //      visitFactor(ctx.arg2, nameToGlobals, params)
-  //    )
-  //  case None => visitFactor(ctx.arg1, nameToGlobals, params)
-  //}
+  def visitListExpr(ctx: SlistContext) : SList = {
+    SList(ctx.expr.asScala.map(visitSExpr).toList)
+  }
 
+  def visitApplyExpr(ctx: SexprApplyContext) : SExpr = {
+    SIndirApply(visitSExpr(ctx.expr), visitListExpr(ctx.slist))
+  }
 
-  //def visitFactor(
-  //    ctx: FactorContext,
-  //    nameToGlobals: Map[String, Variable],
-  //    params: Map[String, Parameter] = Map()
-  //): Expr = Option(ctx.arg2) match {
-  //  case Some(_) =>
-  //    BinaryExpr(
-  //      visitMulDivModOp(ctx.op),
-  //      visitUnaryExpr(ctx.arg1, nameToGlobals, params),
-  //      visitUnaryExpr(ctx.arg2, nameToGlobals, params)
-  //    )
-  //  case None => visitUnaryExpr(ctx.arg1, nameToGlobals, params)
-  //}
+  def visitRelExpr(ctx: RelExprContext) = {
+     ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => {
+      val left = l
+      val right = visitExpr(r)
+
+      val op = (left.getType) match {
+        case BoolType => visitBoolRelOp(ctx.op)
+        case IntType => visitIntRelOp(ctx.op)
+        case _: BitVecType => visitRelOp(ctx.op)
+        case _ => throw TypeError("Cannot have BinOp for map type")
+      }
+
+      BinaryExpr(op, left, right)
+     })
+  }
 
   def visitUnaryExpr(
       ctx: UnaryExprContext,
@@ -595,38 +601,6 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case c: PredicateExprContext => visitPredicateExpr(c.predicate)
   }
 
-  //def visitLoadSlice(
-  //    ctx: LoadSliceContext,
-  //): MemoryLoad = {
-  //  val global = if ctx.region != null then (visitId(ctx.region) match {
-  //    case g: Memory => g
-  //    case _ => mem
-  //  }) else mem
-  //  val ptr = visitExpr(ctx.pointer)
-  //  val size = (ctx.endslice, ctx.beginslice) match
-  //      case (begin, end) if begin != null && end != null=>
-  //        // slice array access returns bitvec of subarray
-  //        evaluateExpression(BinaryExpr(BVSUB, visitExpr(begin), visitExpr(end)), Map.empty) match
-  //          case Some(b) => b.value.toInt * mem.valueSize
-  //          case None => throw IllegalArgumentException("Unable to evaluate expression, load size must be known statically")
-  //      case (begin, null) if begin != null => mem.valueSize // scalar access of one array cell
-  //      case (_, _) => ptr.match // infer size from global regions size
-  //        case v: Variable if globals.exists(_.name == v.name.stripSuffix("_addr").stripPrefix("$")) =>
-  //          globals.find(_.name == v.name.stripSuffix("_addr").stripPrefix("$")).get.size
-  //        case _ => throw IllegalArgumentException("Unable to evaluate expression, load size must be known statically")
-  //  MemoryLoad(global, ptr, Endian.LittleEndian, size)
-  //}
-
-
-  //def visitArrayAccess(
-  //    ctx: ArrayAccessContext,
-  //): MemoryLoad = {
-  //  val global = visitId(ctx.ident) match {
-  //    case g: Memory => g
-  //    case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
-  //  }
-  //  MemoryLoad(global, visitExpr(ctx.expr), Endian.LittleEndian, global.valueSize)
-  //}
 
   def visitBv(ctx: BvContext): BitVecLiteral = {
     BitVecLiteral(BigInt(ctx.value.getText), Integer.parseInt(ctx.BVSIZE.getText.stripPrefix("bv")))
@@ -665,9 +639,9 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     val id = ctx.getText
 
       variableBindings.resolve(id.stripPrefix("Gamma_")) match
-        case Some(x) if id.startsWith("Gamma_") => LocalVar(id, x.getType)
+        case Some(x) if id.startsWith("Gamma_") => LocalVar(id, BoolType)
         case Some(x) => x
-        case None => throw Exception(s"Unable to resolve reference to $id")
+        case None => LocalVar(id, BitVecType(-1))
   }
 
   def visitMulDivModOp(ctx: MulDivModOpContext): BVBinOp = ctx.getText match {
@@ -699,6 +673,20 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     case "<=" => BVSLE
   }
 
+  def visitIntRelOp(ctx: RelOpContext): IntBinOp = ctx.getText match {
+    case "==" => IntEQ
+    case "!=" => IntNEQ
+    case ">"  => IntGT
+    case ">=" => IntGE 
+    case "<"  => IntLT 
+    case "<=" => IntLE
+  }
+
+
+  def visitBoolRelOp(ctx: RelOpContext): BoolBinOp = ctx.getText match {
+    case "==" => BoolEQ 
+    case "!=" => BoolNEQ
+  }
 
 
 }
