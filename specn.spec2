@@ -1,0 +1,12 @@
+{
+  relies = (z == old(z));
+  guarantees = z >= old(z);
+  ensures = false;
+  procedures = {
+    main = {
+      relies = true;
+      requires = (Gamma_x == true) && (Gamma_z == true) && (Gamma_secret == relies) && (z == 0bv64) ;
+      g = (forall x: bv64 :: x > 0bv64)
+    }
+  }
+}
