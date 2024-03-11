@@ -108,17 +108,6 @@ case class SignExtend(extension: Int, body: Expr) extends Expr {
 }
 
 
-case class ParenExpr(body: Expr) extends Expr  {
-  override def toBoogie: BExpr = BParenExpr(body.toBoogie)
-  override def gammas: Set[Expr] = body.gammas
-  override def variables: Set[Variable] = body.variables
-  override def getType: IRType = body.getType
-  override def toString: String = body.toString
-  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
-  override def loads: Set[MemoryLoad] = body.loads
-}
-
-
 case class OldExpr(body: Expr) extends Expr  {
   override def toBoogie: BExpr = Old(body.toBoogie)
   override def gammas: Set[Expr] = body.gammas
@@ -188,7 +177,6 @@ case object IntNEG extends IntUnOp("-")
 sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
 }
-
 
 
 case class FunctionCall(function: Function, params: List[Expr]) extends Expr {
