@@ -66,10 +66,11 @@ expr : arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
     | arg1=expr ( op=relOp arg2=expr )+ #relExpr
     | arg1=expr ( op=addSubOp arg2=expr )+ #arithExpr
     | arg1=expr ( op=mulDivModOp arg2=expr )+ #mathExpr
-    | region=expr '[' (arg=expr) ']'                    #accessRangeExpr // arg = (base) | (base, size) : bitvec subvec / array subvec expr
-    | region=expr '[' (arg1=expr) COLON (arg2=expr) ']' #sliceExpr // bitvec slice expr / array slice expr
+    // | region=expr '[' (arg=expr) ']'                    #accessRangeExpr // arg = (base) | (base, size) : bitvec subvec / array subvec expr
+    // | region=expr '[' (arg1=expr) COLON (arg2=expr) ']' #sliceExpr // bitvec slice expr / array slice expr
     | arg1=expr ('.' (field=ident)) #fieldAccessExpr
     | expr slist #sexprApply
+    | fun=expr '[' arg=expr ']' #sexprIndirApply
     | sstruct #structExpr
     | slist #listExpr
     | unaryExpr #unexp

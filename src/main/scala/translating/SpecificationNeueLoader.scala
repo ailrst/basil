@@ -31,8 +31,9 @@ sealed trait SExpr:
   def satisfies(o: SExpr): Boolean
   def getType: SType
   def toSList: SSExpr.SList
+  def toSStruct(t: SType.SStruct): SSExpr.SStruct
   def toExpr: Option[Expr]
-  def prettyPrint(w: Writer, indentLevel : Int) : String  
+  def prettyPrint(w: Writer, indentLevel: Int): String
 
 enum SType:
   case Top
@@ -63,8 +64,9 @@ enum SType:
       // Structs b <: a if all fields in b are in a, and have compatible types
       case (SStruct(a), SStruct(b)) =>
         b.size >= a.size && a.indices.forall(i => a(i)._1 == b(i)._1 && (b(i)._2.satisfies(a(i)._2)))
+      // The type of a function argument list is intentionally the same as the type of struct.
       case (SFunc(ap, ar), SFunc(bp, br)) => SStruct(bp).satisfies(SStruct(ap)) && br.satisfies(ar)
-      case (a, b) => a == b
+      case (a, b)                         => a == b
     })
   }
 
@@ -75,8 +77,8 @@ enum SSExpr(typ: SType) extends SExpr:
   case SList(e: List[SExpr]) extends SSExpr(SType.SList(e.map(_.getType)))
   case SStruct(e: List[(String, SExpr)]) extends SSExpr(SType.SStruct(e.map((k, v) => (k, v.getType))))
   case SFunc(name: String, args: List[(String, SType)], ret: SType, body: Option[SExpr]) extends SSExpr(SType.Top)
-  case SApply(fun: SFunc, args: SList) extends SSExpr(fun.ret)
-  case SIndirApply(fun: SExpr, args: SList)
+  case SApply(fun: SFunc, args: SList) extends SSExpr(fun.ret) 
+  case SIndirApply(fun: SExpr, args: SExpr) // evaluates down to an SApply.
       extends SSExpr(fun match
         case f: SFunc => f.ret
         case _        => SType.Top
@@ -87,17 +89,16 @@ enum SSExpr(typ: SType) extends SExpr:
         case _          => SType.Top
       )
 
+  override def prettyPrint(w: Writer = StringWriter(), indentLevel: Int = 0): String = {
 
-  override def prettyPrint(w: Writer = StringWriter(), indentLevel : Int = 0) : String  = {
-    
     this match {
-      case Val(n: Variable)               => w.write(s"${n.name}")
-      case Val(e)               => w.write(e.toString)
+      case Val(n: Variable)                 => w.write(s"${n.name}")
+      case Val(e)                           => w.write(e.toString)
       case SVariable(name, SType.Val(t), _) => w.write(s"$name")
-      case SVariable(name, t, _) => w.write(s"$name")
-      case SSymbol(e)           => w.write(e)
-      case SList(e)             => {
-        w.write("(") 
+      case SVariable(name, t, _)            => w.write(s"$name")
+      case SSymbol(e)                       => w.write(e)
+      case SList(e) => {
+        w.write("(")
         e.head.prettyPrint(w, indentLevel)
         e.tail.foreach(v => {
           w.write(", ")
@@ -105,13 +106,13 @@ enum SSExpr(typ: SType) extends SExpr:
         })
         w.write(")")
       }
-      case SStruct(e)           => {
-        w.write("{") 
+      case SStruct(e) => {
+        w.write("{")
         w.write("\n")
         w.write("  " * (indentLevel + 1))
         w.write(s"${e.head._1} = ")
-        e.head._2.prettyPrint(w, indentLevel+1)
-        e.tail.foreach((n,v) => {
+        e.head._2.prettyPrint(w, indentLevel + 1)
+        e.tail.foreach((n, v) => {
           w.write(";\n")
           w.write("  " * (indentLevel + 1))
           w.write(s"${n} = ")
@@ -120,10 +121,10 @@ enum SSExpr(typ: SType) extends SExpr:
         w.write("\n  " * (indentLevel))
         w.write("}")
       }
-      case e: SFunc             => w.write(s"${e.name} ${e.args} -> ${e.body.map(_.toString).getOrElse(e.ret.toString)}")
-      case e: SApply            => w.write(s"${e.fun.name} ${e.args}")
-      case e: SIndirApply       => w.write(e.toString)
-      case e: SFieldAccess      => w.write(e.toString)
+      case e: SFunc        => w.write(s"${e.name} ${e.args} -> ${e.body.map(_.toString).getOrElse(e.ret.toString)}")
+      case e: SApply       => w.write(s"${e.fun.name} ${e.args}")
+      case e: SIndirApply  => w.write(e.toString)
+      case e: SFieldAccess => w.write(e.toString)
     }
 
     w.write(" " * indentLevel)
@@ -140,19 +141,48 @@ enum SSExpr(typ: SType) extends SExpr:
 
   override def toExpr: Option[Expr] = {
     this match {
-      case Val(e)               => Some(e)
-      case SList(e :: Nil)      => e.toExpr
+      case Val(e)                           => Some(e)
+      case SList(e :: Nil)                  => e.toExpr
       case SVariable(name, SType.Val(t), _) => Some(LocalVar(name, t))
-      case SSymbol(e)           => None
-      case SList(e)             => None
-      case SStruct(_)           => None
-      case _: SVariable => None
-      case _: SFunc             => None
-      case _: SApply            => None
-      case _: SIndirApply       => None
-      case _: SFieldAccess      => None
+      case SSymbol(e)                       => None
+      case SList(e)                         => None
+      case SStruct(_)                       => None
+      case _: SVariable                     => None
+      case _: SFunc                         => None
+      case _: SApply                        => None
+      case _: SIndirApply                   => None
+      case _: SFieldAccess                  => None
     }
   }
+
+  /**
+   * Coerce this to struct satisfying a given type. 
+   *
+   * If we contain more fields than the struct then arbitarry fields names are used.  
+   */
+  override def toSStruct(t: SType.SStruct): SStruct = {
+    var fieldCounter = 0
+    val firstFieldName = t.fields.head._1
+
+    val fieldnames = t.fields.map(_._1).toArray
+
+    val sform : SStruct = this match {
+      case s: Val => SStruct(List((fieldnames(0), s)))
+      case s: SList   => SStruct(s.e.indices.map(i =>  {
+        val fieldname = (if (i < fieldnames.size) then fieldnames(i) else s"field${fieldCounter+=1}")
+        (fieldname, s.e(i))
+        }).toList)
+      case s: SStruct  =>  s
+      case o  => SStruct(List((fieldnames(0), o)))
+    }
+
+    if (!sform.getType.satisfies(t)) {
+      throw TypeError(s"Cannot coerce $this to sstruct ($t)")
+    }
+
+    sform
+  }
+
 
   override def toSList: SList = {
     this match {
@@ -162,7 +192,36 @@ enum SSExpr(typ: SType) extends SExpr:
     }
   }
 
+
+class Evaluator {
+  import SSExpr._
+
   val bindings = Stack[Map[String, SExpr]]()
+
+  bindings.push(Map(("mem" -> Val(Memory("mem", 64, 8)))))
+
+  val memoryRegionType = SType.SStruct(List(
+      ("region", SType.SSymbol), 
+      ("address", SType.NumberVal),
+      ("size", SType.NumberVal)
+    ))
+
+
+  def bindGlobals(globs: Set[SpecGlobal]) = {
+    // case class SpecGlobal(name: String, override val size: Int, arraySize: Option[Int], address: BigInt)
+
+    val globMap = globs.map(g => s"${g.name}_region" -> SStruct(List(
+      ("name", SSymbol(g.name)), 
+      ("region", SSymbol("mem")), 
+      ("address", Val(IntLiteral(g.address))),
+      ("size", Val(IntLiteral(g.size)))
+    ))).toMap
+
+    val globLoads = globs.map(g => s"${g.name}" -> SApply(BuiltinFun.accessRangeFunc, SList(List(SVariable("mem", SType.MapVal), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))).toMap
+
+    bindings.push(globMap)
+    bindings.push(globLoads)
+  }
 
   def lookupBinding(n: String): Option[SExpr] = {
     val it = bindings.reverseIterator
@@ -187,14 +246,39 @@ enum SSExpr(typ: SType) extends SExpr:
   //val oldfun: SFunc = SFunc("old", List(("arg", SType.Top)), SType.Top, None)
   //val ifthenelsefun: SFunc =
 
-
-
-  //  Assuming we have already typechecked. 
+  //  Assuming we have already typechecked.
   //  Assuming a.fun.body == None
   def evalBuiltInFunction(a: SApply): SExpr = {
+    def evalPredicateFunc(a: SApply, sort: Quantifier): SExpr = {
+      val ffun = a.args.toSList match {
+        case SList((h : SFunc) :: Nil) => h
+        case _        => ??? // impossible by typecheck
+      }
+
+      val varargs: List[Variable] = ffun.args.map((n, t) =>
+        (t match {
+          case SType.Val(tt) => LocalVar(n, tt)
+          case _             => throw Exception("Illegal predicate lambda argument type")
+        })
+      )
+
+      // partially evaluate body to get an expression
+      val ebody = eval(SApply(ffun, SList(ffun.args.map((n, t) => SVariable(n, t, true)))))
+
+      ebody.toExpr match {
+        case Some(e) =>
+          Val(sort match {
+            case Quantifier.forall => ForAll(varargs, e)
+            case Quantifier.exists => Exists(varargs, e)
+            case Quantifier.lambda => throw NotImplementedError() // not really represented in the IL either yet
+          })
+        case None => throw Exception(s"Predicates cannot have compound body (${ffun.body})")
+      }
+    }
+
     println(s"\nAPPLY: ${a}\n")
     a.fun match {
-      //case BuiltinFun.accessRangeFunc =>  Val(FalseLiteral)
+      case BuiltinFun.accessRangeFunc =>  Val(FalseLiteral)
       //case BuiltinFun.accessCellFunc =>  Val(FalseLiteral)
       //case BuiltinFun.bitvecSliceFunc =>  Val(FalseLiteral)
       case BuiltinFun.binopfun => {
@@ -229,32 +313,25 @@ enum SSExpr(typ: SType) extends SExpr:
 
         Val(UnaryExpr(oper, arg))
       }
-      case BuiltinFun.forallfun     => {
-        val ffun = a.args.e.head match {
-          case f : SFunc => f
-          case _ => ??? // impossible by typecheck
-        }
-
-        val varargs: List[Variable] = ffun.args.map((n,t) => (t match {
-          case SType.Val(tt) => LocalVar(n, tt)
-          case _ => throw Exception("Illegal predicate lambda argument type")
-        }))
-
-        // partially evaluate body to get an expression
-        val ebody = eval(SApply(ffun, SList(ffun.args.map((n,t) => SVariable(n, t, true)))))
-
-        ebody.toExpr match {
-          case Some(e) => Val(ForAll(varargs, e))
-            case None => throw Exception(s"Predicates cannot have compound body (${ffun.body})") 
-        }
-      }
-      case BuiltinFun.existsfun     => Val(FalseLiteral)
+      case BuiltinFun.forallfun     => evalPredicateFunc(a, Quantifier.forall)
+      case BuiltinFun.existsfun     => evalPredicateFunc(a, Quantifier.exists)
       case BuiltinFun.oldfun        => Val(OldExpr(eval(a.args.e(0)).toExpr.get))
-      case BuiltinFun.ifthenelsefun => Val(FalseLiteral)
+      case BuiltinFun.ifthenelsefun => throw NotImplementedError("If then else function not implemented")
       case _                        => SApply(a.fun, eval(a.args).toSList)
     }
   }
 
+  /**
+   * Evaluate an SSExpr as far as possible. 
+   *
+   * TODO: iterate?
+   *  Ideally we can only reference previously declared variables, don't have first-class functions, and 
+   *  evaluate the deepest structures first, so everything should be resolvable in one forward pass. 
+   *
+   * Type-checking is done while evaluating however
+   * a lot of types are just given Top during parseing, and we don't have much of an inference pass to 
+   * refine them and check things resolve to correct conrete types. 
+   */
   def eval(o: SExpr): SExpr = {
     //println(s"\nEVAL: ${o}\n")
     o match {
@@ -267,11 +344,11 @@ enum SSExpr(typ: SType) extends SExpr:
       }
       case SVariable(n, v, false) => // resolve bound variables
         lookupBinding(n) match {
-          case Some(e) => e
-          case None    =>  throw Exception(s"Referenceing unbound variable $n\n$bindings") // SVariable(n, v) 
+          case Some(e) => eval(e) // e is possibly already evaluated
+          case None    => throw Exception(s"Referenceing unbound variable $n\n$bindings") // SVariable(n, v)
         }
       case s: SVariable => s
-      case SList(e) => SList(e.map(eval))
+      case SList(e)     => SList(e.map(eval))
       case SStruct(e) => {
         // Each successively defined field in the struct gets bound, so can be referred to
         // in later terms.
@@ -296,15 +373,15 @@ enum SSExpr(typ: SType) extends SExpr:
       }
       case f: SFunc => f
       case SApply(fun, args) => {
+
         println(s"APPLY: ${SApply(fun, args)}")
+        val argumetypes: SType.SStruct = SType.SStruct(fun.args)
+
+        val argssss = args.toSStruct(argumetypes) // typecheck
+
         // beans
         val bs = args.e.indices.map(i => (fun.args(i)._1 -> eval(args.e(i)))).toMap
         val funparamtypes = SStruct(bs.toList).getType
-        val argumetypes = SType.SStruct(fun.args)
-        if (!(argumetypes.satisfies(funparamtypes))) {
-          println(SApply(fun,args))
-          throw TypeError(s"Function call type mismatch: $argumetypes does not satisfy $funparamtypes")
-        }
 
         fun.body match {
           case None => evalBuiltInFunction(SApply(fun, args))
@@ -319,7 +396,9 @@ enum SSExpr(typ: SType) extends SExpr:
       }
       case SIndirApply(f, args) => {
         eval(f) match {
-          case s: SFunc => eval(SApply(s, args))
+          case s: SFunc => eval(SApply(s, eval(args).toSList))
+          case s if s.getType.satisfies(memoryRegionType) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList)) // memory access, lhs needs to be memory access type
+          case s if s.getType.satisfies(SType.MapVal) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList))     // memory access, rhs needs to be memory access type
           case _        => throw TypeError(s"Expression does not evaluate to a function, cannot apply non-function.")
         }
       }
@@ -331,35 +410,35 @@ enum SSExpr(typ: SType) extends SExpr:
       }
       case SSymbol(e) => SSymbol(e)
     }
-
   }
 
-
-/**
-* Create a list of typed names/bindings, from an slist which evaluates to a list of variables. 
-*
-* Do not evaluate the list because they are to be variables.  
-*/
-def evalParameterList(params: SList) : List[SVariable] = {
-    params.e.map(x => x match  
-      case Val(v: Variable) => SVariable(v.name, SType.Val(v.getType))
-      case v: SVariable => v  
-      case _ => throw Exception("Bad predicate function call in bounds list")
-    )
 }
 
-/**
-* Construct a function from a parameter list and body expression.
-* Do not pre-evaluate anything, that can be done in SFunction
-*/
-def makeLambda(params: Iterable[SVariable], body: SExpr) : SFunc = {
+/** Create a list of typed names/bindings, from an slist which evaluates to a list of variables.
+  *
+  * Do not evaluate the list because they are to be variables.
+  */
+def evalParameterList(params: SList): List[SVariable] = {
+  params.e.map(x =>
+    x match
+      case Val(v: Variable) => SVariable(v.name, SType.Val(v.getType))
+      case v: SVariable     => v
+      case _                => throw Exception("Bad predicate function call in bounds list")
+  )
+}
+
+/** Construct a function from a parameter list and body expression. Do not pre-evaluate anything, that can be done in
+  * SFunction
+  */
+def makeLambda(params: Iterable[SVariable], body: SExpr): SFunc = {
   SFunc(s"lambda${counter += 1}", params.map(p => (p.name, p.getType)).toList, body.getType, Some(body))
 }
 
 object BuiltinFun:
   import SSExpr._
+
   val accessRangeFunc: SFunc =
-    SFunc("arrayslice", List(("base", SType.NumberVal), ("size", SType.NumberVal)), SType.NumberVal, None)
+    SFunc("arrayslice", List(("region", SType.MapVal), ("address", SType.NumberVal), ("size", SType.NumberVal)), SType.NumberVal, None)
   val accessCellFunc: SFunc = SFunc("get", List(("base", SType.NumberVal)), SType.NumberVal, None)
   val bitvecSliceFunc: SFunc =
     SFunc("slice", List(("begin", SType.NumberVal), ("end", SType.NumberVal)), SType.NumberVal, None)
@@ -367,8 +446,18 @@ object BuiltinFun:
     SFunc("binop", List(("op", SType.SSymbol), ("left", SType.Top), ("right", SType.Top)), SType.Top, None)
   val unopfun: SFunc = SFunc("unop", List(("op", SType.SSymbol), ("arg", SType.Top)), SType.Top, None)
 
-  val forallfun: SFunc = SFunc("forall", List(("predicate", SType.SFunc(List.empty, SType.Val(BoolType)))), SType.Val(BoolType), None) // Body is a lambda (bounds) -> body
-  val existsfun: SFunc = SFunc("exists", List(("predicate", SType.SFunc(List.empty, SType.Val(BoolType)))), SType.Val(BoolType), None) // Body is a lambda (bounds) -> body
+  val forallfun: SFunc = SFunc(
+    "forall",
+    List(("predicate", SType.SFunc(List.empty, SType.Val(BoolType)))),
+    SType.Val(BoolType),
+    None
+  ) // Body is a lambda (bounds) -> body
+  val existsfun: SFunc = SFunc(
+    "exists",
+    List(("predicate", SType.SFunc(List.empty, SType.Val(BoolType)))),
+    SType.Val(BoolType),
+    None
+  ) // Body is a lambda (bounds) -> body
 
   val oldfun: SFunc = SFunc("old", List(("arg", SType.Top)), SType.Top, None)
   val ifthenelsefun: SFunc =
@@ -480,12 +569,14 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     println(s"${spec.prettyPrint(StringWriter(), 0)}")
     println("--------------------------------------" * 2)
 
-    val evaled = spec.eval(spec)
-    println("======================================"*2)
+    val evaluator = Evaluator()
+    evaluator.bindGlobals(globals)
+    val evaled = evaluator.eval(spec)
+    println("======================================" * 2)
 
     println(s" AFTER EVAL \n $evaled")
     println(s"${evaled.prettyPrint(StringWriter(), 0)}")
-    println("--------------------------------------" *2 )
+    println("--------------------------------------" * 2)
 
     val mapped = evaled match {
       case SStruct(e) => e.toMap
@@ -616,10 +707,11 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case c: ArithExprContext       => visitArithExpr(c)
       case c: MathExprContext        => visitMathExpr(c)
       case c: UnexpContext           => visitUnaryExpr(c.unaryExpr, nameToGlobals, Map.empty)
-      case c: SliceExprContext       => Val(FalseLiteral)
-      case c: AccessRangeExprContext => Val(FalseLiteral)
+//      case c: SliceExprContext       => Val(FalseLiteral)
+//      case c: AccessRangeExprContext => Val(FalseLiteral)
       case c: FieldAccessExprContext => visitFieldAccess(c)
       case c: SexprApplyContext      => visitApplyExpr(c)
+      case c: SexprIndirApplyContext => visitIndirAplyExpr(c)
       case c: StructExprContext      => visitStructExpr(c.sstruct)
       case c: ListExprContext        => visitListExpr(c.slist)
 
@@ -645,7 +737,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     //ctx.expr.asScala.tail.foldLeft(visitExpr(ctx.expr.asScala.head))((l,r) => BinaryExpr(visitMulDivModOp(ctx.op), l, visitExpr(r)))
   }
 
-  def visitSliceExpr(ctx: SliceExprContext) = {}
+//  def visitSliceExpr(ctx: SliceExprContext) = {}
 
   def visitFieldAccess(ctx: FieldAccessExprContext): SFieldAccess = {
     SFieldAccess(visitSExpr(ctx.arg1), ctx.field.getText)
@@ -661,6 +753,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
 
   def visitApplyExpr(ctx: SexprApplyContext): SExpr = {
     SIndirApply(visitSExpr(ctx.expr), visitListExpr(ctx.slist))
+  }
+
+  def visitIndirAplyExpr(ctx: SexprIndirApplyContext): SExpr = {
+    SIndirApply(visitSExpr(ctx.fun), visitExpr(ctx.arg))
   }
 
   def visitRelExpr(ctx: RelExprContext) = {
@@ -759,7 +855,8 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
   }
 
   def visitPredicateExpr(ctx: PredicateContext) = {
-    val bound : List[SVariable] = ctx.bound.typed_variable.asScala.toList.map(b => SVariable(b.name.getText, SType.Val(visitTypeName(b.btype))))
+    val bound: List[SVariable] =
+      ctx.bound.typed_variable.asScala.toList.map(b => SVariable(b.name.getText, SType.Val(visitTypeName(b.btype))))
     val body = makeLambda(bound, visitExpr(ctx.body))
 
     val fun = ctx.q.getText() match
@@ -781,7 +878,8 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       *     - local variables
       */
     val id = ctx.getText
-    if (id.startsWith("Gamma_") || id.startsWith("R")) then (Val(Register(id, BoolType))) else SVariable(ctx.getText, SType.Top)
+    if (id.startsWith("Gamma_") || id.startsWith("R")) then (Val(Register(id, BoolType)))
+    else SVariable(ctx.getText, SType.Top)
   }
 
 }
