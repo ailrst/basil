@@ -3,6 +3,7 @@ package translating
 import Parsers.SpecificationsNeueParser._
 
 import java.io.Writer
+import scala.math.pow
 import java.io.StringWriter
 import specification._
 import util.Logger
@@ -230,7 +231,12 @@ class Evaluator {
 
     val globMap = globs.map(g => s"${g.name}" -> SStruct(List(
       ("mem", SApply(BuiltinFun.accessRangeFunc, SList(List(Val(mem), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))),
-      ("gamma", SApply(BuiltinFun.binopfun, SList(List(SSymbol("=="), Val(BitVecLiteral(0, (g.size / mem.valueSize))), SApply(BuiltinFun.accessRangeFunc, SList(List(Val(gammaMem), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size / mem.valueSize))))))))),
+      ("gamma",
+          SApply(BuiltinFun.binopfun, SList(List(SSymbol("ult"),
+            Val(BitVecLiteral(math.pow(2, (g.size / mem.valueSize)).intValue - 1, (g.size / mem.valueSize))),
+            SApply(BuiltinFun.accessRangeFunc,
+              SList(List(Val(gammaMem), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size / mem.valueSize))))))))
+        ),
       ("name", SSymbol(g.name)), 
       ("region", SSymbol("mem")), 
       ("address", Val(IntLiteral(g.address))),
