@@ -33,6 +33,7 @@ sealed trait SExpr:
   def toSList: SSExpr.SList
   def toSStruct(t: SType.SStruct): SSExpr.SStruct
   def toExpr: Option[Expr]
+  def toInt: Option[BigInt]
   def prettyPrint(w: Writer, indentLevel: Int): String
 
 enum SType:
@@ -139,6 +140,16 @@ enum SSExpr(typ: SType) extends SExpr:
     o.getType.satisfies(typ)
   }
 
+
+  override def toInt: Option[BigInt] = {
+    this match {
+      case Val(BitVecLiteral(value, _))     => Some(value)
+      case Val(IntLiteral(value))           => Some(value)
+      case SList(e :: Nil)                  => e.toInt
+      case _                                => None
+    }
+  }
+
   override def toExpr: Option[Expr] = {
     this match {
       case Val(e)                           => Some(e)
@@ -198,7 +209,6 @@ class Evaluator {
 
   val bindings = Stack[Map[String, SExpr]]()
 
-  bindings.push(Map(("mem" -> Val(Memory("mem", 64, 8)))))
 
   val memoryRegionType = SType.SStruct(List(
       ("region", SType.SSymbol), 
@@ -210,21 +220,30 @@ class Evaluator {
   def bindGlobals(globs: Set[SpecGlobal]) = {
     // case class SpecGlobal(name: String, override val size: Int, arraySize: Option[Int], address: BigInt)
 
-    val globMap = globs.map(g => s"${g.name}_region" -> SStruct(List(
+    //val mem = SVariable("mem", SType.Val(MapType(BitVecType(64), BitVecType(8))))
+    //val gammaMem = SVariable("Gamma_mem", SType.Val(MapType(BitVecType(64), BoolType)))
+
+    val mem = Memory("mem", 64, 8)
+    val gammaMem = Memory("Gamma_mem", 64, 1)
+    bindings.push(Map(("mem" -> Val(mem)), ("Gamma_mem" -> Val(gammaMem))))
+
+
+    val globMap = globs.map(g => s"${g.name}" -> SStruct(List(
+      ("mem", SApply(BuiltinFun.accessRangeFunc, SList(List(Val(mem), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))),
+      ("gamma", SApply(BuiltinFun.binopfun, SList(List(SSymbol("=="), Val(BitVecLiteral(0, (g.size / mem.valueSize))), SApply(BuiltinFun.accessRangeFunc, SList(List(Val(gammaMem), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size / mem.valueSize))))))))),
       ("name", SSymbol(g.name)), 
       ("region", SSymbol("mem")), 
       ("address", Val(IntLiteral(g.address))),
       ("size", Val(IntLiteral(g.size)))
     ))).toMap
 
-    val globLoads = globs.map(g => s"${g.name}" -> SApply(BuiltinFun.accessRangeFunc, SList(List(SVariable("mem", SType.MapVal), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))).toMap
+    //val globLoads = globs.map(g => s"${g.name}" -> SApply(BuiltinFun.accessRangeFunc, SList(List(SVariable("mem", SType.MapVal), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))).toMap
 
     bindings.push(globMap)
-    bindings.push(globLoads)
   }
 
   def lookupBinding(n: String): Option[SExpr] = {
-    val it = bindings.reverseIterator
+    val it = bindings.iterator
     var term = false
     var res: Option[SExpr] = None
     while (!term && it.hasNext) {
@@ -278,7 +297,17 @@ class Evaluator {
 
     println(s"\nAPPLY: ${a}\n")
     a.fun match {
-      case BuiltinFun.accessRangeFunc =>  Val(FalseLiteral)
+      case BuiltinFun.accessRangeFunc => {
+        val args = eval(a.args).toSList
+        val rgn = args.e(0).toExpr
+        val addr = args.e(1).toInt.get // typechecked
+        val size = args.e(2).toInt.get // typechecked
+
+        rgn match {
+          case Some(m: Memory) => Val(MemoryLoad(m, BitVecLiteral(addr, 64), Endian.LittleEndian, size.toInt))
+          case _ => throw TypeError("Can only access variables with map type.") // shouldnt be reachable due to typecheck
+        }
+      }
       //case BuiltinFun.accessCellFunc =>  Val(FalseLiteral)
       //case BuiltinFun.bitvecSliceFunc =>  Val(FalseLiteral)
       case BuiltinFun.binopfun => {
@@ -344,7 +373,7 @@ class Evaluator {
       }
       case SVariable(n, v, false) => // resolve bound variables
         lookupBinding(n) match {
-          case Some(e) => eval(e) // e is possibly already evaluated
+          case Some(e) => eval(e)
           case None    => throw Exception(s"Referenceing unbound variable $n\n$bindings") // SVariable(n, v)
         }
       case s: SVariable => s

@@ -407,6 +407,13 @@ case class MemoryStore(mem: Memory, index: Expr, value: Expr, endian: Endian, si
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryStore(this)
 }
 
+/**
+ *
+ * @param mem the region to load from
+ * @param index the address to load
+ * @param endian byte order of the load
+ * @param size the number of bits to load
+ */
 case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) extends Expr {
   override def toBoogie: BMemoryLoad = BMemoryLoad(mem.toBoogie, index.toBoogie, endian, size)
   override def toGamma: BExpr = if (mem.name == "stack") {
@@ -421,7 +428,7 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def variables: Set[Variable] = index.variables
   override def gammas: Set[Expr] = Set(this)
   override def loads: Set[MemoryLoad] = Set(this)
-  override def getType: IRType = BitVecType(size)
+  override def getType: IRType = BitVecType(size) // this is wrong???
   override def toString: String = s"MemoryLoad($mem, $index, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
@@ -429,6 +436,11 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
 sealed trait Global:
   def scope = Scope.Global
 
+/**
+ * @param name the name of the region
+ * @param addressSize the bitvector width of addresses
+ * @param valueSize the bitvector width of values
+ */
 case class Memory(name: String, addressSize: Int, valueSize: Int) extends Variable with Global {
 
   override val irType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
