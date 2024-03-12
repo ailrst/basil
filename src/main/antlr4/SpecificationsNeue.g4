@@ -43,16 +43,20 @@ boogieTypeName: BVSIZE #bvBType
 arglist : expr (',' expr)* ;
 
 sexpterm : expr | declaration ;
-sexpdef: ident (COLON sexpTypeName)? '=' (expr);
+sexpdef:  ident (COLON sexpTypeName)            // declaration only
+    | (ident (COLON sexpTypeName)? '=' (expr))  // definition with optional type constraint
+    ;
 
 sstruct : '{' (sexpdef (';' sexpdef)*)? '}';
 slist : '(' expr (',' expr)* ')' ;
 
-sexpTypeName : boogieTypeName
-    | '{' (ident COLON sexpTypeName)* '}'
-    | '(' sexpTypeName* ')'
-    | ('bot' | 'void')
-    | ('top' | '_')
+sexpTypeName : boogieTypeName #boogieTypeDecl
+    | '{' (ident COLON sexpTypeName)* '}'  #structTypeDecl
+    | '(' sexpTypeName* ')'  #listTypeDecl
+    | ('bot' | 'void') #botTypeDecl
+    | ('top' | '_')    #topTypeDecl
+    | 'num' #numberValTypeDecl
+    | 'map' #mapValTypeDecl
     ;
 
 logOp : IMPLIES_OP | AND_OP | OR_OP ;
@@ -69,7 +73,7 @@ expr : arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
     // | region=expr '[' (arg=expr) ']'                    #accessRangeExpr // arg = (base) | (base, size) : bitvec subvec / array subvec expr
     // | region=expr '[' (arg1=expr) COLON (arg2=expr) ']' #sliceExpr // bitvec slice expr / array slice expr
     | arg1=expr ('.' (field=ident)) #fieldAccessExpr
-    | expr slist #sexprApply
+    | arg1=expr argrest=slist #sexprApply
     | fun=expr '[' arg=expr ']' #sexprIndirApply
     | sstruct #structExpr
     | slist #listExpr
@@ -94,6 +98,7 @@ atomExpr : boolLit #boolLitExpr
          | (name=BVOP_DIRECT) LPAREN (args=arglist) RPAREN #funExpr
          | ident #idExpr
          | LPAREN expr RPAREN #parenExpr
+         | QUOTESTRING #symbolExpr
          ;
 
 QUOTE : '"';

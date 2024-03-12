@@ -113,9 +113,10 @@ case class OldExpr(body: Expr) extends Expr  {
   override def gammas: Set[Expr] = body.gammas
   override def variables: Set[Variable] = body.variables
   override def getType: IRType = body.getType
-  override def toString: String = body.toString
+  override def toString: String = s"Old(${body.toString})"
   override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
   override def loads: Set[MemoryLoad] = body.loads
+
 }
 
 /**
@@ -432,6 +433,24 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def toString: String = s"MemoryLoad($mem, $index, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
+
+//case class MapAccessExpr(map: Expr, index: Expr) extends Expr {
+//  require(map.getType.isInstanceOf[MapType])
+//
+//  def mapType : MapType = map.getType match {
+//    case m: MapType => m 
+//    case _ => throw IllegalArgumentException("MapAccess to non-map")
+//  }
+//
+//  override def getType: IRType = mapType.result
+//
+//  override def toBoogie: BExpr = MapAccess(map.toBoogie, ind: index.toBoogie)
+//
+//  }
+//
+//
+//
+//}
 
 sealed trait Global:
   def scope = Scope.Global

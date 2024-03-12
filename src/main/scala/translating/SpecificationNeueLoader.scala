@@ -43,7 +43,7 @@ enum SType:
   case SSymbol
   case Val(t: IRType)
   case NumberVal
-  case MapVal
+  case MapVal  // this exists to represent Val(MapType) for any posisble values constructing maptype 
   case SList(typs: List[SType])
   case SStruct(fields: List[(String, SType)]) // note that any struct satisfies SStruct(List.empty)
   case SFunc(args: List[(String, SType)], ret: SType)
@@ -77,7 +77,12 @@ enum SSExpr(typ: SType) extends SExpr:
   case SVariable(name: String, typ: SType, free: Boolean = false) extends SSExpr(typ)
   case Val(e: Expr) extends SSExpr(SType.Val(e.getType))
   case SList(e: List[SExpr]) extends SSExpr(SType.SList(e.map(_.getType)))
-  case SStruct(e: List[(String, SExpr)]) extends SSExpr(SType.SStruct(e.map((k, v) => (k, v.getType))))
+
+  // assuming sstruct 
+  //  1. has no duplicate fields
+  //  2. e satisfies typ
+  case SStruct(e: List[(String, SExpr)], typ: Option[SType.SStruct] = None) extends SSExpr(typ.getOrElse(SType.SStruct(e.map((k, v) => (k, v.getType)))))
+
   case SFunc(name: String, args: List[(String, SType)], ret: SType, body: Option[SExpr]) extends SSExpr(SType.Top)
   case SApply(fun: SFunc, args: SList) extends SSExpr(fun.ret) 
   case SIndirApply(fun: SExpr, args: SExpr) // evaluates down to an SApply.
@@ -91,14 +96,16 @@ enum SSExpr(typ: SType) extends SExpr:
         case _          => SType.Top
       )
 
+
+
   override def prettyPrint(w: Writer = StringWriter(), indentLevel: Int = 0): String = {
 
     this match {
-      case Val(n: Variable)                 => w.write(s"${n.name}")
-      case Val(e)                           => w.write(e.toString)
+      case Val(n: Variable) => w.write(s"${n.name}")
+      case Val(e) => w.write(e.toString)
       case SVariable(name, SType.Val(t), _) => w.write(s"$name")
-      case SVariable(name, t, _)            => w.write(s"$name")
-      case SSymbol(e)                       => w.write(e)
+      case SVariable(name, t, _) => w.write(s"$name")
+      case SSymbol(e) => w.write(e)
       case SList(e) => {
         w.write("(")
         e.head.prettyPrint(w, indentLevel)
@@ -108,7 +115,7 @@ enum SSExpr(typ: SType) extends SExpr:
         })
         w.write(")")
       }
-      case SStruct(e) => {
+      case SStruct(e, t) => {
         w.write("{")
         w.write("\n")
         w.write("  " * (indentLevel + 1))
@@ -120,16 +127,18 @@ enum SSExpr(typ: SType) extends SExpr:
           w.write(s"${n} = ")
           v.prettyPrint(w, indentLevel + 1)
         })
-        w.write("\n  " * (indentLevel))
+        w.write("\n" + "  " * (indentLevel))
         w.write("}")
       }
-      case e: SFunc        => w.write(s"${e.name} ${e.args} -> ${e.body.map(_.toString).getOrElse(e.ret.toString)}")
-      case e: SApply       => w.write(s"${e.fun.name} ${e.args}")
+      case e: SFunc => w.write(s"${e.name} ${e.args} -> ${e.body.map(_.toString).getOrElse(e.ret.toString)}")
+      case e: SApply => {
+        w.write(s"${e.fun.name} ")
+        e.args.prettyPrint(w, indentLevel)
+      }
       case e: SIndirApply  => w.write(e.toString)
       case e: SFieldAccess => w.write(e.toString)
     }
 
-    w.write(" " * indentLevel)
     w.toString
   }
 
@@ -158,7 +167,7 @@ enum SSExpr(typ: SType) extends SExpr:
       case SVariable(name, SType.Val(t), _) => Some(LocalVar(name, t))
       case SSymbol(e)                       => None
       case SList(e)                         => None
-      case SStruct(_)                       => None
+      case SStruct(_, _)                    => None
       case _: SVariable                     => None
       case _: SFunc                         => None
       case _: SApply                        => None
@@ -226,6 +235,11 @@ class Evaluator {
 
     val mem = Memory("mem", 64, 8)
     val gammaMem = Memory("Gamma_mem", 64, 1)
+
+    // builtin functions
+
+    bindings.push(Map(("binop" -> BuiltinFun.binopfun)))
+
     bindings.push(Map(("mem" -> Val(mem)), ("Gamma_mem" -> Val(gammaMem))))
 
 
@@ -301,7 +315,7 @@ class Evaluator {
       }
     }
 
-    println(s"\nAPPLY: ${a}\n")
+    //println(s"\nAPPLY: ${a}\n")
     a.fun match {
       case BuiltinFun.accessRangeFunc => {
         val args = eval(a.args).toSList
@@ -311,19 +325,24 @@ class Evaluator {
 
         rgn match {
           case Some(m: Memory) => Val(MemoryLoad(m, BitVecLiteral(addr, 64), Endian.LittleEndian, size.toInt))
-          case _ => throw TypeError("Can only access variables with map type.") // shouldnt be reachable due to typecheck
+          case e => throw TypeError(s"Can only access variables with map type. ${args.e(0)} : $e") // shouldnt be reachable due to typecheck
         }
       }
       //case BuiltinFun.accessCellFunc =>  Val(FalseLiteral)
       //case BuiltinFun.bitvecSliceFunc =>  Val(FalseLiteral)
       case BuiltinFun.binopfun => {
         val args = eval(a.args).toSList
-        println(s"ARGS: $args")
+        //println(s"ARGS: $args")
         val op = args.e(0).asInstanceOf[SSymbol].e
-        val arg1 = args.e(1).toExpr.get
-        val arg2 = args.e(2).toExpr.get
-        print(s"$arg1 : ${arg1.getType} $op $arg2: ${arg2.getType}\n")
-        assert(arg1.getType == arg2.getType)
+        val operands = args.e.tail
+        val arg1 = operands.head.toExpr.get
+
+        for (arg2 <- operands.tail) {
+          if (arg1.getType != arg2.toExpr.get.getType) {
+            throw TypeError(s"Binary operator type mismatch ${arg1.getType} != ${arg2.getType}")
+          }
+        }
+
 
         val oper = (arg1.getType) match {
           case b: BitVecType => visitBVOp(op)
@@ -332,7 +351,8 @@ class Evaluator {
           case m: MapType    => throw TypeError("Cannot binop a map type.")
         }
 
-        Val(BinaryExpr(oper, arg1, arg2))
+
+        Val(operands.tail.foldLeft(arg1)((l,r) => BinaryExpr(oper, l, r.toExpr.get)))
       }
       case BuiltinFun.unopfun => {
         val args = eval(a.args).toSList
@@ -384,7 +404,7 @@ class Evaluator {
         }
       case s: SVariable => s
       case SList(e)     => SList(e.map(eval))
-      case SStruct(e) => {
+      case SStruct(e, _) => {
         // Each successively defined field in the struct gets bound, so can be referred to
         // in later terms.
         //
@@ -396,7 +416,6 @@ class Evaluator {
         //  These are available only for subexpressions of the struct.
         val evaled = HashMap[String, SExpr]()
         for ((name, value) <- e) {
-          println(s"str $bindings")
           val res = eval(value)
           evaled(name) = res
           bindings.push(Map(name -> res))
@@ -409,20 +428,16 @@ class Evaluator {
       case f: SFunc => f
       case SApply(fun, args) => {
 
-        println(s"APPLY: ${SApply(fun, args)}")
+        //println(s"APPLY: ${SApply(fun, args)}")
         val argumetypes: SType.SStruct = SType.SStruct(fun.args)
 
-        val argssss = args.toSStruct(argumetypes) // typecheck
-
-        // beans
-        val bs = args.e.indices.map(i => (fun.args(i)._1 -> eval(args.e(i)))).toMap
-        val funparamtypes = SStruct(bs.toList).getType
+        val argStruct = args.toSStruct(argumetypes) // typecheck
 
         fun.body match {
           case None => evalBuiltInFunction(SApply(fun, args))
           case Some(body) => {
             // evaluate arguments, bind them to parameter variables, evaluate body, replace the call with the body
-            bindings.push(bs)
+            bindings.push(argStruct.e.toMap)
             val nb = eval(body)
             bindings.pop()
             nb
@@ -432,14 +447,17 @@ class Evaluator {
       case SIndirApply(f, args) => {
         eval(f) match {
           case s: SFunc => eval(SApply(s, eval(args).toSList))
-          case s if s.getType.satisfies(memoryRegionType) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList)) // memory access, lhs needs to be memory access type
-          case s if s.getType.satisfies(SType.MapVal) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList))     // memory access, rhs needs to be memory access type
+          case s if s.getType.satisfies(memoryRegionType) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList)) 
+          case s if s.getType.satisfies(SType.MapVal) => s.getType match {
+            case SType.Val(MapType(param: BitVecType, value: BitVecType)) => eval(SApply(BuiltinFun.accessRangeFunc, SList(List(s) ++ eval(args).toSList.e ++ List(Val(IntLiteral(value.size))))))
+            case _ => throw NotImplementedError("We can't really model non-bitvector map accesses in the IR so the accessRange function assumes we can convert an access to a MemoryLoad.")
+          }
           case _        => throw TypeError(s"Expression does not evaluate to a function, cannot apply non-function.")
         }
       }
       case SFieldAccess(s, field) => {
         eval(s) match {
-          case SStruct(e) => e.find(_._1 == field).get._2
+          case SStruct(e, _) => e.find(_._1 == field).get._2
           case _          => throw TypeError("Cannot access field of non-struct.")
         }
       }
@@ -614,7 +632,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     println("--------------------------------------" * 2)
 
     val mapped = evaled match {
-      case SStruct(e) => e.toMap
+      case SStruct(e, _) => e.toMap
       case _          => throw Exception("Unreachable.")
     }
 
@@ -648,10 +666,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       .get("procedures")
       .map(procdefs =>
         procdefs match {
-          case SStruct(e) =>
+          case SStruct(e, _) =>
             e.map((procname, procspec) =>
               procspec match {
-                case SStruct(s) => getProcedureSpec(procname, s.toMap)
+                case SStruct(s, _) => getProcedureSpec(procname, s.toMap)
                 case _          => throw TypeError("Procedures should be map.")
               }
             )
@@ -708,6 +726,18 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       List(relies.toBoogie),
       List(guarantees.toBoogie)
     )
+  }
+
+
+  def visitSTypeName(ctx: SexpTypeNameContext): SType = {
+    ctx match {
+      case b: BoogieTypeDeclContext => SType.Val(visitTypeName(b.boogieTypeName))
+      case b: StructTypeDeclContext => SType.SStruct(b.ident.asScala.indices.map(i => (b.ident.get(i).getText, visitSTypeName(b.sexpTypeName.get(i)))).toList )
+      case b: ListTypeDeclContext => SType.SList(b.sexpTypeName.asScala.map(visitSTypeName).toList)
+      case b: BotTypeDeclContext => SType.Bot
+      case b: NumberValTypeDeclContext => SType.NumberVal
+      case b: MapValTypeDeclContext => SType.MapVal
+    }
   }
 
   def visitTypeName(ctx: BoogieTypeNameContext): IRType = {
@@ -779,7 +809,27 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
   }
 
   def visitStructExpr(ctx: SstructContext): SStruct = {
-    SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText, visitSExpr(d.expr))).toList)
+
+
+    val inferredType : SType.SStruct = SType.SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText,
+      Option(d.sexpTypeName) match {
+        case Some(e) => visitSTypeName(e)         // take explicitly given type.
+        case None =>  visitSExpr(d.expr).getType  // infer from value
+      }
+      )).toList)
+
+    val structValue : SStruct = SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText,
+      Option(d.expr) match {
+        case Some(e) => visitSExpr(e)                           // we have a concrete value
+        case None => SVariable(s"variable${d.ident.getText}${counter += 1}", visitSTypeName(d.sexpTypeName), true)  // unknown value constrained later / declaration only, represented as free variable
+      }
+      )).toList)
+
+    if (!structValue.getType.satisfies(inferredType)) {
+      throw TypeError(s"Struct (${structValue.prettyPrint}) does not satisfy its declared type $inferredType")
+    }
+
+    SStruct(structValue.e, Some(inferredType))
   }
 
   def visitListExpr(ctx: SlistContext): SList = {
@@ -876,6 +926,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     case ite: IfThenElseExprContext => visitIfThenElseExpr(ite)
     case c: FunExprContext          => visitFunExpr(c)
     case c: PredicateExprContext    => visitPredicateExpr(c.predicate)
+    case c: SymbolExprContext       => SSymbol(c.getText.stripPrefix("\"").stripSuffix("\""))
   }
 
   def visitBv(ctx: BvContext): BitVecLiteral = {
@@ -971,6 +1022,11 @@ def visitBVOp(s: String) = {
 }
 
 def visitIntOp(s: String): IntBinOp = s match {
+  case "+"   => IntADD 
+  case "*"   => IntMUL 
+  case "-"   => IntSUB 
+  case "div" => IntDIV 
+  case "mod" => IntMOD 
   case "==" => IntEQ
   case "!=" => IntNEQ
   case ">"  => IntGT
