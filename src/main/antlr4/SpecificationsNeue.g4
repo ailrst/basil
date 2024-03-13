@@ -64,17 +64,19 @@ relOp : EQ_OP | LT_OP | GT_OP | LE_OP | GE_OP | NEQ_OP;
 addSubOp : ADD_OP | SUB_OP;
 mulDivModOp: MUL_OP | DIV_OP | MOD_OP;
 
-// based upon boogie grammar: https://boogie-docs.readthedocs.io/en/latest/LangRef.html#grammar
-expr : arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
+// based on boogie grammar: https://boogie-docs.readthedocs.io/en/latest/LangRef.html#grammar
+expr : 
+     '(' fun=expr arg=expr ')' #sexprIndirApply
+    | arg1=expr argrest=slist #sexprApply
+    | arg1=expr ( EQUIV_OP arg2=expr )+ #equivExpr
     | arg1=expr ( op=logOp arg2=expr )+ #logicalExpr
     | arg1=expr ( op=relOp arg2=expr )+ #relExpr
     | arg1=expr ( op=addSubOp arg2=expr )+ #arithExpr
     | arg1=expr ( op=mulDivModOp arg2=expr )+ #mathExpr
-    // | region=expr '[' (arg=expr) ']'                    #accessRangeExpr // arg = (base) | (base, size) : bitvec subvec / array subvec expr
+    // | region=expr '[' (arg=expr) '...' (arg2=expr) ']' #accessRangeExpr // arg = (base) | (base, size) : bitvec subvec / array subvec expr
     // | region=expr '[' (arg1=expr) COLON (arg2=expr) ']' #sliceExpr // bitvec slice expr / array slice expr
     | arg1=expr ('.' (field=ident)) #fieldAccessExpr
-    | arg1=expr argrest=slist #sexprApply
-    | fun=expr '[' arg=expr ']' #sexprIndirApply
+    | arg1=expr CONCAT arg2=expr #concatExpr
     | sstruct #structExpr
     | slist #listExpr
     | unaryExpr #unexp
@@ -243,6 +245,8 @@ fragment SLE : 'sle';
 fragment SGT : 'sgt';
 fragment SGE : 'sge';
 fragment COMP : 'comp';
+
+CONCAT : '++' | 'concat';
 
 
 
