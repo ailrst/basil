@@ -568,9 +568,12 @@ case class Old(body: BExpr) extends WrapperExpr(body) {
   override def resolveSpecL: BExpr = copy(body = body.resolveSpecL)
 }
 
-case class MapAccess(mapVar: BMapVar, index: BExpr) extends BExpr {
+case class MapAccess(mapVar: BExpr, index: BExpr) extends BExpr {
   override def toString: String = s"$mapVar[$index]"
-  override val getType: BType = mapVar.getType.result
+  override val getType: BType = mapVar.getType match {
+    case MapBType(_, result) => result
+    case _ => throw Exception("Trying to access a non-map")
+  }
   override def functionOps: Set[FunctionOp] = index.functionOps
   override def locals: Set[BVar] = index.locals
   override def globals: Set[BVar] = index.globals ++ mapVar.globals

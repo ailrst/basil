@@ -80,8 +80,8 @@ enum SSExpr(typ: SType) extends SExpr:
 
   // assuming sstruct 
   //  1. has no duplicate fields
-  //  2. e satisfies typ
-  case SStruct(e: List[(String, SExpr)], typ: Option[SType.SStruct] = None) extends SSExpr(typ.getOrElse(SType.SStruct(e.map((k, v) => (k, v.getType)))))
+  //  2. For the declared type typ = Some(t), e satisfies t
+  case SStruct(e: List[(String, SExpr)], typ: Option[SType.SStruct]) extends SSExpr(typ.getOrElse(SType.SStruct(e.map((k, v) => (k, v.getType)))))
 
   case SFunc(name: String, args: List[(String, SType)], ret: SType, body: Option[SExpr]) extends SSExpr(SType.Top)
   case SApply(fun: SFunc, args: SList) extends SSExpr(fun.ret) 
@@ -119,12 +119,12 @@ enum SSExpr(typ: SType) extends SExpr:
         w.write("{")
         w.write("\n")
         w.write("  " * (indentLevel + 1))
-        w.write(s"${e.head._1} = ")
+        w.write(s"${e.head._1} : ${e.head._2.getType} = ")
         e.head._2.prettyPrint(w, indentLevel + 1)
         e.tail.foreach((n, v) => {
           w.write(";\n")
           w.write("  " * (indentLevel + 1))
-          w.write(s"${n} = ")
+          w.write(s"${n} : ${v.getType} = ")
           v.prettyPrint(w, indentLevel + 1)
         })
         w.write("\n" + "  " * (indentLevel))
@@ -135,8 +135,16 @@ enum SSExpr(typ: SType) extends SExpr:
         w.write(s"${e.fun.name} ")
         e.args.prettyPrint(w, indentLevel)
       }
-      case e: SIndirApply  => w.write(e.toString)
-      case e: SFieldAccess => w.write(e.toString)
+      case e: SIndirApply => {
+        e.fun.prettyPrint(w, indentLevel)
+        w.write("[")
+        e.args.prettyPrint(w, indentLevel)
+        w.write("]")
+      }
+      case e: SFieldAccess => {
+        e.struct.prettyPrint(w, indentLevel)
+        w.write("." + e.field)
+      }
     }
 
     w.toString
@@ -183,18 +191,17 @@ enum SSExpr(typ: SType) extends SExpr:
    */
   override def toSStruct(t: SType.SStruct): SStruct = {
     var fieldCounter = 0
-    val firstFieldName = t.fields.head._1
 
     val fieldnames = t.fields.map(_._1).toArray
 
     val sform : SStruct = this match {
-      case s: Val => SStruct(List((fieldnames(0), s)))
+      case s: Val => SStruct(List((fieldnames(0), s)), Some(t))
       case s: SList   => SStruct(s.e.indices.map(i =>  {
         val fieldname = (if (i < fieldnames.size) then fieldnames(i) else s"field${fieldCounter+=1}")
         (fieldname, s.e(i))
-        }).toList)
+        }).toList, Some(t))
       case s: SStruct  =>  s
-      case o  => SStruct(List((fieldnames(0), o)))
+      case o  => SStruct(List((fieldnames(0), o)), Some(t))
     }
 
     if (!sform.getType.satisfies(t)) {
@@ -238,7 +245,7 @@ class Evaluator {
 
     // builtin functions
 
-    bindings.push(Map(("binop" -> BuiltinFun.binopfun)))
+    bindings.push(Map(("binop" -> BuiltinFun.binopfun), ("concat" -> BuiltinFun.concatfun), ("println" -> BuiltinFun.printlnfun), ("ignore", BuiltinFun.ignorefun)))
 
     bindings.push(Map(("mem" -> Val(mem)), ("Gamma_mem" -> Val(gammaMem))))
 
@@ -255,7 +262,7 @@ class Evaluator {
       ("region", SSymbol("mem")), 
       ("address", Val(IntLiteral(g.address))),
       ("size", Val(IntLiteral(g.size)))
-    ))).toMap
+    ), None)).toMap
 
     //val globLoads = globs.map(g => s"${g.name}" -> SApply(BuiltinFun.accessRangeFunc, SList(List(SVariable("mem", SType.MapVal), Val(BitVecLiteral(g.address, 64)), Val(IntLiteral(g.size)))))).toMap
 
@@ -275,15 +282,6 @@ class Evaluator {
     }
     if (n.startsWith("Gamma_")) then Some(SVariable(n, SType.Val(BoolType))) else res
   }
-  //val binopfun: SFunc =
-  //  SFunc("binop", List(("op", SType.SSymbol), ("left", SType.Top), ("right", SType.Top)), SType.Top, None)
-  //val unopfun: SFunc = SFunc("unop", List(("op", SType.SSymbol), ("arg", SType.Top)), SType.Top, None)
-  //val forallfun: SFunc =
-  //  SFunc("forall", List(("binds", SType.SList(List.empty)), ("arg", SType.Val(BoolType))), SType.Val(BoolType), None)
-  //val existsfun: SFunc =
-  //  SFunc("exists", List(("binds", SType.SList(List.empty)), ("arg", SType.Val(BoolType))), SType.Val(BoolType), None)
-  //val oldfun: SFunc = SFunc("old", List(("arg", SType.Top)), SType.Top, None)
-  //val ifthenelsefun: SFunc =
 
   //  Assuming we have already typechecked.
   //  Assuming a.fun.body == None
@@ -317,6 +315,21 @@ class Evaluator {
 
     //println(s"\nAPPLY: ${a}\n")
     a.fun match {
+      // TODO ; this should be implemented as a single builtin which dispatches to the correct type of access
+      //    NOT in the eval() function.
+      case BuiltinFun.accessCellFunc =>  {
+        val args = eval(a.args).toSList
+        val rgn = args.e(0).toExpr
+        val index = args.e(1).toExpr.get
+        rgn match {
+          case Some(e) if e.getType.isInstanceOf[MapType] => Val(MapAccessExpr(e, index))
+          case e => throw TypeError(s"Can only access variables with map type. ${args.e(0)} : $e") // shouldnt be reachable due to typecheck
+        }
+      }
+      case BuiltinFun.printlnfun => {
+        println(a.args.prettyPrint())
+        SFunc(s"identity", List(("next", SType.Top)), SType.Top, Some(SVariable("next", SType.Top)))
+      }
       case BuiltinFun.accessRangeFunc => {
         val args = eval(a.args).toSList
         val rgn = args.e(0).toExpr
@@ -328,7 +341,6 @@ class Evaluator {
           case e => throw TypeError(s"Can only access variables with map type. ${args.e(0)} : $e") // shouldnt be reachable due to typecheck
         }
       }
-      //case BuiltinFun.accessCellFunc =>  Val(FalseLiteral)
       //case BuiltinFun.bitvecSliceFunc =>  Val(FalseLiteral)
       case BuiltinFun.binopfun => {
         val args = eval(a.args).toSList
@@ -360,9 +372,14 @@ class Evaluator {
         val arg = args.e(1).toExpr.get
 
         val oper = (arg.getType, op) match {
-          case (_, "not")             => BVNOT
+          case (b : BitVecType, "!")             => BVNOT
+          case (b : BitVecType, "not")             => BVNOT
+          case (BoolType, "!")             => BoolNOT
+          case (BoolType, "not")             => BoolNOT 
           case (IntType, "neg")       => IntNEG
           case (b: BitVecType, "neg") => BVNEG
+          case (IntType, "-")       => IntNEG
+          case (b: BitVecType, "-") => BVNEG
           case (_, _)                 => throw Exception("Bad use of builtin func unop")
         }
 
@@ -372,6 +389,15 @@ class Evaluator {
       case BuiltinFun.existsfun     => evalPredicateFunc(a, Quantifier.exists)
       case BuiltinFun.oldfun        => Val(OldExpr(eval(a.args.e(0)).toExpr.get))
       case BuiltinFun.ifthenelsefun => throw NotImplementedError("If then else function not implemented")
+      case BuiltinFun.concatfun     => {
+        val args = eval(a.args).toSList
+        val nargs = args.e.flatMap(a => a match {
+          case SList(e) => e
+          case o => List(o)
+        })
+
+        SList(nargs)
+      } 
       case _                        => SApply(a.fun, eval(a.args).toSList)
     }
   }
@@ -389,7 +415,8 @@ class Evaluator {
    */
   def eval(o: SExpr): SExpr = {
     //println(s"\nEVAL: ${o}\n")
-    o match {
+    var old = o
+    var evaled = o match {
       case Val(e) => {
         val replacer = VariableReplacer(
           // TODO: this is not correct wrt shadowing
@@ -423,7 +450,7 @@ class Evaluator {
         for ((name, value) <- e) {
           bindings.pop()
         }
-        SStruct(e.map(i => (i._1, evaled(i._1))))
+        SStruct(e.map(i => (i._1, evaled(i._1))), None)
       }
       case f: SFunc => f
       case SApply(fun, args) => {
@@ -450,9 +477,10 @@ class Evaluator {
           case s if s.getType.satisfies(memoryRegionType) => eval(SApply(BuiltinFun.accessRangeFunc, eval(args).toSList)) 
           case s if s.getType.satisfies(SType.MapVal) => s.getType match {
             case SType.Val(MapType(param: BitVecType, value: BitVecType)) => eval(SApply(BuiltinFun.accessRangeFunc, SList(List(s) ++ eval(args).toSList.e ++ List(Val(IntLiteral(value.size))))))
+            case SType.Val(MapType(param, value)) => eval(SApply(BuiltinFun.accessCellFunc, SList(List(s) ++ eval(args).toSList.e)))
             case _ => throw NotImplementedError("We can't really model non-bitvector map accesses in the IR so the accessRange function assumes we can convert an access to a MemoryLoad.")
           }
-          case _        => throw TypeError(s"Expression does not evaluate to a function, cannot apply non-function.")
+          case o        => throw TypeError(s"Expression does not evaluate to a function, cannot apply non-function: $o")
         }
       }
       case SFieldAccess(s, field) => {
@@ -463,6 +491,13 @@ class Evaluator {
       }
       case SSymbol(e) => SSymbol(e)
     }
+
+    //while (evaled != old) {
+    //  old = evaled
+    //  evaled = eval(old)
+    //}
+
+    evaled
   }
 
 }
@@ -490,9 +525,16 @@ def makeLambda(params: Iterable[SVariable], body: SExpr): SFunc = {
 object BuiltinFun:
   import SSExpr._
 
+  val printlnfun: SFunc = SFunc("println", List.empty, SType.Top, None)
+
+  // concrete Memory access function
   val accessRangeFunc: SFunc =
     SFunc("arrayslice", List(("region", SType.MapVal), ("address", SType.NumberVal), ("size", SType.NumberVal)), SType.NumberVal, None)
-  val accessCellFunc: SFunc = SFunc("get", List(("base", SType.NumberVal)), SType.NumberVal, None)
+  val ignorefun: SFunc = SFunc(s"ignore", List(("frst", SType.Top), ("next", SType.Top)), SType.Top, Some(SVariable("next", SType.Top)))
+
+  // access a map cell
+  val accessCellFunc: SFunc = SFunc("select", List(("index", SType.Top)), SType.Top, None)
+
   val bitvecSliceFunc: SFunc =
     SFunc("slice", List(("begin", SType.NumberVal), ("end", SType.NumberVal)), SType.NumberVal, None)
   val binopfun: SFunc =
@@ -513,8 +555,13 @@ object BuiltinFun:
   ) // Body is a lambda (bounds) -> body
 
   val oldfun: SFunc = SFunc("old", List(("arg", SType.Top)), SType.Top, None)
+
   val ifthenelsefun: SFunc =
     SFunc("ite", List(("if", SType.Top), ("then", SType.Top), ("else", SType.Top)), SType.Top, None)
+
+  val concatfun: SFunc = SFunc("concat", List.empty, SType.Top, None) // (possibly empty) list of lists => blah
+  val listof: SFunc = SFunc("list_of", List(("value", SType.Top)), SType.Top, None) // coerce value to a list
+
 
 import SSExpr._
 import BuiltinFun._
@@ -597,7 +644,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
           ("region", Val(mem)),
           ("base", Val(LocalVar("$" + g.name + "_addr", BitVecType(64)))),
           ("size", Val(BitVecLiteral(g.size, 64)))
-        )
+        ), None
       )
     )
 
@@ -638,10 +685,10 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
 
     def getProcedureSpec(name: String, mapped: Map[String, SExpr]): SubroutineSpec = {
       // all this should be validated via type-checking first.
-      val relies = mapped.get("relies").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val relies = mapped.get("rely").map(_.toExpr.get).getOrElse(FalseLiteral)
       val guarantees = mapped.get("guarantees").map(_.toExpr.get).getOrElse(FalseLiteral)
-      val requires = mapped.get("requires").map(_.toExpr.getOrElse(FalseLiteral)).getOrElse(FalseLiteral)
-      val ensures = mapped.get("ensures").map(_.toExpr.get).getOrElse(FalseLiteral)
+      val requires = mapped.get("require").map(_.toExpr.getOrElse(FalseLiteral)).getOrElse(FalseLiteral)
+      val ensures = mapped.get("ensure").map(_.toExpr.get).getOrElse(FalseLiteral)
       val mods = mapped
         .get("modifies")
         .toList
@@ -658,8 +705,6 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       SubroutineSpecinfo(name, relies, guarantees, mods, requires, ensures).toProcSpec
     }
 
-    val relies = mapped.get("relies")
-    val guarantees = mapped.get("guarantees")
     val lpreds = mapped.get("L")
 
     val procedures = mapped
@@ -677,6 +722,9 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
         }
       )
 
+    val relies = mapped.get("rely").flatMap(_.toExpr).map(_.toBoogie).toList
+    val guarantees = mapped.get("guarantee").flatMap(_.toExpr).map(_.toBoogie).toList
+
     //val relies = ctx.relies.asScala.map(visitRelies)
     //val guarantees = ctx.guarantees.asScala.map(visitGuarantees)
     //val procedures = ctx.procedure.asScala.map(visitProcedure)
@@ -685,7 +733,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
     variableBindings.pop()
     variableBindings.pop()
     // Specification(globals, lpreds.map((k,v) => nameToSpecGlobal(k) -> v.toBoogie).toMap, relies.map(_.toBoogie).toList, guarantees.map(_.toBoogie).toList, procedures.map(_.toProcSpec).toList, Set.empty)
-    Specification(Set.empty, Map.empty, List.empty, List.empty, List.empty, Set.empty)
+    Specification(Set.empty, Map.empty, relies, guarantees, procedures.toList.flatten, Set.empty)
   }
 
   //def visitLPreds(ctx: LPredsContext) : Map[String, Expr] = {
@@ -734,6 +782,7 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       case b: BoogieTypeDeclContext => SType.Val(visitTypeName(b.boogieTypeName))
       case b: StructTypeDeclContext => SType.SStruct(b.ident.asScala.indices.map(i => (b.ident.get(i).getText, visitSTypeName(b.sexpTypeName.get(i)))).toList )
       case b: ListTypeDeclContext => SType.SList(b.sexpTypeName.asScala.map(visitSTypeName).toList)
+      case b: TopTypeDeclContext => SType.Top
       case b: BotTypeDeclContext => SType.Bot
       case b: NumberValTypeDeclContext => SType.NumberVal
       case b: MapValTypeDeclContext => SType.MapVal
@@ -810,6 +859,16 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
 
   def visitStructExpr(ctx: SstructContext): SStruct = {
 
+    /*
+     * Struct records can be two types of expression: 
+     *  1. Variable declaration 
+     *    Is translated to x : typ = x, so the value is a variable referencing itself. 
+     *  2. Variable definition
+     *    Is the record is given a value and either an explicit or inferred type. 
+     *    Translated to x : type = <expr>
+     *
+     *  This allows expressions to look like statements. 
+     */
 
     val inferredType : SType.SStruct = SType.SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText,
       Option(d.sexpTypeName) match {
@@ -818,12 +877,15 @@ case class NewSpecificationLoader(symbols: Set[Variable], globals: Set[SpecGloba
       }
       )).toList)
 
+    println(s"$inferredType")
+
     val structValue : SStruct = SStruct(ctx.sexpdef.asScala.map(d => (d.ident.getText,
       Option(d.expr) match {
         case Some(e) => visitSExpr(e)                           // we have a concrete value
-        case None => SVariable(s"variable${d.ident.getText}${counter += 1}", visitSTypeName(d.sexpTypeName), true)  // unknown value constrained later / declaration only, represented as free variable
+        case None => SVariable(s"freevar_${d.ident.getText}", visitSTypeName(d.sexpTypeName), true)  // unknown value constrained later / declaration only, represented as free variable
       }
-      )).toList)
+      )).toList, None)
+
 
     if (!structValue.getType.satisfies(inferredType)) {
       throw TypeError(s"Struct (${structValue.prettyPrint}) does not satisfy its declared type $inferredType")

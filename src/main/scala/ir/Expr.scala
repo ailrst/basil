@@ -142,7 +142,7 @@ case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
     case (_: BoolUnOp, BoolType)     => BoolType
     case (_: BVUnOp, bv: BitVecType) => bv
     case (_: IntUnOp, IntType)       => IntType
-    case _ => throw new Exception("type mismatch, operator " + op + " type doesn't match arg: " + arg)
+    case _ => throw new Exception(s"type mismatch, operator ${op.getClass.getSimpleName} ($op) type doesn't match args: ($arg : ${arg.getType})")
   }
 
   private def inSize = arg.getType match {
@@ -228,7 +228,7 @@ enum Quantifier {
 
 
 trait PredicateExpr(sort: Quantifier, bound : List[Variable], body: Expr) extends Expr {
-  override def acceptVisit(visitor: Visitor): Variable =
+  override def acceptVisit(visitor: Visitor): PredicateExpr =
     throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 
   def getType: ir.IRType = BoolType
@@ -238,6 +238,11 @@ case class ForAll(bound: List[Variable], body: Expr) extends PredicateExpr(Quant
   require (body.getType == BoolType)
   def toBoogie: boogie.BExpr = BForAll(bound.map(_.toBoogie), body.toBoogie)
   override def variables: Set[Variable] = body.variables -- bound
+
+  override def acceptVisit(v: Visitor): ForAll = {
+    v.visitForallExpr(this)
+  }
+
 }
 
 case class Exists(bound: List[Variable], body: Expr) extends PredicateExpr(Quantifier.exists, bound, body) {
@@ -429,28 +434,26 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def variables: Set[Variable] = index.variables
   override def gammas: Set[Expr] = Set(this)
   override def loads: Set[MemoryLoad] = Set(this)
-  override def getType: IRType = BitVecType(size) // this is wrong???
+  override def getType: IRType = BitVecType(size) 
   override def toString: String = s"MemoryLoad($mem, $index, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
 
-//case class MapAccessExpr(map: Expr, index: Expr) extends Expr {
-//  require(map.getType.isInstanceOf[MapType])
-//
-//  def mapType : MapType = map.getType match {
-//    case m: MapType => m 
-//    case _ => throw IllegalArgumentException("MapAccess to non-map")
-//  }
-//
-//  override def getType: IRType = mapType.result
-//
-//  override def toBoogie: BExpr = MapAccess(map.toBoogie, ind: index.toBoogie)
-//
-//  }
-//
-//
-//
-//}
+case class MapAccessExpr(map: Expr, index: Expr) extends Expr {
+  require(map.getType.isInstanceOf[MapType])
+
+  def mapType : MapType = map.getType match {
+    case m: MapType => m 
+    case _ => throw IllegalArgumentException("MapAccess to non-map")
+  }
+
+  override def getType: IRType = mapType.result
+
+  override def toBoogie: BExpr = MapAccess(map.toBoogie, index.toBoogie)
+
+  override def acceptVisit(visitor: Visitor): Expr = visitor.visitMapAccess(this)
+
+}
 
 sealed trait Global:
   def scope = Scope.Global

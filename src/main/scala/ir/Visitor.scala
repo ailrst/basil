@@ -117,6 +117,18 @@ abstract class Visitor {
     node.copy(mem = visitMemory(node.mem), index = visitExpr(node.index))
   }
 
+  def visitMapAccess(node: MapAccessExpr): Expr = {
+    node.copy(map = visitExpr(node.map), index = visitExpr(node.index))
+  }
+
+  def visitForallExpr(node: ForAll): ForAll = {
+    node.copy(bound = node.bound.map(visitVariable), body=visitExpr(node.body))
+  }
+
+  def visitExistsExpr(node: Exists): Exists = {
+    node.copy(bound = node.bound.map(visitVariable), body=visitExpr(node.body))
+  }
+
   def visitMemory(node: Memory): Memory = node
 
   def visitVariable(node: Variable): Variable = node.acceptVisit(this)
@@ -173,6 +185,25 @@ abstract class ReadOnlyVisitor extends Visitor {
     visitExpr(node.index)
     node
   }
+
+  override def visitMapAccess(node: MapAccessExpr): Expr = {
+    visitExpr(node.map)
+    visitExpr(node.index)
+    node
+  }
+
+  override def visitForallExpr(node: ForAll): ForAll = {
+    node.bound.foreach(visitVariable)
+    visitExpr(node.body)
+    node
+  }
+
+  override def visitExistsExpr(node: Exists): Exists = {
+    node.bound.foreach(visitVariable)
+    visitExpr(node.body)
+    node
+  }
+
 
   override def visitLocalAssign(node: LocalAssign): Statement = {
     visitVariable(node.lhs)
