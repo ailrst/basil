@@ -86,15 +86,18 @@ case class EventuallyBlock(label: String, sl: Seq[Statement], j: EventuallyJump)
     tempBlock
   }
 }
-
-def block(label: String, sl: (Statement | EventuallyJump)*): EventuallyBlock = {
+def block(label: String, sl: Iterable[Statement | EventuallyJump]): EventuallyBlock = {
   val statements = sl.collect {
     case s: Statement => s
-  }
+  }.toList
   val jump = sl.collectFirst {
     case j: EventuallyJump => j
   }
   EventuallyBlock(label, statements, jump.get)
+}
+
+def block(label: String, sl: (Statement | EventuallyJump)*): EventuallyBlock = {
+  block(label, sl.toSeq)
 }
 
 case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {
@@ -110,6 +113,9 @@ case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {
 
 }
 
+def proc(label: String, blocks: Iterable[EventuallyBlock]): EventuallyProcedure = {
+  EventuallyProcedure(label, blocks.toList)
+}
 def proc(label: String, blocks: EventuallyBlock*): EventuallyProcedure = {
   EventuallyProcedure(label, blocks)
 }

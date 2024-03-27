@@ -48,6 +48,12 @@ case class BitVecLiteral(value: BigInt, size: Int) extends Literal {
   override def toString: String = s"${value}bv$size"
 }
 
+object BitVecLiteral {
+
+  def apply(value: BigInt, size: BigInt) : BitVecLiteral = BitVecLiteral(value, size.toInt)
+
+}
+
 case class IntLiteral(value: BigInt) extends Literal {
   override def toBoogie: IntBLiteral = IntBLiteral(value)
   override def getType: IRType = IntType
