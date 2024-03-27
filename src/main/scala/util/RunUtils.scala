@@ -132,6 +132,7 @@ object IRLoading {
     val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
 
     val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
+    val g = lgtirb(mods, cfg, mainAddress)
     GTIRBConverter.createIR()
   }
 

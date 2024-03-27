@@ -342,4 +342,3 @@ def v___BranchTaken = Mutable(Register("__BranchTaken", BoolType))
 def v_BTypeNext = Mutable(Register("BTypeNext", BoolType))
 def v___ExclusiveLocal = Mutable(Register("__ExclusiveLocal", BoolType))
 
-

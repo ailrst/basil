@@ -26,6 +26,7 @@ class OfflineLifterTest extends AnyFunSuite {
     println(s"decoded ")
 
     println(prog(proc("beans", Lifter.liftOpcode(0x91000661))))
+
   }
 
 
