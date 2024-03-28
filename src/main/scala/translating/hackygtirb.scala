@@ -28,6 +28,11 @@ import aslloader._
 
 var namecounter = 0
 
+def new_name ()= {
+  namecounter += 1
+  namecounter.toHexString
+}
+
 def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   val functionNames = MapDecoder.decode_uuid(mods.map(_.auxData("functionNames").data))
   val functionEntries = MapDecoder.decode_set(mods.map(_.auxData("functionEntries").data))
@@ -82,11 +87,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
 
   val semblocks = opcodes.map((uid, opcodes) => (uid -> {
-    val label = names.getOrElse(uid, s"block ${namecounter += 1}" )
+    val label = names.getOrElse(uid, s"block${new_name()}" )
     liftBlock(label, opcodes)
   })).toMap
   val proxies = mods.flatMap(_.proxies).map(_.uuid).map(u => (u -> {
-    val label = names.getOrElse(u, s"block ${namecounter += 1}")
+    val label : String = names.getOrElse(u, s"block${new_name()}")
     LiftState(label)
   })).toMap
   val allblocks = semblocks ++ proxies
@@ -98,32 +103,36 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   assert(verts_not_blocks.isEmpty)
 
   val calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, true, Type_Branch, _)) if (procedures.keySet.contains(e.sourceUuid)) => e.sourceUuid -> e
+    case Some(EdgeLabel(_, true, Type_Branch, _)) if (procedures.keySet.contains(e.sourceUuid)) => e.sourceUuid -> e
   }).toMap
 
   val noreturn_calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, true, Type_Call, _)) => e.sourceUuid -> e
+    case Some(EdgeLabel(_, true, Type_Call, _)) => e.sourceUuid -> e
   }).toMap
 
   val fallthroughs = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, true, Type_Fallthrough, _))  => e.sourceUuid -> e
+    case Some(EdgeLabel(_, true, Type_Fallthrough, _))  => e.sourceUuid -> e
   }).toMap
 
   val returns = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, true, Type_Return, _)) => e
+    case Some(EdgeLabel(_, true, Type_Return, _)) => e
   })
 
   val gotos = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, true, Type_Branch, _)) if (!(procedures.keySet.contains(e.sourceUuid))) => e
+    case Some(EdgeLabel(_, true, Type_Branch, _)) if (!(procedures.keySet.contains(e.sourceUuid))) => e
   })
 
   calls.foreach((from, c) => {
     val call = dsl.call(procedures(c.targetUuid), fallthroughs.get(from).map(c => allblocks(c.targetUuid).entry))
+    Logger.debug(s"call $call")
     allblocks(from).add_call(call)
   })
 
+  Logger.debug(s"Fallthroughs ${fallthroughs.map((f,t) => allblocks(t.targetUuid).entry)}")
+
   noreturn_calls.foreach((from, c) => {
     val call = dsl.call(procedures(c.targetUuid), None)
+    Logger.debug(s"call $call")
     allblocks(from).add_call(call)
   })
 
@@ -154,7 +163,6 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
   val p = dsl.prog(real_procedures.map((fname, blocks) => dsl.proc(fname, blocks.toIR())).toList)
   val s = serialiseIL(p) 
-  Logger.info(s)
 
   p
 }

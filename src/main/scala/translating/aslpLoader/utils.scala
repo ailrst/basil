@@ -119,6 +119,8 @@ class LiftState(val entry: String = "block") {
 
   def escaping_jumps = controlFlow.collect { 
       case (_, EventuallyGoto(tgts)) => tgts.map((t: DelayNameResolve) => t.ident)
+      case (_, EventuallyCall(_, Some(ft))) => List(ft.ident)
+      case (_, EventuallyIndirectCall(_, Some(ft))) => List(ft.ident)
   }.flatMap(_.toList).filter((t) => !blocks.keySet.contains(t)).toSet
 
   def push_block(p: Option[String]=None) : String = {
@@ -321,7 +323,7 @@ def f_gen_and_bool(st:LiftState, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(
 def f_gen_asr_bits(st:LiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVASHR, arg0, gen_zero_extend_to(targ0, arg1))
 def f_gen_lsl_bits(st:LiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVSHL, arg0, gen_zero_extend_to(targ0, arg1)) 
 def f_gen_lsr_bits(st:LiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVLSHR, arg0, gen_zero_extend_to(targ0, arg1))
-def f_gen_mul_bits(st:LiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVLSHR, arg0, arg1) 
+def f_gen_mul_bits(st:LiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVMUL, arg0, arg1) 
 def f_gen_ne_bits(st:LiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym ): RTSym = BinaryExpr(BVNEQ, arg0, arg1)
 def f_gen_not_bits(st:LiftState, targ0: BigInt, arg0: RTSym ): RTSym = arg0.getType match {
   case BoolType => UnaryExpr(BoolNOT, arg0) 
