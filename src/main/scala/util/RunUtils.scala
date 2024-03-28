@@ -134,6 +134,7 @@ object IRLoading {
     val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
     val g = lgtirb(mods, cfg, mainAddress)
     GTIRBConverter.createIR()
+    g
   }
 
   def loadReadELF(

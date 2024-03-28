@@ -131,7 +131,7 @@ case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
 
   private def inSize = arg.getType match {
     case bv: BitVecType => bv.size
-    case _              => throw new Exception("type mismatch")
+    case _              => throw new Exception(s"UnaryExpr.inSize $op Type mismatch $arg:${arg.getType}")
   }
 
   override def toString: String = op match {
@@ -182,7 +182,7 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
           if (bv1.size == bv2.size) {
             bv1
           } else {
-            throw new Exception("bitvector size mismatch")
+            throw new Exception(s"bitvector size mismatch $bv1 $bv2 $this")
           }
         case BVCOMP =>
           if (bv1.size == bv2.size) {
@@ -210,7 +210,7 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
 
   private def inSize = arg1.getType match {
     case bv: BitVecType => bv.size
-    case _              => throw new Exception("type mismatch")
+    case _              => throw new Exception(s"BinaryExpr.inSize $arg1 type mismatch")
   }
 
   override def toString: String = op match {

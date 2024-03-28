@@ -125,8 +125,7 @@ def mem: Memory = Memory("mem", 64, 8)
 
 def stack: Memory = Memory("stack", 64, 8)
 
-
-def prog(procedures: EventuallyProcedure*): Program = {
+def prog(procedures: List[EventuallyProcedure]): Program = {
   require(procedures.nonEmpty)
 
   val initialMemory = mutable.ArrayBuffer.empty[MemorySection]
@@ -135,6 +134,10 @@ def prog(procedures: EventuallyProcedure*): Program = {
 
   procedures.foreach(_.resolve(p))
   p
+}
+
+def prog(procedures: EventuallyProcedure*): Program = {
+  prog(procedures.toList)
 }
 
 

@@ -319,6 +319,13 @@ object BitVectorEval {
   def smt_concat(s: BitVecLiteral, t: BitVecLiteral): BitVecLiteral = {
     BitVecLiteral((s.value << t.size) + t.value, s.size + t.size)
   }
+  def bv_replicate(value: BitVecLiteral, times:Int) : BitVecLiteral = {
+    var walk = BitVecLiteral(0, 0)
+    for (i <- 1 to times) {
+      walk = smt_concat(value, walk)
+    }
+    walk
+  }
 
   def smt_sign_extend(i: Int, s: BitVecLiteral): BitVecLiteral = {
     if (isNegative(s)) {
