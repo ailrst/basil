@@ -79,7 +79,7 @@ def call(tgt: Variable, fallthrough: Option[String]): EventuallyIndirectCall = E
 // def directcall(tgt: String) = EventuallyCall(DelayNameResolve(tgt), None)
 
 
-case class EventuallyBlock(label: String, sl: Iterable[Statement], j: EventuallyJump) {
+case class EventuallyBlock(label: String, sl: List[Statement], j: EventuallyJump) {
   val tempBlock: Block = Block(label, None, sl, GoTo(List.empty))
 
   def resolve(prog: Program): Block = {
@@ -87,7 +87,7 @@ case class EventuallyBlock(label: String, sl: Iterable[Statement], j: Eventually
     tempBlock
   }
 }
-def block(label: String, sl: Iterable[Statement | EventuallyJump]): EventuallyBlock = {
+def block(label: String, sl: List[Statement | EventuallyJump]): EventuallyBlock = {
   val statements = sl.collect {
     case s: Statement => s
   }.toList
@@ -98,7 +98,7 @@ def block(label: String, sl: Iterable[Statement | EventuallyJump]): EventuallyBl
 }
 
 def block(label: String, sl: (Statement | EventuallyJump)*): EventuallyBlock = {
-  block(label, sl.toSeq)
+  block(label, sl.toList)
 }
 
 case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {

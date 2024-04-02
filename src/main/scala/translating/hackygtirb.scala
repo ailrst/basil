@@ -129,11 +129,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
 
   val calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.sourceUuid)) => e.sourceUuid -> e
+    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
   }).toMap
 
   val indir_calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.sourceUuid)) => e.sourceUuid -> e
+    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
   }).toMap
    ++  cfg.edges.collect(e => e.label match {
     case Some(EdgeLabel(false, _, Type_Call, _)) => e.sourceUuid -> e
@@ -152,7 +152,7 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   })
 
   val gotos = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (!(procedures.keySet.contains(e.sourceUuid))) => e
+    case Some(EdgeLabel(false, _, Type_Branch, _)) if (!(procedures.keySet.contains(e.targetUuid))) => e
   })
 
 
@@ -190,8 +190,7 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
     .foreach((e, os) => allblocks(e).add_call(dsl.goto(os.map(_._2).toList)))
 
   conds.map((e, ft) => (e.sourceUuid , List(allblocks(e.targetUuid).entry, allblocks(ft.targetUuid).entry)))
-  .foreach((s, b) => allblocks(s).add_call(dsl.goto(b.toList)))
-
+    .foreach((s, b) => allblocks(s).add_call(dsl.goto(b.toList)))
 
 
   val proxy_names = proxies.map((uid, ls) => names.get(uid).getOrElse(symbol_names.get(uid).getOrElse(ls.entry)) -> ls)
@@ -232,11 +231,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
     def fix(s:String) = s.stripPrefix("?:").stripSuffix("()").replace("(", "").replace(")", "")
 
     override def visitLocalVar(node: LocalVar): LocalVar = {
-      node.copy(name = s"#${fix(node.name)}")
+      node.copy(name = s"${fix(node.name)}")
     }
 
     override def visitMemory(node: Memory): Memory = {
-      node.copy(name = s"#${fix(node.name)}")
+      node.copy(name = s"${fix(node.name)}")
     }
 
     override def visitParameter(node: Parameter): Parameter = {

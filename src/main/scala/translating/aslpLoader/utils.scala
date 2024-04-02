@@ -63,7 +63,7 @@ class LiftState(val entry: String = "block") {
     current_pos = c
   }
 
-  def gen_branch(cond: Expr): String = {
+  def gen_branch(cond: Expr) = {
     val branch_id = new_name(Some("branch"))
     val true_branch = push_block(Some("true"))
     val false_branch = push_block(Some("false"))
@@ -74,7 +74,7 @@ class LiftState(val entry: String = "block") {
     controlFlow(true_branch) = goto(merge_block)
     controlFlow(true_branch) = goto(merge_block)
     branches.addOne((branch_id -> (true_branch, false_branch, merge_block)))
-    branch_id
+    (branch_id, true_branch, false_branch, merge_block)
   }
 
   def add_call(c: EventuallyJump) = {
@@ -123,6 +123,7 @@ def zero_extend_to(s: BigInt, x: BitVecLiteral) = {
 
 def gen_zero_extend_to(s: BigInt, x: Expr) = {
   x.getType match {
+    case BitVecType(sz) if sz == s.toInt => x 
     case BitVecType(sz) => ZeroExtend((s - sz).toInt, x)
     case _              => throw Exception("Type mismatch gen_zero_extend_to")
   }
@@ -266,7 +267,7 @@ def f_gen_FixedToFP(
 def f_gen_bit_lit(st: LiftState, targ0: BigInt, arg0: BitVecLiteral): RTSym = BitVecLiteral(arg0.value, targ0.toInt)
 def f_gen_bool_lit(st: LiftState, arg0: Boolean): RTSym = if arg0 then TrueLiteral else FalseLiteral
 
-def f_gen_branch(st: LiftState, arg0: RTSym): RTLabel = st.gen_branch(arg0)
+def f_gen_branch(st: LiftState, arg0: RTSym): RTLabel = st.gen_branch(arg0)._1
 def f_true_branch(st: LiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._1
 def f_false_branch(st: LiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._2
 def f_merge_branch(st: LiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._3
@@ -309,7 +310,7 @@ def f_gen_ZeroExtend(st: LiftState, targ0: BigInt, targ1: BigInt, arg0: Expr, ar
   if (arg1.value != newSize) {
     throw Exception()
   }
-  ZeroExtend((newSize - oldSize).toInt, arg0)
+  if ((newSize - oldSize) == 0) then arg0 else ZeroExtend((newSize - oldSize).toInt, arg0)
 }
 
 def f_gen_add_bits(st: LiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVADD, arg0, arg1)
