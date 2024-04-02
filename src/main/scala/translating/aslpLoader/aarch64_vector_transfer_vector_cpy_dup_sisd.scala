@@ -3,375 +3,375 @@ package aslloader
 import util.Logger
 import ir._
 
-def f_aarch64_vector_transfer_vector_cpy_dup_sisd (v_st: LiftState,v_enc: BitVecLiteral) : Unit = {
-  val v_LowestSetBit3__2 = Mutable[BitVecLiteral](BitVecLiteral(0, BigInt(3)))
-  if (v_split_expr_85065(v_st, v_enc)) then {
-    v_LowestSetBit3__2.v = BitVecLiteral(BigInt("000", 2), 3)
+def f_aarch64_vector_transfer_vector_cpy_dup_sisd (v_st: LiftState,v_enc: BV) : Unit = {
+  val v_LowestSetBit3__2 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
+  if (v_split_expr_85835(v_st, v_enc)) then {
+    v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("000", 2))
   } else {
-    if (v_split_expr_85066(v_st, v_enc)) then {
-      v_LowestSetBit3__2.v = BitVecLiteral(BigInt("001", 2), 3)
+    if (v_split_expr_85836(v_st, v_enc)) then {
+      v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("001", 2))
     } else {
-      v_split_fun_85070 (v_st,v_LowestSetBit3__2,v_enc)
+      v_split_fun_85840 (v_st,v_LowestSetBit3__2,v_enc)
     }
   }
-  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit3__2.v, BitVecLiteral(BigInt("000", 2), 3))) then {
-    v_split_fun_85138 (v_st,v_LowestSetBit3__2,v_enc)
+  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit3__2.v, mkBits(v_st, 3, BigInt("000", 2)))) then {
+    v_split_fun_85908 (v_st,v_LowestSetBit3__2,v_enc)
   } else {
-    v_split_fun_85139 (v_st,v_LowestSetBit3__2,v_enc)
+    v_split_fun_85909 (v_st,v_LowestSetBit3__2,v_enc)
   }
 }
-def v_split_expr_85065 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85835 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85066 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85836 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85067 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85837 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85068 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85838 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85069 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85839 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85071 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85841 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85072 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85842 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85073 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(5), BitVecLiteral(BigInt("00000", 2), 5), f_ZeroExtend(v_st, BigInt(4), BigInt(5), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(5)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), BitVecLiteral(BigInt("0001000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00001000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("010000000", 2), 9))))
+def v_split_expr_85843 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(5), mkBits(v_st, 5, BigInt("00000", 2)), f_ZeroExtend(v_st, BigInt(4), BigInt(5), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(5)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), mkBits(v_st, 7, BigInt("0001000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00001000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("010000000", 2)))))
 }
-def v_split_expr_85074 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85844 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85075 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85845 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85076 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(8), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), BitVecLiteral(BigInt("0001000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(8)), BigInt(0), BigInt(8)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85846 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(8), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), mkBits(v_st, 7, BigInt("0001000", 2))), BigInt(8)))), BigInt(0), BigInt(8)), BigInt(0), BigInt(8)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85077 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85847 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85078 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(5), BitVecLiteral(BigInt("00000", 2), 5), f_ZeroExtend(v_st, BigInt(4), BigInt(5), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(5)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), BitVecLiteral(BigInt("0001000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00001000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("001000000", 2), 9))))
+def v_split_expr_85848 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(5), mkBits(v_st, 5, BigInt("00000", 2)), f_ZeroExtend(v_st, BigInt(4), BigInt(5), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(5)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), mkBits(v_st, 7, BigInt("0001000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00001000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("001000000", 2)))))
 }
-def v_split_expr_85079 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85849 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85080 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85850 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85081 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(8), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), BitVecLiteral(BigInt("0001000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(8)), BigInt(0), BigInt(8)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85851 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(8), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(4), BigInt(7), bvextract(v_st,v_enc,BigInt(17),BigInt(4)), BigInt(7)), mkBits(v_st, 7, BigInt("0001000", 2))), BigInt(8)))), BigInt(0), BigInt(8)), BigInt(0), BigInt(8)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85082 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85852 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85083 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85853 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85084 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85854 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85085 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85855 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85086 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85856 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85088 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85858 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85089 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85859 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85090 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(4), BitVecLiteral(BigInt("0000", 2), 4), f_ZeroExtend(v_st, BigInt(3), BigInt(4), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(4)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), BitVecLiteral(BigInt("0010000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00010000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("010000000", 2), 9))))
+def v_split_expr_85860 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(4), mkBits(v_st, 4, BigInt("0000", 2)), f_ZeroExtend(v_st, BigInt(3), BigInt(4), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(4)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), mkBits(v_st, 7, BigInt("0010000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00010000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("010000000", 2)))))
 }
-def v_split_expr_85091 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85861 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85092 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85862 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85093 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(16), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), BitVecLiteral(BigInt("0010000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(16)), BigInt(0), BigInt(16)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85863 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(16), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), mkBits(v_st, 7, BigInt("0010000", 2))), BigInt(8)))), BigInt(0), BigInt(16)), BigInt(0), BigInt(16)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85094 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85864 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85095 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(4), BitVecLiteral(BigInt("0000", 2), 4), f_ZeroExtend(v_st, BigInt(3), BigInt(4), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(4)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), BitVecLiteral(BigInt("0010000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00010000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("001000000", 2), 9))))
+def v_split_expr_85865 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(4), mkBits(v_st, 4, BigInt("0000", 2)), f_ZeroExtend(v_st, BigInt(3), BigInt(4), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(4)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), mkBits(v_st, 7, BigInt("0010000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00010000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("001000000", 2)))))
 }
-def v_split_expr_85096 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85866 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85097 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85867 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85098 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(16), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), BitVecLiteral(BigInt("0010000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(16)), BigInt(0), BigInt(16)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85868 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(16), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(3), BigInt(7), bvextract(v_st,v_enc,BigInt(18),BigInt(3)), BigInt(7)), mkBits(v_st, 7, BigInt("0010000", 2))), BigInt(8)))), BigInt(0), BigInt(16)), BigInt(0), BigInt(16)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85099 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85869 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85100 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85870 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85101 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85871 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85102 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85872 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85103 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85873 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85105 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85875 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85106 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85876 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85107 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(3), BitVecLiteral(BigInt("000", 2), 3), f_ZeroExtend(v_st, BigInt(2), BigInt(3), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(3)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), BitVecLiteral(BigInt("0100000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00100000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("010000000", 2), 9))))
+def v_split_expr_85877 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(3), mkBits(v_st, 3, BigInt("000", 2)), f_ZeroExtend(v_st, BigInt(2), BigInt(3), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(3)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), mkBits(v_st, 7, BigInt("0100000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00100000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("010000000", 2)))))
 }
-def v_split_expr_85108 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85878 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85109 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85879 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85110 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(32), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), BitVecLiteral(BigInt("0100000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(32)), BigInt(0), BigInt(32)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85880 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(32), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), mkBits(v_st, 7, BigInt("0100000", 2))), BigInt(8)))), BigInt(0), BigInt(32)), BigInt(0), BigInt(32)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85111 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85881 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85112 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(3), BitVecLiteral(BigInt("000", 2), 3), f_ZeroExtend(v_st, BigInt(2), BigInt(3), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(3)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), BitVecLiteral(BigInt("0100000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("00100000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("001000000", 2), 9))))
+def v_split_expr_85882 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(3), mkBits(v_st, 3, BigInt("000", 2)), f_ZeroExtend(v_st, BigInt(2), BigInt(3), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(3)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), mkBits(v_st, 7, BigInt("0100000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("00100000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("001000000", 2)))))
 }
-def v_split_expr_85113 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85883 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85114 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85884 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85115 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(32), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), BitVecLiteral(BigInt("0100000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(32)), BigInt(0), BigInt(32)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85885 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(32), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(2), BigInt(7), bvextract(v_st,v_enc,BigInt(19),BigInt(2)), BigInt(7)), mkBits(v_st, 7, BigInt("0100000", 2))), BigInt(8)))), BigInt(0), BigInt(32)), BigInt(0), BigInt(32)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85116 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85886 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(16),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85117 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85887 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(17),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85118 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85888 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(18),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85119 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85889 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(19),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85120 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85890 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85122 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BitVecLiteral(BigInt("1", 2), 1))
+def v_split_expr_85892 (v_st: LiftState,v_enc: BV)  = {
+  f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))
 }
-def v_split_expr_85123 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85893 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85124 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(2), BitVecLiteral(BigInt("00", 2), 2), f_ZeroExtend(v_st, BigInt(1), BigInt(2), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(2)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), BitVecLiteral(BigInt("1000000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("01000000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("010000000", 2), 9))))
+def v_split_expr_85894 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(2), mkBits(v_st, 2, BigInt("00", 2)), f_ZeroExtend(v_st, BigInt(1), BigInt(2), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(2)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), mkBits(v_st, 7, BigInt("1000000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("01000000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("010000000", 2)))))
 }
-def v_split_expr_85125 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85895 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85126 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85896 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85127 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(64), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), BitVecLiteral(BigInt("1000000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(64)), BigInt(0), BigInt(64)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85897 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(64), BigInt(128), f_gen_slice(v_st, f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(128), BigInt(8), f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), mkBits(v_st, 7, BigInt("1000000", 2))), BigInt(8)))), BigInt(0), BigInt(64)), BigInt(0), BigInt(64)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_expr_85128 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85898 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85129 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(2), BitVecLiteral(BigInt("00", 2), 2), f_ZeroExtend(v_st, BigInt(1), BigInt(2), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(2)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), BitVecLiteral(BigInt("1000000", 2), 7)), BigInt(8)), BitVecLiteral(BigInt("01000000", 2), 8)), BigInt(9)), BitVecLiteral(BigInt("001000000", 2), 9))))
+def v_split_expr_85899 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(2), mkBits(v_st, 2, BigInt("00", 2)), f_ZeroExtend(v_st, BigInt(1), BigInt(2), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(2)))) && (f_sle_bits(v_st, BigInt(9), f_ZeroExtend(v_st, BigInt(8), BigInt(9), f_add_bits(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), mkBits(v_st, 7, BigInt("1000000", 2))), BigInt(8)), mkBits(v_st, 8, BigInt("01000000", 2))), BigInt(9)), mkBits(v_st, 9, BigInt("001000000", 2)))))
 }
-def v_split_expr_85130 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  ((f_sle_bits(v_st, BigInt(6), BitVecLiteral(BigInt("000000", 2), 6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), BitVecLiteral(BigInt("011111", 2), 6))))
+def v_split_expr_85900 (v_st: LiftState,v_enc: BV)  = {
+  ((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(0),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2)))))
 }
-def v_split_expr_85131 (v_st: LiftState,v_enc: BitVecLiteral)  = {
+def v_split_expr_85901 (v_st: LiftState,v_enc: BV)  = {
   f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(0),BigInt(5)))
 }
-def v_split_expr_85132 (v_st: LiftState,v_enc: BitVecLiteral)  = {
-  f_gen_ZeroExtend(v_st, BigInt(64), BigInt(128), f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), BitVecLiteral(BigInt("1000000", 2), 7)), BigInt(8)))), BigInt(0), BigInt(64)), f_gen_int_lit(v_st, BigInt(128)))
+def v_split_expr_85902 (v_st: LiftState,v_enc: BV)  = {
+  f_gen_ZeroExtend(v_st, BigInt(64), BigInt(128), f_gen_slice(v_st, f_gen_lsr_bits(v_st, BigInt(64), BigInt(8), f_gen_slice(v_st, f_gen_array_load(v_st, v__Z.v, f_cvt_bits_uint(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(5),BigInt(5)))), BigInt(0), BigInt(64)), f_gen_bit_lit(v_st, BigInt(8), f_ZeroExtend(v_st, BigInt(7), BigInt(8), f_mul_bits(v_st, BigInt(7), f_ZeroExtend(v_st, BigInt(1), BigInt(7), bvextract(v_st,v_enc,BigInt(20),BigInt(1)), BigInt(7)), mkBits(v_st, 7, BigInt("1000000", 2))), BigInt(8)))), BigInt(0), BigInt(64)), f_gen_int_lit(v_st, BigInt(128)))
 }
-def v_split_fun_85070 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85067(v_st, v_enc)) then {
-    v_LowestSetBit3__2.v = BitVecLiteral(BigInt("010", 2), 3)
+def v_split_fun_85840 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85837(v_st, v_enc)) then {
+    v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("010", 2))
   } else {
-    if (v_split_expr_85068(v_st, v_enc)) then {
-      v_LowestSetBit3__2.v = BitVecLiteral(BigInt("011", 2), 3)
+    if (v_split_expr_85838(v_st, v_enc)) then {
+      v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("011", 2))
     } else {
-      if (v_split_expr_85069(v_st, v_enc)) then {
-        v_LowestSetBit3__2.v = BitVecLiteral(BigInt("100", 2), 3)
+      if (v_split_expr_85839(v_st, v_enc)) then {
+        v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("100", 2))
       } else {
-        v_LowestSetBit3__2.v = BitVecLiteral(BigInt("101", 2), 3)
+        v_LowestSetBit3__2.v = mkBits(v_st, 3, BigInt("101", 2))
       }
     }
   }
 }
-def v_split_fun_85087 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85084(v_st, v_enc)) then {
-    v_LowestSetBit32__2.v = BitVecLiteral(BigInt("010", 2), 3)
+def v_split_fun_85857 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85854(v_st, v_enc)) then {
+    v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("010", 2))
   } else {
-    if (v_split_expr_85085(v_st, v_enc)) then {
-      v_LowestSetBit32__2.v = BitVecLiteral(BigInt("011", 2), 3)
+    if (v_split_expr_85855(v_st, v_enc)) then {
+      v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("011", 2))
     } else {
-      if (v_split_expr_85086(v_st, v_enc)) then {
-        v_LowestSetBit32__2.v = BitVecLiteral(BigInt("100", 2), 3)
+      if (v_split_expr_85856(v_st, v_enc)) then {
+        v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("100", 2))
       } else {
-        v_LowestSetBit32__2.v = BitVecLiteral(BigInt("101", 2), 3)
+        v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("101", 2))
       }
     }
   }
 }
-def v_split_fun_85104 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_LowestSetBit61__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85101(v_st, v_enc)) then {
-    v_LowestSetBit61__2.v = BitVecLiteral(BigInt("010", 2), 3)
+def v_split_fun_85874 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_LowestSetBit61__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85871(v_st, v_enc)) then {
+    v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("010", 2))
   } else {
-    if (v_split_expr_85102(v_st, v_enc)) then {
-      v_LowestSetBit61__2.v = BitVecLiteral(BigInt("011", 2), 3)
+    if (v_split_expr_85872(v_st, v_enc)) then {
+      v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("011", 2))
     } else {
-      if (v_split_expr_85103(v_st, v_enc)) then {
-        v_LowestSetBit61__2.v = BitVecLiteral(BigInt("100", 2), 3)
+      if (v_split_expr_85873(v_st, v_enc)) then {
+        v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("100", 2))
       } else {
-        v_LowestSetBit61__2.v = BitVecLiteral(BigInt("101", 2), 3)
+        v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("101", 2))
       }
     }
   }
 }
-def v_split_fun_85121 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_LowestSetBit61__2: Mutable[BitVecLiteral],v_LowestSetBit90__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85118(v_st, v_enc)) then {
-    v_LowestSetBit90__2.v = BitVecLiteral(BigInt("010", 2), 3)
+def v_split_fun_85891 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_LowestSetBit61__2: Mutable[BV],v_LowestSetBit90__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85888(v_st, v_enc)) then {
+    v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("010", 2))
   } else {
-    if (v_split_expr_85119(v_st, v_enc)) then {
-      v_LowestSetBit90__2.v = BitVecLiteral(BigInt("011", 2), 3)
+    if (v_split_expr_85889(v_st, v_enc)) then {
+      v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("011", 2))
     } else {
-      if (v_split_expr_85120(v_st, v_enc)) then {
-        v_LowestSetBit90__2.v = BitVecLiteral(BigInt("100", 2), 3)
+      if (v_split_expr_85890(v_st, v_enc)) then {
+        v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("100", 2))
       } else {
-        v_LowestSetBit90__2.v = BitVecLiteral(BigInt("101", 2), 3)
+        v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("101", 2))
       }
     }
   }
 }
-def v_split_fun_85133 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_LowestSetBit61__2: Mutable[BitVecLiteral],v_LowestSetBit90__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85122(v_st, v_enc)) then {
-    assert (v_split_expr_85123(v_st, v_enc))
-    assert (v_split_expr_85124(v_st, v_enc))
-    assert (v_split_expr_85125(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85126(v_st, v_enc),v_split_expr_85127(v_st, v_enc))
+def v_split_fun_85903 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_LowestSetBit61__2: Mutable[BV],v_LowestSetBit90__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85892(v_st, v_enc)) then {
+    assert (v_split_expr_85893(v_st, v_enc))
+    assert (v_split_expr_85894(v_st, v_enc))
+    assert (v_split_expr_85895(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85896(v_st, v_enc),v_split_expr_85897(v_st, v_enc))
   } else {
-    assert (v_split_expr_85128(v_st, v_enc))
-    assert (v_split_expr_85129(v_st, v_enc))
-    assert (v_split_expr_85130(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85131(v_st, v_enc),v_split_expr_85132(v_st, v_enc))
+    assert (v_split_expr_85898(v_st, v_enc))
+    assert (v_split_expr_85899(v_st, v_enc))
+    assert (v_split_expr_85900(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85901(v_st, v_enc),v_split_expr_85902(v_st, v_enc))
   }
 }
-def v_split_fun_85134 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_LowestSetBit61__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85105(v_st, v_enc)) then {
-    assert (v_split_expr_85106(v_st, v_enc))
-    assert (v_split_expr_85107(v_st, v_enc))
-    assert (v_split_expr_85108(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85109(v_st, v_enc),v_split_expr_85110(v_st, v_enc))
+def v_split_fun_85904 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_LowestSetBit61__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85875(v_st, v_enc)) then {
+    assert (v_split_expr_85876(v_st, v_enc))
+    assert (v_split_expr_85877(v_st, v_enc))
+    assert (v_split_expr_85878(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85879(v_st, v_enc),v_split_expr_85880(v_st, v_enc))
   } else {
-    assert (v_split_expr_85111(v_st, v_enc))
-    assert (v_split_expr_85112(v_st, v_enc))
-    assert (v_split_expr_85113(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85114(v_st, v_enc),v_split_expr_85115(v_st, v_enc))
+    assert (v_split_expr_85881(v_st, v_enc))
+    assert (v_split_expr_85882(v_st, v_enc))
+    assert (v_split_expr_85883(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85884(v_st, v_enc),v_split_expr_85885(v_st, v_enc))
   }
 }
-def v_split_fun_85135 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_LowestSetBit61__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  val v_LowestSetBit90__2 = Mutable[BitVecLiteral](BitVecLiteral(0, BigInt(3)))
-  if (v_split_expr_85116(v_st, v_enc)) then {
-    v_LowestSetBit90__2.v = BitVecLiteral(BigInt("000", 2), 3)
+def v_split_fun_85905 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_LowestSetBit61__2: Mutable[BV],v_enc: BV) : Unit = {
+  val v_LowestSetBit90__2 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
+  if (v_split_expr_85886(v_st, v_enc)) then {
+    v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("000", 2))
   } else {
-    if (v_split_expr_85117(v_st, v_enc)) then {
-      v_LowestSetBit90__2.v = BitVecLiteral(BigInt("001", 2), 3)
+    if (v_split_expr_85887(v_st, v_enc)) then {
+      v_LowestSetBit90__2.v = mkBits(v_st, 3, BigInt("001", 2))
     } else {
-      v_split_fun_85121 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_LowestSetBit90__2,v_enc)
+      v_split_fun_85891 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_LowestSetBit90__2,v_enc)
     }
   }
-  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit90__2.v, BitVecLiteral(BigInt("011", 2), 3))) then {
-    v_split_fun_85133 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_LowestSetBit90__2,v_enc)
+  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit90__2.v, mkBits(v_st, 3, BigInt("011", 2)))) then {
+    v_split_fun_85903 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_LowestSetBit90__2,v_enc)
   } else {
     throw Exception("not supported")
   }
 }
-def v_split_fun_85136 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85088(v_st, v_enc)) then {
-    assert (v_split_expr_85089(v_st, v_enc))
-    assert (v_split_expr_85090(v_st, v_enc))
-    assert (v_split_expr_85091(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85092(v_st, v_enc),v_split_expr_85093(v_st, v_enc))
+def v_split_fun_85906 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85858(v_st, v_enc)) then {
+    assert (v_split_expr_85859(v_st, v_enc))
+    assert (v_split_expr_85860(v_st, v_enc))
+    assert (v_split_expr_85861(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85862(v_st, v_enc),v_split_expr_85863(v_st, v_enc))
   } else {
-    assert (v_split_expr_85094(v_st, v_enc))
-    assert (v_split_expr_85095(v_st, v_enc))
-    assert (v_split_expr_85096(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85097(v_st, v_enc),v_split_expr_85098(v_st, v_enc))
+    assert (v_split_expr_85864(v_st, v_enc))
+    assert (v_split_expr_85865(v_st, v_enc))
+    assert (v_split_expr_85866(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85867(v_st, v_enc),v_split_expr_85868(v_st, v_enc))
   }
 }
-def v_split_fun_85137 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BitVecLiteral],v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  val v_LowestSetBit61__2 = Mutable[BitVecLiteral](BitVecLiteral(0, BigInt(3)))
-  if (v_split_expr_85099(v_st, v_enc)) then {
-    v_LowestSetBit61__2.v = BitVecLiteral(BigInt("000", 2), 3)
+def v_split_fun_85907 (v_st: LiftState,v_LowestSetBit32__2: Mutable[BV],v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  val v_LowestSetBit61__2 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
+  if (v_split_expr_85869(v_st, v_enc)) then {
+    v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("000", 2))
   } else {
-    if (v_split_expr_85100(v_st, v_enc)) then {
-      v_LowestSetBit61__2.v = BitVecLiteral(BigInt("001", 2), 3)
+    if (v_split_expr_85870(v_st, v_enc)) then {
+      v_LowestSetBit61__2.v = mkBits(v_st, 3, BigInt("001", 2))
     } else {
-      v_split_fun_85104 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
+      v_split_fun_85874 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
     }
   }
-  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit61__2.v, BitVecLiteral(BigInt("010", 2), 3))) then {
-    v_split_fun_85134 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
+  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit61__2.v, mkBits(v_st, 3, BigInt("010", 2)))) then {
+    v_split_fun_85904 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
   } else {
-    v_split_fun_85135 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
+    v_split_fun_85905 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_LowestSetBit61__2,v_enc)
   }
 }
-def v_split_fun_85138 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  if (v_split_expr_85071(v_st, v_enc)) then {
-    assert (v_split_expr_85072(v_st, v_enc))
-    assert (v_split_expr_85073(v_st, v_enc))
-    assert (v_split_expr_85074(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85075(v_st, v_enc),v_split_expr_85076(v_st, v_enc))
+def v_split_fun_85908 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  if (v_split_expr_85841(v_st, v_enc)) then {
+    assert (v_split_expr_85842(v_st, v_enc))
+    assert (v_split_expr_85843(v_st, v_enc))
+    assert (v_split_expr_85844(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85845(v_st, v_enc),v_split_expr_85846(v_st, v_enc))
   } else {
-    assert (v_split_expr_85077(v_st, v_enc))
-    assert (v_split_expr_85078(v_st, v_enc))
-    assert (v_split_expr_85079(v_st, v_enc))
-    f_gen_array_store (v_st,v__Z.v,v_split_expr_85080(v_st, v_enc),v_split_expr_85081(v_st, v_enc))
+    assert (v_split_expr_85847(v_st, v_enc))
+    assert (v_split_expr_85848(v_st, v_enc))
+    assert (v_split_expr_85849(v_st, v_enc))
+    f_gen_array_store (v_st,v__Z.v,v_split_expr_85850(v_st, v_enc),v_split_expr_85851(v_st, v_enc))
   }
 }
-def v_split_fun_85139 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BitVecLiteral],v_enc: BitVecLiteral) : Unit = {
-  val v_LowestSetBit32__2 = Mutable[BitVecLiteral](BitVecLiteral(0, BigInt(3)))
-  if (v_split_expr_85082(v_st, v_enc)) then {
-    v_LowestSetBit32__2.v = BitVecLiteral(BigInt("000", 2), 3)
+def v_split_fun_85909 (v_st: LiftState,v_LowestSetBit3__2: Mutable[BV],v_enc: BV) : Unit = {
+  val v_LowestSetBit32__2 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
+  if (v_split_expr_85852(v_st, v_enc)) then {
+    v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("000", 2))
   } else {
-    if (v_split_expr_85083(v_st, v_enc)) then {
-      v_LowestSetBit32__2.v = BitVecLiteral(BigInt("001", 2), 3)
+    if (v_split_expr_85853(v_st, v_enc)) then {
+      v_LowestSetBit32__2.v = mkBits(v_st, 3, BigInt("001", 2))
     } else {
-      v_split_fun_85087 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
+      v_split_fun_85857 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
     }
   }
-  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit32__2.v, BitVecLiteral(BigInt("001", 2), 3))) then {
-    v_split_fun_85136 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
+  if (f_eq_bits(v_st, BigInt(3), v_LowestSetBit32__2.v, mkBits(v_st, 3, BigInt("001", 2)))) then {
+    v_split_fun_85906 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
   } else {
-    v_split_fun_85137 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
+    v_split_fun_85907 (v_st,v_LowestSetBit32__2,v_LowestSetBit3__2,v_enc)
   }
 }

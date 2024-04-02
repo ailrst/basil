@@ -3,7 +3,7 @@ package aslloader
 import util.Logger
 import ir._
 
-def f_aarch64_integer_flags_xaflag (v_st: LiftState,v_enc: BitVecLiteral) : Unit = {
+def f_aarch64_integer_flags_xaflag (v_st: LiftState,v_enc: BV) : Unit = {
   val v_Exp8__1 : RTSym = f_decl_bv(v_st, "Exp8__1", BigInt(1)) 
   f_gen_store (v_st,v_Exp8__1,f_gen_load(v_st, v_PSTATE_Z.v))
   val v_Exp9__1 : RTSym = f_decl_bv(v_st, "Exp9__1", BigInt(1)) 

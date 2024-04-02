@@ -199,8 +199,6 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
    * @return The element
    */
   def append(newElem: T): T = {
-    assert(newElem.unitary)
-    assert(!containsRef(newElem))
     onInsert(newElem)
     if (size > 0) {
       insertAfter(lastElem.get, newElem)
