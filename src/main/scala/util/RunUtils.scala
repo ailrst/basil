@@ -443,11 +443,11 @@ object IRTransform {
     ctx.program.determineRelevantMemory(ctx.globalOffsets)
 
     Logger.info("[!] Stripping unreachable")
-    val before = ctx.program.procedures.size
-    ctx.program.stripUnreachableFunctions(config.procedureTrimDepth)
-    Logger.info(
-      s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
-    )
+    //val before = ctx.program.procedures.size
+    //ctx.program.stripUnreachableFunctions(config.procedureTrimDepth)
+    //Logger.info(
+    //  s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
+    //)
 
     val stackIdentification = StackSubstituter()
     stackIdentification.visitProgram(ctx.program)

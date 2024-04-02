@@ -15,6 +15,7 @@ val R29: Register = Register("R29", BitVecType(64))
 val R30: Register = Register("R30", BitVecType(64))
 val R31: Register = Register("R31", BitVecType(64))
 val ret: EventuallyIndirectCall = EventuallyIndirectCall(Register("R30", BitVecType(64)), None)
+val term: EventuallyIndirectCall = EventuallyIndirectCall(Register("Unkonwn", BitVecType(64)), None)
 
 
 def bv32(i: Int): BitVecLiteral = BitVecLiteral(i, 32)
@@ -41,14 +42,14 @@ trait EventuallyJump {
 
 case class EventuallyIndirectCall(target: Variable, fallthrough: Option[DelayNameResolve]) extends EventuallyJump {
   override def resolve(p: Program): IndirectCall = {
-    IndirectCall(target, fallthrough.flatMap(_.resolveBlock(p)))
+    IndirectCall(target, fallthrough.map(_.resolveBlock(p).get))
   }
 }
 
 case class EventuallyCall(target: DelayNameResolve, fallthrough: Option[DelayNameResolve]) extends EventuallyJump {
   override def resolve(p: Program): DirectCall = {
-    val t = target.resolveProc(p).get
-    val ft = fallthrough.flatMap(_.resolveBlock(p))
+    val t = target.resolveProc(p).get 
+    val ft = fallthrough.map(_.resolveBlock(p).get)
     DirectCall(t, ft)
   }
 }
@@ -78,7 +79,7 @@ def call(tgt: Variable, fallthrough: Option[String]): EventuallyIndirectCall = E
 // def directcall(tgt: String) = EventuallyCall(DelayNameResolve(tgt), None)
 
 
-case class EventuallyBlock(label: String, sl: Seq[Statement], j: EventuallyJump) {
+case class EventuallyBlock(label: String, sl: Iterable[Statement], j: EventuallyJump) {
   val tempBlock: Block = Block(label, None, sl, GoTo(List.empty))
 
   def resolve(prog: Program): Block = {
