@@ -281,7 +281,11 @@ def f_gen_eq_bits(st: LiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym
   (arg0.getType, arg1.getType) match {
     case (b:BitVecType, v:BitVecType) => BinaryExpr(BVEQ, arg0, arg1)
     case (b:BitVecType, BoolType) => BinaryExpr(BVXNOR, BinaryExpr(BVEQ, BitVecLiteral(0, targ0.toInt), arg0), arg1)
+    case (BoolType, b:BitVecType) => BinaryExpr(BVXNOR, BinaryExpr(BVEQ, BitVecLiteral(0, targ0.toInt), arg1), arg0)
     case (b:BitVecType, IntType) => BinaryExpr(IntEQ, BinaryExpr(BVEQ, BitVecLiteral(0, targ0.toInt), arg0), arg1)
+    case (IntType, b:BitVecType) => BinaryExpr(IntEQ, BinaryExpr(BVEQ, BitVecLiteral(0, targ0.toInt), arg1), arg0)
+    case (BoolType, BoolType) =>  BinaryExpr(BoolEQ, arg0, arg1)
+    case (IntType, IntType) =>  BinaryExpr(IntEQ, arg0, arg1)
   }
 }
 def f_gen_eq_enum(st: LiftState, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVEQ, arg0, arg1)
@@ -376,8 +380,10 @@ def f_gen_replicate_bits(st: LiftState, targ0: BigInt, targ1: BigInt, arg0: RTSy
 }
 def f_gen_append_bits(st: LiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym): RTSym =
   BinaryExpr(BVCONCAT, arg0, arg1)
+
 def f_gen_array_load(st: LiftState, arg0: RTSym, arg1: BigInt): RTSym = arg0 match
   case Register("_R", t) => Register("R" + arg1, BitVecType(64))
+  case Register("_Z", t) => Register("V" + arg1, BitVecType(128))
   case _ => {
     Logger.warn(s"Unknown array load $arg0")
     arg0
@@ -391,10 +397,10 @@ def f_switch_context(st: LiftState, arg0: RTLabel) = st.switch_ctx(arg0)
 
 /** Global variable definitions * */
 
-def v_PSTATE_C = Mutable(Register("PSTATE.C", BoolType)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "C")
-def v_PSTATE_Z = Mutable(Register("PSTATE.Z", BoolType)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "Z")
-def v_PSTATE_V = Mutable(Register("PSTATE.V", BoolType)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "V")
-def v_PSTATE_N = Mutable(Register("PSTATE.N", BoolType)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "N")
+def v_PSTATE_C = Mutable(Register("C", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "C")
+def v_PSTATE_Z = Mutable(Register("Z", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "Z")
+def v_PSTATE_V = Mutable(Register("V", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "V")
+def v_PSTATE_N = Mutable(Register("N", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "N")
 def v__PC = Mutable(Register("_PC", BitVecType(64))) // Expr_Var(Ident "_PC")
 def v__R = Mutable(Register("_R", IntType))
 def v__Z = Mutable(Register("_Z", BoolType))
