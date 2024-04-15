@@ -63,11 +63,14 @@ factor : arg1=unaryExpr ( op=mulDivModOp arg2=unaryExpr )? ;
 unaryExpr : atomExpr #atomUnaryExpr
           | SUB_OP unaryExpr #negExpr
           | NOT_OP unaryExpr #notExpr
+          | 'memory_load' '('  addr=atomExpr ',' size=nat ')'   #loadExpr
+          | 'gamma_load'  '(' addr=atomExpr',' size=nat  ')'   #gammaLoadExpr
           ;
 
 atomExpr : boolLit #boolLitExpr
          | bv #bvExpr
          | id #idExpr
+         | REG #regExpr
          | arrayAccess #arrayAccessExpr
          | OLD LPAREN expr RPAREN #oldExpr
          | LPAREN expr RPAREN #parenExpr
@@ -87,8 +90,8 @@ GAMMA_STORE_DIRECT: GAMMA_STORE DIGIT+;
 ZERO_EXTEND_DIRECT: ZERO_EXTEND DIGIT+ UNDERSCORE DIGIT+;
 SIGN_EXTEND_DIRECT: SIGN_EXTEND DIGIT+ UNDERSCORE DIGIT+;
 
-fragment MEMORY_LOAD: 'memory_load';
 fragment MEMORY_STORE: 'memory_store';
+fragment MEMORY_LOAD: 'memory_load';
 fragment GAMMA_LOAD: 'gamma_load';
 fragment GAMMA_STORE: 'gamma_store';
 fragment ZERO_EXTEND: 'zero_extend';
@@ -114,6 +117,8 @@ ELSE: 'else';
 
 DIV_OP : 'div';
 MOD_OP : 'mod';
+
+REG : ('R'|'r') DIGIT+ ;
 
 BVSIZE: BV DIGIT+;
 
