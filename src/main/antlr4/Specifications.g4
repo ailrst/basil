@@ -70,7 +70,6 @@ unaryExpr : atomExpr #atomUnaryExpr
 atomExpr : boolLit #boolLitExpr
          | bv #bvExpr
          | id #idExpr
-         | REG #regExpr
          | arrayAccess #arrayAccessExpr
          | OLD LPAREN expr RPAREN #oldExpr
          | LPAREN expr RPAREN #parenExpr
@@ -117,8 +116,6 @@ ELSE: 'else';
 
 DIV_OP : 'div';
 MOD_OP : 'mod';
-
-REG : ('R'|'r') DIGIT+ ;
 
 BVSIZE: BV DIGIT+;
 

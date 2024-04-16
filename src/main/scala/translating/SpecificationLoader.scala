@@ -257,9 +257,6 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
       GammaLoad(gmem, visitAtomExpr(l.addr, nameToGlobals, params), Integer.parseInt(l.size.getText), Integer.parseInt(l.size.getText) / 8)
   }
 
-  def visitRegExpr(ctx: RegExprContext) : BExpr = {
-    BVariable(ctx.getText, BitVecBType(64), Scope.Global)
-  } 
 
   def visitAtomExpr(
       ctx: AtomExprContext,
@@ -268,7 +265,6 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   ): BExpr = ctx match {
     case b: BoolLitExprContext     => visitBoolLit(b.boolLit)
     case i: IdExprContext          => visitId(i.id, nameToGlobals, params)
-    case r: RegExprContext         => visitRegExpr(r)
     case o: OldExprContext         => visitOldExpr(o, nameToGlobals, params)
     case p: ParenExprContext       => visitExpr(p.expr, nameToGlobals, params)
     case i: IfThenElseExprContext  => visitIfThenElseExpr(i, nameToGlobals, params)
@@ -334,7 +330,8 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
 
   def visitId(ctx: IdContext, nameToGlobals: Map[String, SpecGlobal], params: Map[String, Parameter] = Map()): BExpr = {
     val id = ctx.getText
-    if (id.startsWith("Gamma_")) {
+    id match {
+      case id if (id.startsWith("Gamma_")) => {
       val gamma_id = id.stripPrefix("Gamma_")
       params.get(gamma_id) match {
         case Some(p: Parameter) => p.value.toGamma
@@ -343,26 +340,31 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
             case Some(g: SpecGlobal) => SpecGamma(g)
             case None                => throw new Exception(s"unresolvable reference to '$id' in specification")
           }
+        }
       }
-    } else {
-      params.get(id) match {
-        case Some(p: Parameter) =>
-          val registerSize = p.value.size
-          val paramSize = p.size
-          if (paramSize == registerSize) {
-            p.value.toBoogie
-          } else if (registerSize > paramSize) {
-            BVExtract(registerSize - p.size, 0, p.value.toBoogie)
-          } else {
-            throw Exception(s"parameter $p doesn't fit in register ${p.value} for ID $id")
-          }
-        case None =>
-          nameToGlobals.get(ctx.getText) match {
-            case Some(g: SpecGlobal) => g
-            case None                => throw new Exception(s"unresolvable reference to '$id' in specification")
-          }
+      case id if id.startsWith("R") => {
+        BVariable(id, BitVecBType(64), Scope.Global)
       }
-    }
+      case id =>  {
+        params.get(id) match {
+          case Some(p: Parameter) =>
+            val registerSize = p.value.size
+            val paramSize = p.size
+            if (paramSize == registerSize) {
+              p.value.toBoogie
+            } else if (registerSize > paramSize) {
+              BVExtract(registerSize - p.size, 0, p.value.toBoogie)
+            } else {
+              throw Exception(s"parameter $p doesn't fit in register ${p.value} for ID $id")
+            }
+          case None =>
+            nameToGlobals.get(ctx.getText) match {
+              case Some(g: SpecGlobal) => g
+              case None                => throw new Exception(s"unresolvable reference to '$id' in specification")
+            }
+        }
+      }
+      }
   }
 
   def visitMulDivModOp(ctx: MulDivModOpContext): BVBinOp = ctx.getText match {
