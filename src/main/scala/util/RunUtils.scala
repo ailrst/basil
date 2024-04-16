@@ -112,7 +112,7 @@ object IRLoading {
     val mods = ir.modules
     val cfg = ir.cfg.get
 
-    //val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
+    val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
 
     def parse_insn(f: String): StmtContext = {
       try {
@@ -129,15 +129,11 @@ object IRLoading {
       }
     }
 
-    //val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
-
-    val tmr = PerformanceTimer("loading")
-    //val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
-    //GTIRBConverter.createIR()
-    tmr.checkPoint("Gtirb parsing")
-    val g = lgtirb(mods, cfg, mainAddress)
-    tmr.checkPoint("Offline lifter")
-    g
+    val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
+    val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
+   // val g = lgtirb(mods, cfg, mainAddress)
+    // g
+    GTIRBConverter.createIR()
 
   }
 
