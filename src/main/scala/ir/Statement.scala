@@ -49,7 +49,7 @@ object MemoryAssign:
   def unapply(m: MemoryAssign): Option[(Memory, MemoryStore, Option[String])] = Some(m.lhs, m.rhs, m.label)
 
 class NOP(override val label: Option[String] = None) extends Statement {
-  override def toString: String = s"NOP $labelStr"
+  override def toString: String = s"NOP // $labelStr"
   override def acceptVisit(visitor: Visitor): Statement = this
 }
 

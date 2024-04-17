@@ -15,7 +15,7 @@ val R29: Register = Register("R29", BitVecType(64))
 val R30: Register = Register("R30", BitVecType(64))
 val R31: Register = Register("R31", BitVecType(64))
 val ret: EventuallyIndirectCall = EventuallyIndirectCall(Register("R30", BitVecType(64)), None)
-val term: EventuallyIndirectCall = EventuallyIndirectCall(Register("Unkonwn", BitVecType(64)), None)
+val term: EventuallyIndirectCall = EventuallyIndirectCall(Register("Register(Unkonwn)", BitVecType(64)), None)
 
 
 def bv32(i: Int): BitVecLiteral = BitVecLiteral(i, 32)
@@ -110,9 +110,8 @@ case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {
     jumps.map((b, j) => b.replaceJump(j.resolve(prog)))
     tempProc
   }
-
-
 }
+
 
 def proc(label: String, blocks: Iterable[EventuallyBlock]): EventuallyProcedure = {
   EventuallyProcedure(label, blocks.toList)

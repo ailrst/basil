@@ -34,6 +34,9 @@ def new_name ()= {
 }
 
 def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
+
+  def fixname(s:String) = s.stripPrefix("?:").stripSuffix("()").replace("(", "").replace(")", "")
+
   val functionNames = MapDecoder.decode_uuid(mods.map(_.auxData("functionNames").data))
   val functionEntries = MapDecoder.decode_set(mods.map(_.auxData("functionEntries").data))
   val functionBlocks = MapDecoder.decode_set(mods.map(_.auxData("functionBlocks").data))
@@ -128,33 +131,99 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   })
 
 
+  val gedges = cfg.edges.groupBy(e => e.sourceUuid).toMap
+
+  def get_pc(binfo: LiftState) : (String, BranchInfo) = {
+    val pcs = binfo.pcAssigns.toList
+    assert(pcs.size == 1)
+    pcs.head
+  }
+
+  for ((b, es) <- gedges) {
+      val edge = es.find(!_.label.get.`type`.isTypeFallthrough).getOrElse(es.head)
+      val ft = es.find(_ != edge)
+      val ft_sb = ft.map(f => allblocks(f.sourceUuid))
+      val ft_tb = ft.map(f => allblocks(f.targetUuid))
+      val sb = allblocks(edge.sourceUuid)
+      val tb = allblocks(edge.targetUuid)
+      val sb_pos = sb.current_pos
+      edge.label match  {
+        // unconditional
+        case Some(EdgeLabel(_, _, Type_Return, _)) => sb.add_call(dsl.ret); assert(ft.isEmpty)
+        case Some(EdgeLabel(false, true, Type_Branch, _)) if (procedures.keySet.contains(edge.targetUuid)) => sb.add_call(dsl.call(procedures(edge.targetUuid), ft_tb.map(_.entry))); ft_tb.foreach(sb.merge_state)
+        case Some(EdgeLabel(false, false, Type_Branch, _)) if (procedures.keySet.contains(edge.targetUuid)) => sb.add_call(dsl.indirectCall(procedures(edge.targetUuid), ft_tb.map(_.entry))); ft_tb.foreach(sb.merge_state)
+        case Some(EdgeLabel(false, true, Type_Branch, _))  => sb.add_goto(tb.entry); sb.merge_state(tb)
+        case Some(EdgeLabel(false, true, Type_Call, _))  => sb.add_call(dsl.call(procedures(edge.targetUuid), ft_tb.map(_.entry))); ft_tb.foreach(sb.merge_state)
+        case Some(EdgeLabel(false, true, Type_Fallthrough, _))  => sb.add_goto(tb.entry); sb.merge_state(tb)
+        case Some(EdgeLabel(true, true, Type_Fallthrough, _)) => {
+          assert(ft.isEmpty)
+          val (pcblockid, pc) = get_pc(sb)
+          sb.switch_ctx(pcblockid)
+          sb.add_goto(tb.entry)
+          sb.merge_state(tb)
+          sb.switch_ctx(sb_pos)
+        };
+        case Some(EdgeLabel(true, true, Type_Branch, _)) => {
+          val (pcblockid, pc) = get_pc(sb)
+          val (true_branch, false_branch, join) = sb.branches(pc.branch.get)
+          assert(sb.current_pos == join) // branch at the end of the instruction
+          assert(true_branch == pcblockid)
+
+          sb.blocks.remove(join)
+          sb.controlFlow(true_branch) = dsl.goto(allblocks(edge.targetUuid).entry)
+          ft_tb.foreach(f => sb.controlFlow(false_branch) = dsl.goto(f.entry))
+        }
+        case Some(EdgeLabel(true, true, Type_Call, _)) => {
+          //sb.add_call(dsl.call(procedures(edge.targetUuid), ft_tb.map(_.entry)))
+          //ft_tb.foreach(sb.merge_state(_))
+          val (pcblockid, pc) = get_pc(sb)
+          val (true_branch, false_branch, join) = sb.branches(pc.branch.get)
+          assert(sb.current_pos == join) // branch at the end of the instruction
+          assert(true_branch == pcblockid)
+
+          sb.blocks.remove(join)
+          sb.controlFlow(true_branch) = dsl.call(procedures(edge.targetUuid), None)
+          ft_tb.foreach(f => sb.controlFlow(false_branch) = dsl.goto(f.entry))
+
+        };
+        case x => throw Exception(s"$x")
+      }
+  }
+
+  /*
+  val cond_calls = cfg.edges.collect(e => e.label match {
+    case Some(EdgeLabel(true, true, Type_Branch, _)) if ((procedures.keySet.contains(e.targetUuid))) => e.sourceUuid -> e
+  })
+  val conditionals = cfg.edges.collect(e => e.label match {
+    case Some(EdgeLabel(true, true, Type_Branch, _)) if (!(procedures.keySet.contains(e.targetUuid)))  => e.sourceUuid -> e
+  })
+
   val calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
+    case Some(EdgeLabel(false, true, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
   }).toMap
 
+  val gotos = cfg.edges.collect(e => e.label match {
+    case Some(EdgeLabel(false, true, Type_Branch, _)) if (!(procedures.keySet.contains(e.targetUuid))) => e
+  })
+
   val indir_calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
+    case Some(EdgeLabel(false, false, Type_Branch, _)) if (procedures.keySet.contains(e.targetUuid)) => e.sourceUuid -> e
   }).toMap
    ++  cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Call, _)) => e.sourceUuid -> e
+    case Some(EdgeLabel(false, false, Type_Call, _)) => e.sourceUuid -> e
   }).toMap
 
   val noreturn_calls = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Call, _)) => e.sourceUuid -> e
+    case Some(EdgeLabel(_, _, Type_Call, _)) => e.sourceUuid -> e
   }).toMap
 
   val fallthroughs = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Fallthrough, _))  => e.sourceUuid -> e
+    case Some(EdgeLabel(_, _, Type_Fallthrough, _))  => e.sourceUuid -> e
   }).toMap
 
   val returns = cfg.edges.collect(e => e.label match {
     case Some(EdgeLabel(false, _, Type_Return, _)) => e
   })
-
-  val gotos = cfg.edges.collect(e => e.label match {
-    case Some(EdgeLabel(false, _, Type_Branch, _)) if (!(procedures.keySet.contains(e.targetUuid))) => e
-  })
-
 
 
   calls.foreach((from, c) => {
@@ -162,12 +231,85 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
     val call = dsl.call(procedures(c.targetUuid), ft.map(c => allblocks(c.targetUuid).entry))
     Logger.debug(s"call $call $from ${fallthroughs.get(from)}")
     allblocks(from).add_call(call)
+    ft.foreach(f => allblocks(from).merge_state(allblocks(f.targetUuid)))
   })
 
   fallthroughs.foreach((f, edge) => {
     val edg = cfg.edges.filter(e => e.sourceUuid == f && e != f)
     Logger.debug(s"Fallthrough $f : $edg")
   })
+
+  conditionals.foreach((from, c) => {
+    val ft = fallthroughs.get(c.sourceUuid).get
+    val ftBl = allblocks(ft.targetUuid)
+    val jmp = dsl.goto(allblocks(c.targetUuid).entry, ftBl.entry)
+    val existing_branches = allblocks(from).pcAssigns
+
+    val tgt_true_branch = allblocks(c.targetUuid)
+    val tgt_ft_branch = ftBl
+    val cb = allblocks(c.sourceUuid)
+    val ocb = cb.current_pos
+
+    assert(existing_branches.size == 1)
+    val true_branch = existing_branches.toList.head
+    assert(true_branch._2.branchTaken)
+    val f_false_branch = cb.branches(true_branch._2.branch.get)._2
+    val f_true_branch = cb.branches(true_branch._2.branch.get)._1
+    val f_join = cb.branches(true_branch._2.branch.get)._3
+
+    cb.merge_state(tgt_true_branch)
+    cb.merge_state(tgt_ft_branch)
+    tgt_true_branch.add_goto(f_join)
+    tgt_ft_branch.add_goto(f_join)
+
+    cb.switch_ctx(f_true_branch)
+    cb.add_call(dsl.goto(tgt_true_branch.entry))
+
+    cb.switch_ctx(f_false_branch)
+    cb.add_call(dsl.goto(tgt_ft_branch.entry))
+
+    //tgt_true_branch.add_goto(cb.branches(true_branch._2.branch.get)._3)
+    cb.switch_ctx(ocb)
+  })
+
+
+  cond_calls.foreach((from, c) => {
+    val ft = fallthroughs.get(c.sourceUuid).get
+    val ftBl = allblocks(ft.targetUuid)
+    val jmp = dsl.goto(allblocks(c.targetUuid).entry, ftBl.entry)
+    val existing_branches = allblocks(from).pcAssigns
+
+    val tgt_true_branch = allblocks(c.targetUuid)
+    val tgt_ft_branch = ftBl
+    val cb = allblocks(c.sourceUuid)
+    val ocb = cb.current_pos
+
+    assert(existing_branches.size == 1)
+    val true_branch = existing_branches.toList.head
+    assert(true_branch._2.branchTaken)
+    val f_false_branch = cb.branches(true_branch._2.branch.get)._2
+    val f_true_branch = cb.branches(true_branch._2.branch.get)._1
+    val f_join = cb.branches(true_branch._2.branch.get)._3
+
+    //tgt_true_branch.add_goto(f_join)
+    //tgt_ft_branch.add_goto(f_join)
+
+    cb.switch_ctx(f_true_branch)
+    cb.add_call(dsl.call(tgt_true_branch.entry, Some(f_join)))
+
+    cb.switch_ctx(f_false_branch)
+    cb.add_call(dsl.call(tgt_ft_branch.entry, Some(f_join)))
+
+    //tgt_true_branch.add_goto(cb.branches(true_branch._2.branch.get)._3)
+    cb.switch_ctx(ocb)
+  })
+
+  gotos.map(e => (e.sourceUuid, allblocks(e.targetUuid).entry))
+    .groupBy((b, _) => b)
+    .foreach((e, os) => {
+      (os.map(g => allblocks(e).add_goto(g._2)).toList)
+      (os.foreach(g => allblocks(e).merge_state(allblocks(g._1))))
+    })
 
 
   Logger.debug(s"Fallthroughs ${fallthroughs.map((f,t) => allblocks(t.targetUuid).entry)}")
@@ -185,13 +327,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
     allblocks(c.sourceUuid).add_call(dsl.ret)
   })
 
-  gotos.map(e => (e.sourceUuid, allblocks(e.targetUuid).entry))
-    .groupBy((b,_) => b)
-    .foreach((e, os) => allblocks(e).add_call(dsl.goto(os.map(_._2).toList)))
 
-  conds.map((e, ft) => (e.sourceUuid , List(allblocks(e.targetUuid).entry, allblocks(ft.targetUuid).entry)))
-    .foreach((s, b) => allblocks(s).add_call(dsl.goto(b.toList)))
+   */
 
+  //conds.map((e, ft) => (e.sourceUuid , List(allblocks(e.targetUuid).entry, allblocks(ft.targetUuid).entry)))
+  //  .foreach((s, b) => allblocks(s).add_call(dsl.goto(b.toList)))
 
   val proxy_names = proxies.map((uid, ls) => names.get(uid).getOrElse(symbol_names.get(uid).getOrElse(ls.entry)) -> ls)
   var real_procedures = procedure_names.map((fuid, fname) => fname -> allblocks(fuid)).toMap ++ proxy_names
@@ -210,7 +350,6 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   }
 
 
-
   class CleanupVis extends Visitor {
     override def visitBlock(node: ir.Block): ir.Block = {
       for (s: Statement <- node.statements) {
@@ -226,8 +365,6 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
 
   class VRenamer() extends Visitor {
-
-
     def fix(s:String) = s.stripPrefix("?:").stripSuffix("()").replace("(", "").replace(")", "")
 
     override def visitLocalVar(node: LocalVar): LocalVar = {
@@ -255,7 +392,6 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   }
 
   var p = dsl.prog(real_procedures.map((fname, blocks) => dsl.proc(fname, blocks.toIR())).toList)
-  p = VRenamer().visitProgram(p)
   p = CleanupVis().visitProgram(p)
 
 

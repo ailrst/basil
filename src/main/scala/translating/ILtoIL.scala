@@ -12,16 +12,16 @@ private class ILSerialiser extends ReadOnlyVisitor {
 
   def blockIdentifier(block: Block): String = {
     val i = block.address match {
-      case Some(addr) => f"$addr:${block.label}"
-      case None       => f"?:${block.label}"
+      case Some(addr) => f"${block.label}"
+      case None       => f"${block.label}"
     }
     s"\"$i\""
   }
 
   def procedureIdentifier(proc: Procedure): String = {
     val i = proc.address match {
-      case Some(addr) => f"$addr:${proc.name}"
-      case None       => f"?:${proc.name}"
+      case Some(addr) => f"${proc.name}"
+      case None       => f"${proc.name}"
     }
     s"\"$i\""
   }
@@ -30,7 +30,9 @@ private class ILSerialiser extends ReadOnlyVisitor {
     node.acceptVisit(this)
   }
 
-  override def visitStatement(node: Statement): Statement = node.acceptVisit(this)
+  override def visitStatement(node: Statement): Statement = node match
+    case n: NOP => program ++= node.toString; node
+    case _ => node.acceptVisit(this)
 
   override def visitLocalAssign(node: LocalAssign): Statement = {
     program ++= "LocalAssign("
