@@ -22,7 +22,7 @@ import Parsers.*
 import Parsers.SemanticsParser.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import org.antlr.v4.runtime.BailErrorStrategy
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token}
+import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 import translating.*
 import util.Logger
 import java.util.Base64
@@ -112,41 +112,32 @@ object IRLoading {
     val mods = ir.modules
     val cfg = ir.cfg.get
 
-    val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
+    //val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
 
-    def parse_insn(line: String): StmtContext = {
-      val semanticsLexer = SemanticsLexer(CharStreams.fromString(line))
-      val tokens = CommonTokenStream(semanticsLexer)
-      val parser = SemanticsParser(tokens)
-      parser.setErrorHandler(BailErrorStrategy())
-      parser.setBuildParseTree(true)
-
+    def parse_insn(f: String): StmtContext = {
       try {
+        val semanticsLexer = SemanticsLexer(CharStreams.fromString(f))
+        val tokens = CommonTokenStream(semanticsLexer)
+        val parser = SemanticsParser(tokens)
+        parser.setErrorHandler(BailErrorStrategy())
+        parser.setBuildParseTree(true)
         parser.stmt()
       } catch {
         case e: org.antlr.v4.runtime.misc.ParseCancellationException =>
-          val extra = e.getCause match {
-            case mismatch: org.antlr.v4.runtime.InputMismatchException =>
-              val token = mismatch.getOffendingToken
-              s"""
-                exn: ${mismatch}
-                offending token: ${token}
-
-              ${line.replace('\n', ' ')}
-              ${" " * token.getStartIndex}^ here!
-              """.stripIndent
-            case _ => ""
-          }
-          Logger.error(s"""Semantics parse error:\n  line: ${line}\n${extra}""")
-          throw e
+          Logger.error(f)
+          throw RuntimeException(e)
       }
     }
 
-    val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
-    val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
-   // val g = lgtirb(mods, cfg, mainAddress)
-    // g
-    GTIRBConverter.createIR()
+    //val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
+
+    val tmr = PerformanceTimer("loading")
+    //val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
+    //GTIRBConverter.createIR()
+    tmr.checkPoint("Gtirb parsing")
+    val g = lgtirb(mods, cfg, mainAddress)
+    tmr.checkPoint("Offline lifter")
+    g
 
   }
 
@@ -452,11 +443,11 @@ object IRTransform {
     ctx.program.determineRelevantMemory(ctx.globalOffsets)
 
     Logger.info("[!] Stripping unreachable")
-    //val before = ctx.program.procedures.size
-    //ctx.program.stripUnreachableFunctions(config.procedureTrimDepth)
-    //Logger.info(
-    //  s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
-    //)
+    val before = ctx.program.procedures.size
+    ctx.program.stripUnreachableFunctions(config.procedureTrimDepth)
+    Logger.info(
+      s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
+    )
 
     val stackIdentification = StackSubstituter()
     stackIdentification.visitProgram(ctx.program)

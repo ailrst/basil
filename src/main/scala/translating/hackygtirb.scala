@@ -222,6 +222,7 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
   var p = dsl.prog(real_procedures.map((fname, blocks) => dsl.proc(fname, blocks.toIR())).toList)
   p = CleanupVis().visitProgram(p)
+  p.mainProcedure = p.procedures.find(_.name == "main").getOrElse(p.procedures.head)
 
 
   val s = serialiseIL(p) 

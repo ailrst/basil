@@ -71,7 +71,16 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
     xs.iterator.foreach(append)
     this
   }
-  // end Growable
+
+  override def toList : List[T] = {
+    iterator.map(remove).toList
+  }
+
+  override def toSeq: Seq[T] = {
+    iterator.map(remove).toSeq
+  }
+
+// end Growable
 
   def this() = this(0, None, None)
 
