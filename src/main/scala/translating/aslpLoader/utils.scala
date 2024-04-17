@@ -15,6 +15,7 @@ def rTExprDefault = null
 
 import ir.dsl._
 
+case class BranchInfo(val branch: Option[String], val guard: Expr, val branchTaken: Boolean, pcAssigned: Option[Expr])
 class LiftState(val entry: String = "block") {
 
   val endian = Endian.LittleEndian
@@ -28,14 +29,17 @@ class LiftState(val entry: String = "block") {
   val blocks: mutable.LinkedHashMap[String, ArrayBuffer[Statement]] = mutable.LinkedHashMap((entry -> ArrayBuffer.empty))
   val branches: mutable.Map[String, (String, String, String)] = mutable.Map()
 
-  case class BranchInfo(val guard: Expr, val branchTaken: Boolean, pcAssigned: Option[Expr])
 
-  var current_guard: BranchInfo = BranchInfo(TrueLiteral, false, None)
+  var current_guard: BranchInfo = BranchInfo(None, TrueLiteral, false, None)
 
   // maps block ids to guards
   // We push the current guard forward as blocks are appended. We maintain this mapping so we 
   // can update the current guard when switch_ctx is called. 
   val block_guard: mutable.Map[String, BranchInfo] = mutable.Map()
+
+  def pcAssigns = block_guard.filter {
+    case (k,v) => v.pcAssigned.isDefined
+  } 
 
   def new_name(p: Option[String] = None) = {
     counter += 1
@@ -52,7 +56,7 @@ class LiftState(val entry: String = "block") {
   def escaping_jumps = controlFlow
     .collect {
       case (_, EventuallyGoto(tgts))                => tgts.map((t: DelayNameResolve) => t.ident)
-      case (_, EventuallyCall(_, Some(ft)))         => List(ft.ident)
+      case (_, EventuallyCall(t, Some(ft)))         => List(ft.ident)
       case (_, EventuallyIndirectCall(_, Some(ft))) => List(ft.ident)
     }
     .flatMap(_.toList)
@@ -68,8 +72,8 @@ class LiftState(val entry: String = "block") {
 
   def push_stmt(s: Statement) = {
     s match {
-      case LocalAssign(Register("BranchTaken", BoolType), TrueLiteral, _) => current_guard = BranchInfo(current_guard.guard, true, current_guard.pcAssigned) 
-      case LocalAssign(Register("_PC", BitVecType(64)), addr, _) => current_guard = BranchInfo(current_guard.guard, current_guard.branchTaken, Some(addr))
+      case LocalAssign(Register("BranchTaken", BoolType), TrueLiteral, _) => current_guard = BranchInfo(current_guard.branch, current_guard.guard, true, current_guard.pcAssigned) 
+      case LocalAssign(Register("_PC", BitVecType(64)), addr, _) => current_guard = BranchInfo(current_guard.branch, current_guard.guard, current_guard.branchTaken, Some(addr))
       case _ => ()
     }
 
@@ -85,40 +89,61 @@ class LiftState(val entry: String = "block") {
 
   def gen_branch(cond: Expr) = {
     val branch_id = new_name(Some("branch"))
+
     val true_branch = push_block(Some("true"))
     val false_branch = push_block(Some("false"))
     val merge_block = push_block(Some("join"))
     blocks(true_branch).append(Assume(cond))
     blocks(false_branch).append(Assume(UnaryExpr(BoolNOT, cond)))
 
-    block_guard(true_branch) = BranchInfo(cond, false, None)
-    block_guard(false_branch) = BranchInfo(UnaryExpr(BoolNOT, cond), false, None)
-    block_guard(merge_block) = BranchInfo(TrueLiteral, false, None)
+    block_guard(true_branch) = BranchInfo(Some(branch_id), cond, false, None)
+    block_guard(false_branch) = BranchInfo(Some(branch_id), UnaryExpr(BoolNOT, cond), false, None)
+    block_guard(merge_block) = BranchInfo(None, TrueLiteral, false, None)
+    current_guard = BranchInfo(Some(branch_id), current_guard.guard, current_guard.branchTaken, current_guard.pcAssigned)
 
     controlFlow(current_pos) = goto(true_branch, false_branch)
     controlFlow(true_branch) = goto(merge_block)
-    controlFlow(true_branch) = goto(merge_block)
+    controlFlow(false_branch) = goto(merge_block)
     branches.addOne((branch_id -> (true_branch, false_branch, merge_block)))
+    switch_ctx (merge_block)
     (branch_id, true_branch, false_branch, merge_block)
   }
 
-  def add_call(c: EventuallyJump) = {
-    controlFlow.get(current_pos) match {
-      case None    => controlFlow(current_pos) = c
+  def replace_jmp(c: EventuallyJump) = controlFlow(current_pos) = c
+
+  def add_call(from: String, c: EventuallyJump) : Unit = {
+    controlFlow.get(from) match {
+      case None => controlFlow(current_pos) = c
+      case Some(EventuallyGoto(List(x))) => {
+        c match {
+          case EventuallyCall(c, None) => EventuallyCall(c, Some(x))
+          case EventuallyCall(_, Some(f)) => add_call(f.ident, c)
+          case EventuallyIndirectCall(c, None) => EventuallyIndirectCall(c, Some(x))
+          case EventuallyIndirectCall(_, Some(f)) => add_call(f.ident, c)
+          case EventuallyGoto(cs) => (EventuallyGoto(cs ++ List(x)))
+          case _ => throw Exception(s"Existing jump ${EventuallyGoto(List(x))} adding $c")
+        }
+
+      }
       case Some(l) => throw Exception(s"Existing jump $l")
     }
+  }
+
+  def add_call(c: EventuallyJump) : Unit = {
+    add_call(current_pos, c)
   }
 
   def add_goto(l: String) = {
     controlFlow.get(current_pos) match {
       case Some(EventuallyGoto(ts)) => controlFlow(current_pos) = EventuallyGoto(ts ++ List(DelayNameResolve(l)))
+      case Some(EventuallyCall(ts, None)) => controlFlow(current_pos) = EventuallyCall(ts, Some(DelayNameResolve(l)))
       case None                     => controlFlow(current_pos) = EventuallyGoto(List(DelayNameResolve(l)))
       case Some(l)                  => throw RuntimeException(s"Cannot add goto target to call $l")
     }
   }
 
   def toIR(): List[EventuallyBlock] =
-    blocks.map((n, stmts) => block(n, (stmts.toList ++ List(controlFlow.getOrElse(n, term))))).toList
+    blocks.map((n, stmts) => block(n, (stmts.toList ++ List(controlFlow.getOrElse(n, ret))))).toList
 }
 
 object Lifter {
