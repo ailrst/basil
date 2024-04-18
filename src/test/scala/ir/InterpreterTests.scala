@@ -21,7 +21,8 @@ class InterpreterTests extends AnyFunSuite with BeforeAndAfter {
       inputFile = s"examples/$name/$name.adt",
       relfFile = s"examples/$name/$name.relf",
       specFile = None,
-      dumpIL = None
+      dumpIL = None,
+      useLifter = false,
     )
 
     val bapProgram = loadBAP(loading.inputFile)

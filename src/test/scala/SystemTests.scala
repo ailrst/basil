@@ -74,7 +74,7 @@ trait SystemTests extends AnyFunSuite {
     Logger.info(outPath)
     val timer = PerformanceTimer(s"test $name/$variation")
 
-    val args = mutable.ArrayBuffer("--input", inputPath, "--relf", RELFPath, "--output", outPath)
+    val args = mutable.ArrayBuffer("--input", inputPath, "--relf", RELFPath, "--output", outPath, "--dump-il", outPath)
     if (File(specPath).exists) args ++= Seq("--spec", specPath)
 
     Main.main(args.toArray)

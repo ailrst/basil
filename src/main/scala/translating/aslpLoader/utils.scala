@@ -70,6 +70,11 @@ class LiftState(val entry: String = "block") {
     n
   }
 
+  def implicit_set_pc(address: Long, label: Option[String] = None) = {
+    val la = LocalAssign(Register("_PC", BitVecType(64)), BitVecLiteral(BigInt(address), 64), label)
+    blocks(current_pos).append(la)
+  }
+
   def push_stmt(s: Statement) = {
     s match {
       case LocalAssign(Register("BranchTaken", BoolType), TrueLiteral, _) => current_guard = BranchInfo(current_guard.branch, current_guard.guard, true, current_guard.pcAssigned) 

@@ -41,12 +41,15 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   val functionEntries = MapDecoder.decode_set(mods.map(_.auxData("functionEntries").data))
   val functionBlocks = MapDecoder.decode_set(mods.map(_.auxData("functionBlocks").data))
 
-  val blocks = mods.flatMap(_.sections).flatMap(_.byteIntervals).map(bi => (bi.blocks.toList, bi.contents))
+  val blocks = mods.flatMap(_.sections).flatMap(_.byteIntervals).map(bi => {
+    assert(bi.hasAddress) // Unsure if this holds for PIC https://grammatech.github.io/gtirb/cpp/classgtirb_1_1_byte_interval.html#aaf13ececea7d2b943402feeb4f1aae35
+   (bi.blocks.toList, bi.contents, bi.address)
+  })
 
-  case class BlockPos(uuid:ByteString, offset: Long, size: Long, content: ByteString)
-  val codeblocks = blocks.flatMap((bl, cont) => bl.collect(
+  case class BlockPos(uuid:ByteString, address: Long, offset: Long, size: Long, content: ByteString)
+  val codeblocks = blocks.flatMap((bl, cont, bi_addr) => bl.collect(
     b => b.value.code match {
-      case Some(c) =>  BlockPos(c.uuid, b.offset, c.size, cont.substring(b.offset.toInt, (b.offset + c.size).toInt))
+      case Some(c) =>  BlockPos(c.uuid,  bi_addr + b.offset, b.offset,  c.size, cont.substring(b.offset.toInt, (b.offset + c.size).toInt))
     }
   ))
 
@@ -60,7 +63,7 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   }
 
   val opsize = 4
-  val opcodes = codeblocks.map(b => (b.uuid, Range.Exclusive(0, b.size.toInt, opsize)
+  val opcodes = codeblocks.map(b => (b, Range.Exclusive(0, b.size.toInt, opsize)
     .map(i => b.content.substring(i, i + opsize))
     .map(b => bytesToi32(b.toByteArray, true))))
 
@@ -68,19 +71,23 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   val names = mods.flatMap(_.symbols).map(s => s.getReferentUuid -> s.name).toMap
   val symbol_names = mods.flatMap(_.symbols).map(s => s.uuid -> s.name).toMap
 
-  def liftBlock(label: String, ops: Iterable[Int]) = {
+  def liftBlock(label: String, ops: Iterable[Int], addr: Long) = {
+    var address = addr
     var liftState = LiftState(label)
     val dec = A64_decoder()
       ops.foreach(op =>
+        liftState.implicit_set_pc(address, Some(s"opcode ${op.toHexString}"))
+        address += 32
+
         try {
-        dec.decode(liftState, BitVecLiteral(BigInt(op), 32))
+          dec.decode(liftState, BitVecLiteral(BigInt(op), 32))
         } catch {
           case e: Exception => {
-            Logger.warn(s"Disassembly error on ${op.toHexString} (using NOP) : $e\n${e.getStackTrace.map(_.toString).mkString("\n  ")} ")
+            if (op != 0xd503201f) then Logger.warn(s"Disassembly error on ${op.toHexString} (using NOP) : $e\n${e.getStackTrace.map(_.toString).mkString("\n  ")} ")
             liftState.push_stmt(NOP(Some(s"Potentially mis-lifted from ${op.toHexString}")))
           }
           case e: NotImplementedError => {
-            Logger.warn(s"Disassembly not implemented ${op.toHexString} (using NOP) : $e\n  ${e.getStackTrace.map(_.toString).mkString("\n  ")}")
+            if (op != 0xd503201f) then Logger.warn(s"Disassembly not implemented ${op.toHexString} (using NOP) : $e\n  ${e.getStackTrace.map(_.toString).mkString("\n  ")}")
             liftState.push_stmt(NOP(Some(s"Potentially mis-lifted from ${op.toHexString}")))
           }
         }
@@ -89,9 +96,9 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   }
 
 
-  val semblocks = opcodes.map((uid, opcodes) => (uid -> {
-    val label = names.getOrElse(uid, s"block${new_name()}" )
-    liftBlock(label, opcodes)
+  val semblocks = opcodes.map((b, opcodes) => (b.uuid -> {
+    val label = names.getOrElse(b.uuid, s"block${new_name()}" )
+    liftBlock(label, opcodes, b.address)
   })).toMap
   val proxies = mods.flatMap(_.proxies).map(_.uuid).map(u => (u -> {
     val label : String = names.getOrElse(u, s"block${new_name()}")
