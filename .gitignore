@@ -23,4 +23,5 @@ examplesold/
 src/test/scala/dump/
 src/test/analysis/dump/
 *.gtirb
+*.xml
 *.json

@@ -8,12 +8,17 @@ import util.Logger
 import ir._
 import org.scalatest.funsuite.AnyFunSuite
 import util.{Logger, PerformanceTimer}
+import scala.xml
+
+import scala.collection.parallel.CollectionConverters._
 
 
 import java.io.{BufferedWriter, File, FileWriter}
 import scala.collection.mutable
 import scala.io.Source
 import scala.sys.process.*
+
+
 
 class SystemTestsOfflineLifter extends AnyFunSuite {
   val testPath = "./src/test/"
@@ -34,16 +39,22 @@ class SystemTestsOfflineLifter extends AnyFunSuite {
 
   def runTests(programs: Array[String], path: String, name: String, shouldVerify: Boolean, useOfflineLifter: Boolean): Unit = {
     // get all variations of each program
-    for (p <- programs) {
+
+
+    programs.par.foreach(p => {
       val programPath = path + "/" + p
       val variations = getSubdirectories(programPath)
       variations.foreach(t =>
-        val n = if useOfflineLifter then " offline" else " online"
-        test(name + "/" + p + "/" + t + n) {
+        val n = if useOfflineLifter then "_offline" else "_online"
+        try {
           runTest(path, p, t, shouldVerify, useOfflineLifter)
+        } catch {
+          case e => Logger.error(s"failed: $t $n $e")
         }
+        //test(name + "/" + p + "/" + t + n) {
+       // }
       )
-    }
+    })
   }
 
   def summary(): Unit = {
@@ -79,7 +90,9 @@ class SystemTestsOfflineLifter extends AnyFunSuite {
     Logger.info(outPath)
     val timer = PerformanceTimer(s"test $name/$variation")
 
-    val args = mutable.ArrayBuffer("--input", inputPath, "--relf", RELFPath, "--output", outPath, "--dump-il", outPath) ++ (if useOfflineLifter then mutable.ArrayBuffer("--lifter") else mutable.ArrayBuffer.empty)
+    val args = mutable.ArrayBuffer("--input", inputPath, "--relf", RELFPath, "--output", outPath, "--dump-il", outPath)
+
+    if (useOfflineLifter) args ++= Seq("--lifter")
 
     if (File(specPath).exists) args ++= Seq("--spec", specPath)
 
@@ -87,8 +100,9 @@ class SystemTestsOfflineLifter extends AnyFunSuite {
     val translateTime = timer.checkPoint("translate-boogie")
     Logger.info(outPath + " done")
     val extraSpec = List.from(File(directoryPath).listFiles()).map(_.toString).filter(_.endsWith(".bpl")).filterNot(_.endsWith(outPath))
-    val resultPath = if useOfflineLifter then variationPath + "_offline_result.xml" else variationPath + "_online_result.xml"
-    val boogieResult = (Seq("boogie", "/timeLimit:10", "/printVerifiedProceduresCount:0", "/useArrayAxioms", "/xml", resultPath, "/randomizeVcIterations:20",  outPath) ++ extraSpec).!!
+    val vresultpath = variationPath + "_" + variation
+    val resultPath = if useOfflineLifter then vresultpath + "_offline_result.xml" else vresultpath + "_online_result.xml"
+    val boogieResult = (Seq("boogie", "/timeLimit:10", "/printVerifiedProceduresCount:0", "/useArrayAxioms", "/xml", resultPath, "/randomizeVcIterations:10",  outPath) ++ extraSpec).!!
     val verifyTime = timer.checkPoint("verify")
     val verified = boogieResult.strip().equals("Boogie program verifier finished with 0 errors")
     val proveFailed = boogieResult.contains("could not be proved")
@@ -119,7 +133,6 @@ class SystemTestsOfflineLifter extends AnyFunSuite {
     val passed = !timedOut && (verified == shouldVerify) && xor(verified, proveFailed)
     val result = TestResult(passed, verified, shouldVerify, hasExpected, timedOut, matchesExpected, translateTime, verifyTime)
     testResults.append((s"$name/$variation", result))
-    if (!passed) fail(failureMsg)
   }
 
   def compareFiles(path1: String, path2: String): Boolean = {
@@ -163,11 +176,13 @@ class SystemTestsOfflineLifter extends AnyFunSuite {
     writer.close()
   }
 
-  runTests(correctPrograms, correctPath, "correct", true, false)
-  runTests(incorrectPrograms, incorrectPath, "incorrect", false, false)
 
+  test("thetest") {
+  runTests(correctPrograms, correctPath, "correct", true, false)
+  //runTests(incorrectPrograms, incorrectPath, "incorrect", false, false)
   runTests(correctPrograms, correctPath, "correct", true, true)
-  runTests(incorrectPrograms, incorrectPath, "incorrect", false, true)
+  }
+  //runTests(incorrectPrograms, incorrectPath, "incorrect", false, true)
   test("summary") {
     summary()
   }

@@ -85,7 +85,9 @@ object IRLoading {
       val bapProgram = loadBAP(q.inputFile)
       val IRTranslator = BAPToIR(bapProgram, mainAddress)
       IRTranslator.translate
-    } else if (q.inputFile.endsWith(".gts")) {
+    } else if (q.inputFile.endsWith(".gts") && q.useLifter) {
+      loadGTIRBLifter(q.inputFile, mainAddress)
+    } else if (q.inputFile.endsWith(".gts") && !q.useLifter) {
       loadGTIRB(q.inputFile, mainAddress)
     } else {
       throw Exception(s"input file name ${q.inputFile} must be an .adt or .gst file")
@@ -106,13 +108,26 @@ object IRLoading {
     BAPLoader.visitProject(parser.project())
   }
 
+  def loadGTIRBLifter(fileName: String, mainAddress: Int): Program = {
+    val fIn = FileInputStream(fileName)
+    val ir = IR.parseFrom(fIn)
+    val mods = ir.modules
+    val cfg = ir.cfg.get
+    val tmr = PerformanceTimer("loading")
+    tmr.checkPoint("Gtirb parsing")
+    val g = lgtirb(mods, cfg, mainAddress)
+    tmr.checkPoint("Offline lifter")
+    g
+  }
+
+
   def loadGTIRB(fileName: String, mainAddress: Int): Program = {
     val fIn = FileInputStream(fileName)
     val ir = IR.parseFrom(fIn)
     val mods = ir.modules
     val cfg = ir.cfg.get
 
-    //val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
+    val semantics = mods.map(_.auxData("ast").data.toStringUtf8.parseJson.convertTo[Map[String, Array[Array[String]]]])
 
     def parse_insn(f: String): StmtContext = {
       try {
@@ -129,16 +144,11 @@ object IRLoading {
       }
     }
 
-    //val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
+    val parserMap = semantics.map(_.map((k: String, v: Array[Array[String]]) => (k, v.map(_.map(parse_insn)))))
 
     val tmr = PerformanceTimer("loading")
-    //val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
-    //GTIRBConverter.createIR()
-    tmr.checkPoint("Gtirb parsing")
-    val g = lgtirb(mods, cfg, mainAddress)
-    tmr.checkPoint("Offline lifter")
-    g
-
+    val GTIRBConverter = GTIRBToIR(mods, parserMap.flatten.toMap, cfg, mainAddress)
+    GTIRBConverter.createIR()
   }
 
   def loadReadELF(
