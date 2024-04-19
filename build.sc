@@ -11,6 +11,7 @@ import contrib.scalapblib._
 object basil extends RootModule with ScalaModule with antlr.AntlrModule with ScalaPBModule{
   def scalaVersion = "3.3.1"
 
+  val col = ivy"org.scala-lang.modules::scala-parallel-collections:1.0.3"
   val javaTests = ivy"com.novocode:junit-interface:0.11"
   val scalaTests = ivy"org.scalatest::scalatest:3.2.10"
   val scalactic = ivy"org.scalactic::scalactic:3.2.10"
@@ -28,7 +29,7 @@ object basil extends RootModule with ScalaModule with antlr.AntlrModule with Sca
 
   override def scalaPBSources = T.sources {Seq(PathRef(this.millSourcePath / "main" / "protobuf"))}
   def millSourcePath = super.millSourcePath / "src"
-  def ivyDeps = Agg(scalactic, antlrRuntime, sourceCode, mainArgs, sprayJson, scalapb)
+  def ivyDeps = Agg(scalactic, antlrRuntime, sourceCode, mainArgs, sprayJson, scalapb, col)
   def sources = T.sources {Seq(PathRef(this.millSourcePath / "main" / "scala" ))}
 
 
