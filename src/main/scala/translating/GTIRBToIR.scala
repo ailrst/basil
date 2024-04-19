@@ -214,7 +214,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
     }
 
     val readOnlyMemory: ArrayBuffer[MemorySection] = ArrayBuffer()
-    val intialProc: Procedure = procedures.find(_.address.get == mainAddress).get
+    val intialProc: Procedure = procedures.find(_.address.getOrElse(0) == mainAddress).getOrElse(procedures.find(_.name == "main").get)
 
     Program(procedures, intialProc, initialMemory, readOnlyMemory)
   }
@@ -591,10 +591,10 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
         case (EdgeLabel(true, true, Type_Branch, _), EdgeLabel(true, true, Type_Fallthrough, _)) =>
           handleConditionalBranch(edge1, edge0, block, procedure)
         case _ =>
-          throw Exception(s"cannot resolve outgoing edges from block ${block.label}")
+          throw Exception(s"cannot resolve outgoing edges from block ${block.label} indirect conditional")
       }
     } else {
-      throw Exception(s"cannot resolve outgoing edges from block ${block.label}")
+      throw Exception(s"cannot resolve outgoing edges from block ${block.label} more than 2 edges")
     }
   }
 

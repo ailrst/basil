@@ -6,23 +6,7 @@ import ir._
 def f_aarch64_vector_arithmetic_unary_cmp_float_bulk_sisd (v_st: LiftState,v_enc: BV) : Unit = {
   if (f_eq_bits(v_st, BigInt(1), mkBits(v_st, 1, BigInt("0", 2)), bvextract(v_st,v_enc,BigInt(22),BigInt(1)))) then {
     val v_comparison__1 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
-    if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("00", 2)))) then {
-      v_comparison__1.v = mkBits(v_st, 3, BigInt("000", 2))
-    } else {
-      if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("01", 2)))) then {
-        v_comparison__1.v = mkBits(v_st, 3, BigInt("001", 2))
-      } else {
-        if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("10", 2)))) then {
-          v_comparison__1.v = mkBits(v_st, 3, BigInt("010", 2))
-        } else {
-          if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("11", 2)))) then {
-            v_comparison__1.v = mkBits(v_st, 3, BigInt("011", 2))
-          } else {
-            throw Exception("not supported")
-          }
-        }
-      }
-    }
+    v_comparison__1.v = f_ZeroExtend(v_st, BigInt(2), BigInt(3), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), BigInt(3))
     assert (((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2))))))
     val v_test_passed__1 = Mutable[Expr](rTExprDefault)
     if (f_eq_bits(v_st, BigInt(3), v_comparison__1.v, mkBits(v_st, 3, BigInt("000", 2)))) then {
@@ -68,23 +52,7 @@ def f_aarch64_vector_arithmetic_unary_cmp_float_bulk_sisd (v_st: LiftState,v_enc
   } else {
     if (f_eq_bits(v_st, BigInt(1), mkBits(v_st, 1, BigInt("1", 2)), bvextract(v_st,v_enc,BigInt(22),BigInt(1)))) then {
       val v_comparison__1 = Mutable[BV](mkBits(v_st, BigInt(3), BigInt(0)))
-      if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("00", 2)))) then {
-        v_comparison__1.v = mkBits(v_st, 3, BigInt("000", 2))
-      } else {
-        if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("01", 2)))) then {
-          v_comparison__1.v = mkBits(v_st, 3, BigInt("001", 2))
-        } else {
-          if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("10", 2)))) then {
-            v_comparison__1.v = mkBits(v_st, 3, BigInt("010", 2))
-          } else {
-            if (f_eq_bits(v_st, BigInt(2), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), mkBits(v_st, 2, BigInt("11", 2)))) then {
-              v_comparison__1.v = mkBits(v_st, 3, BigInt("011", 2))
-            } else {
-              throw Exception("not supported")
-            }
-          }
-        }
-      }
+      v_comparison__1.v = f_ZeroExtend(v_st, BigInt(2), BigInt(3), f_append_bits(v_st, BigInt(1), BigInt(1), bvextract(v_st,v_enc,BigInt(12),BigInt(1)), bvextract(v_st,v_enc,BigInt(29),BigInt(1))), BigInt(3))
       assert (((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(5),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2))))))
       val v_test_passed__1 = Mutable[Expr](rTExprDefault)
       if (f_eq_bits(v_st, BigInt(3), v_comparison__1.v, mkBits(v_st, 3, BigInt("000", 2)))) then {

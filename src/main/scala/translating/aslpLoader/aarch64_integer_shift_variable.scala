@@ -6,23 +6,7 @@ import ir._
 def f_aarch64_integer_shift_variable (v_st: LiftState,v_enc: BV) : Unit = {
   if (f_eq_bits(v_st, BigInt(1), bvextract(v_st,v_enc,BigInt(31),BigInt(1)), mkBits(v_st, 1, BigInt("1", 2)))) then {
     val v_DecodeShift4__2 = Mutable[BV](mkBits(v_st, BigInt(2), BigInt(0)))
-    if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("00", 2)))) then {
-      v_DecodeShift4__2.v = mkBits(v_st, 2, BigInt("00", 2))
-    } else {
-      if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("01", 2)))) then {
-        v_DecodeShift4__2.v = mkBits(v_st, 2, BigInt("01", 2))
-      } else {
-        if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("10", 2)))) then {
-          v_DecodeShift4__2.v = mkBits(v_st, 2, BigInt("10", 2))
-        } else {
-          if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("11", 2)))) then {
-            v_DecodeShift4__2.v = mkBits(v_st, 2, BigInt("11", 2))
-          } else {
-            throw Exception("not supported")
-          }
-        }
-      }
-    }
+    v_DecodeShift4__2.v = bvextract(v_st,v_enc,BigInt(10),BigInt(2))
     val v_X_read6__2 = Mutable[Expr](rTExprDefault)
     assert (((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2))))))
     if (f_ne_bits(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), mkBits(v_st, 5, BigInt("11111", 2)))) then {
@@ -71,23 +55,7 @@ def f_aarch64_integer_shift_variable (v_st: LiftState,v_enc: BV) : Unit = {
     }
   } else {
     val v_DecodeShift25__2 = Mutable[BV](mkBits(v_st, BigInt(2), BigInt(0)))
-    if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("00", 2)))) then {
-      v_DecodeShift25__2.v = mkBits(v_st, 2, BigInt("00", 2))
-    } else {
-      if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("01", 2)))) then {
-        v_DecodeShift25__2.v = mkBits(v_st, 2, BigInt("01", 2))
-      } else {
-        if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("10", 2)))) then {
-          v_DecodeShift25__2.v = mkBits(v_st, 2, BigInt("10", 2))
-        } else {
-          if (f_eq_bits(v_st, BigInt(2), bvextract(v_st,v_enc,BigInt(10),BigInt(2)), mkBits(v_st, 2, BigInt("11", 2)))) then {
-            v_DecodeShift25__2.v = mkBits(v_st, 2, BigInt("11", 2))
-          } else {
-            throw Exception("not supported")
-          }
-        }
-      }
-    }
+    v_DecodeShift25__2.v = bvextract(v_st,v_enc,BigInt(10),BigInt(2))
     val v_X_read27__2 = Mutable[Expr](rTExprDefault)
     assert (((f_sle_bits(v_st, BigInt(6), mkBits(v_st, 6, BigInt("000000", 2)), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), BigInt(6)))) && (f_sle_bits(v_st, BigInt(6), f_ZeroExtend(v_st, BigInt(5), BigInt(6), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), BigInt(6)), mkBits(v_st, 6, BigInt("011111", 2))))))
     if (f_ne_bits(v_st, BigInt(5), bvextract(v_st,v_enc,BigInt(16),BigInt(5)), mkBits(v_st, 5, BigInt("11111", 2)))) then {

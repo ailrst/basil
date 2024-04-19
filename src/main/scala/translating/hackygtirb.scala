@@ -33,6 +33,22 @@ def new_name ()= {
   namecounter.toHexString
 }
 
+private def createArguments(name: String): (ArrayBuffer[Parameter], ArrayBuffer[Parameter]) = {
+  val args = ArrayBuffer.newBuilder[Parameter]
+  var regNum = 0
+
+  val in = if (name == "main") {
+    ArrayBuffer(Parameter("main_argc", 32, Register("R0", BitVecType(64))), Parameter("main_argv", 64, Register("R1", BitVecType(64))))
+  } else {
+    ArrayBuffer()
+  }
+
+  val out = ArrayBuffer(Parameter(name + "_result", 32, Register("R0", BitVecType(64))))
+
+  (in, out)
+}
+
+
 def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
 
   def fixname(s:String) = s.stripPrefix("?:").stripSuffix("()").replace("(", "").replace(")", "")
@@ -231,6 +247,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   p = CleanupVis().visitProgram(p)
   p.mainProcedure = p.procedures.find(_.name == "main").getOrElse(p.procedures.head)
 
+  p.procedures.foreach(proc =>  {
+      val (in,out) = createArguments(proc.name)
+      proc.in = in
+      proc.out = out
+  })
 
   val s = serialiseIL(p) 
 
