@@ -92,11 +92,11 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
     var liftState = LiftState(label)
     val dec = A64_decoder()
       ops.foreach(op =>
-        liftState.implicit_set_pc(address, Some(s"opcode ${op.toHexString}"))
+        // liftState.implicit_set_pc(address, Some(s"opcode ${op.toHexString}"))
         address += 32
 
         try {
-          dec.decode(liftState, BitVecLiteral(BigInt(op), 32))
+          dec.decode(liftState, BitVecLiteral(BigInt(op), 32), BitVecLiteral(BigInt(address), 64))
         } catch {
           case e: Exception => {
             if (op != 0xd503201f) then Logger.warn(s"Disassembly error on ${op.toHexString} (using NOP) : $e\n${e.getStackTrace.map(_.toString).mkString("\n  ")} ")
@@ -112,8 +112,12 @@ def lgtirb(mods: Seq[Module], cfg: CFG, mainAddress: Int): Program = {
   }
 
 
+  def byteStringToString(byteString: ByteString): String = {
+    Base64.getUrlEncoder.encodeToString(byteString.toByteArray).replace("=", "").replace("-", "~").replace("/", "\'")
+  }
+
   val semblocks = opcodes.map((b, opcodes) => (b.uuid -> {
-    val label = names.getOrElse(b.uuid, s"block${new_name()}" )
+    val label = names.getOrElse(b.uuid, byteStringToString(b.uuid) )
     liftBlock(label, opcodes, b.address)
   })).toMap
   val proxies = mods.flatMap(_.proxies).map(_.uuid).map(u => (u -> {

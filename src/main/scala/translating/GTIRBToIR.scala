@@ -283,7 +283,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
   // makes label boogie friendly
   private def convertLabel(procedure: Procedure, label: ByteString, blockCount: Int): String = {
-    "$" + procedure.name + "$__" + blockCount + "__$" + byteStringToString(label).replace("=", "").replace("-", "~").replace("/", "\'")
+    "$" + procedure.name + "$__" + byteStringToString(label).replace("=", "").replace("-", "~").replace("/", "\'")
   }
 
   // handles stray assignments to the program counter (which are indirect calls that DDisasm failed to identify)

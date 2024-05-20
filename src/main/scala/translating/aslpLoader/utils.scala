@@ -15,13 +15,16 @@ def rTExprDefault = null
 
 import ir.dsl._
 
+
+object Counter:
+  var counter = 0
+
 case class BranchInfo(val branch: Option[String], val guard: Expr, val branchTaken: Boolean, pcAssigned: Option[Expr])
 class LiftState(val entry: String = "block") {
 
   val endian = Endian.LittleEndian
   val memory = Memory("mem", 64, 8)
 
-  var counter = 0
   var current_pos: String = entry
 
 
@@ -42,8 +45,8 @@ class LiftState(val entry: String = "block") {
   } 
 
   def new_name(p: Option[String] = None) = {
-    counter += 1
-    entry + "_" + p.map(_ + "_").getOrElse("") + counter
+    Counter.counter += 1
+    entry + "_" + p.map(_ + "_").getOrElse("") + Counter.counter
   }
 
   def merge_state(other: LiftState) = {
@@ -153,10 +156,18 @@ class LiftState(val entry: String = "block") {
 
 object Lifter {
 
+  def liftOpcode(op: Int, sp: BitVecLiteral): List[EventuallyBlock] = {
+    var liftState = LiftState()
+    val dec = A64_decoder()
+    val r = dec.decode(liftState, BitVecLiteral(BigInt(op), 32), sp)
+    liftState.toIR()
+  }
+
+
   def liftOpcode(op: Int): List[EventuallyBlock] = {
     var liftState = LiftState()
     val dec = A64_decoder()
-    val r = dec.decode(liftState, BitVecLiteral(BigInt(op), 32))
+    val r = dec.decode(liftState, BitVecLiteral(BigInt(op), 32), BitVecLiteral(BigInt(0), 64))
     liftState.toIR()
   }
 
@@ -467,6 +478,15 @@ def f_switch_context(st: LiftState, arg0: RTLabel) = st.switch_ctx(arg0)
 
 /** Global variable definitions * */
 
+def v_PSTATE_UAO = Mutable(Register("UAO", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_PAN = Mutable(Register("PAN", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_DIT = Mutable(Register("DIT", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_SSBS = Mutable(Register("SSBS", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_G = Mutable(Register("G", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_A = Mutable(Register("A", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_I = Mutable(Register("I", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_F = Mutable(Register("F", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
+def v_PSTATE_D = Mutable(Register("D", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "G")
 def v_PSTATE_C = Mutable(Register("CF", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "C")
 def v_PSTATE_Z = Mutable(Register("ZF", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "Z")
 def v_PSTATE_V = Mutable(Register("VF", BitVecType(1))) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "V")
