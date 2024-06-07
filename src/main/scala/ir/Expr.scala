@@ -64,20 +64,30 @@ def getsize(b: RExpr) = b.t match
   case _ => throw Exception("No") 
 
 def vars (e: RExpr) = {
-  var vars = mutable.Set[RExpr.Variable]()
 
   class VarFinder extends CILVisitorImpl {
+    var vars = mutable.Set[RExpr.Variable]()
+
     override def vvar(v: RExpr.Variable) : VisitAction[RExpr.Variable] = {
       vars.add(v)
       VisitAction.DoChildren()
     }
+
+    def find_vars(e: RExpr) = {
+      val f = VarFinder()
+      val v = CILVisitor(f) 
+      v.visit_expr(e)
+      f.vars
+    }
+
   }
+
 }
 
 def toGamma(e: RExpr): RExpr = {
   e match {
     case RExpr.Variable(name, scope, shared,_) => RExpr.Variable("Gamma_" + name, scope, shared, NType.Bool)
-    case _ => e
+    case e => VarFinder()
   }
 }
 
@@ -97,7 +107,7 @@ trait CILVisitorImpl:
   def vlexpr(e: LExpr): VisitAction[LExpr] = VisitAction.DoChildren()
   def vlvar(e: LExpr.Variable): VisitAction[LExpr.Variable] = VisitAction.DoChildren()
 
-class CILVisitor(v: CILVisitorImpl) {
+class CILVisitor(val v: CILVisitorImpl) {
   import NStatement._ 
   import RExpr._
   // TODO: fix evaluation order
