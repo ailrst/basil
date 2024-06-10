@@ -447,11 +447,11 @@ object IRTransform {
     * add in modifies from the spec.
     */
   def prepareForTranslation(config: ILLoadingConfig, ctx: IRContext): Unit = {
-    ctx.program.determineRelevantMemory(ctx.globalOffsets)
+    determineRelevantMemory(ctx.program, ctx.globalOffsets)
 
     Logger.info("[!] Stripping unreachable")
     val before = ctx.program.procedures.size
-    ctx.program.stripUnreachableFunctions(config.procedureTrimDepth)
+    stripUnreachableFunctions(ctx.program, config.procedureTrimDepth)
     Logger.info(
       s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
     )
@@ -460,7 +460,7 @@ object IRTransform {
     stackIdentification.visitProgram(ctx.program)
 
     val specModifies = ctx.specification.subroutines.map(s => s.name -> s.modifies).toMap
-    ctx.program.setModifies(specModifies)
+    setModifies(ctx.program, specModifies)
   }
 
 }
