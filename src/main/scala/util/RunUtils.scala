@@ -805,6 +805,11 @@ object RunUtils {
 
     IRTransform.doCleanup(ctx)
 
+    val procs = ctx.program.procedures.map(p => translating.BoogieTranslator().translateProc(p, translating.ProcAttrs(List(), List(), List(), List(), List())))
+    for (p <- procs) {
+      Logger.info(p.toString)
+    }
+
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-after-analysis.il"))
