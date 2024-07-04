@@ -74,6 +74,56 @@ class ReplaceReturns extends CILVisitor {
 
 /** Add call rely */
 
+
+/*
+ * Encode relations to expressions
+ * */
+
+object OldCounter:
+  var i = BigInt(0)
+
+  def next() = {
+    i += 1
+    s"old_$i"
+  }
+
+enum OldAction:
+  case Replace
+  case Collect
+
+class OldsToVars(val bindVars: OldAction) extends CILVisitor {
+  /**
+   * Replace: Collect all old() subexpressions in expression and map them to variable names, and replace them with variables
+   * Collect: Simply collect all old() sub-expressions
+   */
+  val olds = mutable.Map[LocalVar, Expr]()
+
+  override def vexpr(e: Expr): VisitAction[Expr] = e match {
+    case OldExpr(x) => {
+      val variable = LocalVar(OldCounter.next(), x.getType)
+      if (getOlds(x).size > 0) then throw Exception("Nested old() expressions are not allowed: " + e.toString())
+      olds(variable) = x
+      bindVars match {
+        case OldAction.Replace => ChangeTo(variable)
+        case OldAction.Collect => SkipChildren()
+      }
+    }
+    case _ => DoChildren()
+  }
+}
+
+def oldsToVars(e: Expr): (Expr, Expr, mutable.Map[LocalVar, Expr]) = {
+  val v = OldsToVars(OldAction.Replace)
+  val ne = visit_expr(v, e)
+  (e, ne, v.olds)
+}
+
+def getOlds(e: Expr): List[Expr] = {
+  val v = OldsToVars(OldAction.Collect)
+  val ne = visit_expr(v, e)
+  v.olds.toList.map(_._2)
+}
+
 /** Add guarantee check */
 
 /** Add analysis state/case splits */

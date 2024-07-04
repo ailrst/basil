@@ -156,6 +156,15 @@ class Program(var procedures: ArrayBuffer[Procedure], var mainProcedure: Procedu
 
 }
 
+object Procedure {
+  def stub(name: String) = Procedure(name, None, None, None, ArrayBuffer(), ArrayBuffer(), ArrayBuffer())
+}
+
+case class FunctionSpec(val procedure: String, 
+  val requires: List[Expr], val ensures: List[Relation], 
+  val freeRequires: List[Expr], val freeEnsures: List[Relation])
+
+
 class Procedure private (
                   var name: String,
                   var address: Option[Int],

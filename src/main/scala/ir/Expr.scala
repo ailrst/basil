@@ -2,6 +2,56 @@ package ir
 
 import boogie._
 import scala.collection.mutable
+import ir.cilvisitor._
+
+case class Relation(val body: Expr) {
+  // A relation is not an expression since we have two states present
+  // body: an Expr containing old()
+
+  /* 
+   * Resolve to assertion by caching old in a specific state
+   * Modifies the block(s) containing oldBinding and newBinding
+   * Assertion is inserted after newBinding, and old(x) in the relation are bound
+   * to the state before bindOld
+   * Hence to relate the statements before and after a single statement you can make bindOld = bindNew
+   * 
+   * **Mutates IR**
+   *
+   * @returns the updated expressions
+   */
+  def toAssertion(bindOld: Statement, bindNew: Statement): Expr = {
+    val (origExpr: Expr, replaced: Expr, vars: mutable.Map[LocalVar, Expr]) = transforms.oldsToVars(body)
+    val assigns : List[Statement] = vars.toList.map((v: LocalVar, e: Expr) => Assign(v, e))
+    bindOld.parent.statements.insertAllBefore(Some(bindOld), assigns)
+    bindNew.parent.statements.insertAfter(bindNew, Assert(replaced))
+    replaced
+  }
+
+  /* 
+   * Resolve to a state transition/assumption by creating a procedure call to dummy procedure with the given specification
+   * Returns the stub procedure ensuring the condition, and its function specification
+   *
+   * **Mutates IR**
+   */
+  def toAssumption(bindOld: Statement, relationName: Option[String] = None): (Procedure, FunctionSpec) = {
+    val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
+    val spec = FunctionSpec(name, List(), List(), List(), List(this))
+    val proc = Procedure.stub(name)
+
+    val jump = bindOld.parent.jump
+    val ft = bindOld.parent.fallthrough
+
+    val nextBlock = Block(bindOld.parent.label + name, None, bindOld.parent.statements.splitOn(bindOld))
+    bindOld.parent.parent.addBlocks(nextBlock)
+    nextBlock.replaceJump(jump)
+    nextBlock.fallthrough = ft
+
+    bindOld.parent.replaceJump(DirectCall(proc))
+    bindOld.parent.fallthrough = Some(GoTo(List(nextBlock)))
+
+    (proc, spec)
+  }
+}
 
 sealed trait Expr {
   def toBoogie: BExpr
@@ -22,6 +72,11 @@ sealed trait Expr {
   def gammas: Set[Expr] = Set()
   def variables: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Expr = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+}
+
+case class OldExpr(body: Expr) extends Expr {
+  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
+  override def toString = s"old($body)"
 }
 
 sealed trait Literal extends Expr {
@@ -151,7 +206,6 @@ sealed trait IntUnOp(op: String) extends UnOp {
 }
 
 case object IntNEG extends IntUnOp("-")
-
 
 sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
@@ -384,11 +438,14 @@ sealed trait Memory extends Global {
 }
 
 // A stack section of memory, which is local to a thread
-case class StackMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+case class StackMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
+    extends Memory {
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitStackMemory(this)
 }
 
 // A non-stack region of memory, which is shared between threads
-case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
+    extends Memory {
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitSharedMemory(this)
 }
+
