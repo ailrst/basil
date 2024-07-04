@@ -29,6 +29,8 @@ import java.util.Base64
 import spray.json.DefaultJsonProtocol.*
 import util.intrusive_list.IntrusiveList
 import analysis.CfgCommandNode
+import ir.cilvisitor
+import ir.transforms
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -191,6 +193,7 @@ object IRTransform {
     val renamer = Renamer(boogieReserved)
     val returnUnifier = ConvertToSingleProcedureReturn()
 
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), ctx.program)
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
     returnUnifier.visitProgram(ctx.program)

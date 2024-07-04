@@ -80,6 +80,7 @@ sealed trait Jump extends Command {
   def acceptVisit(visitor: Visitor): Jump = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 }
 
+
 class GoTo private (private val _targets: mutable.LinkedHashSet[Block], override val label: Option[String]) extends Jump {
 
   def this(targets: Iterable[Block], label: Option[String] = None) = this(mutable.LinkedHashSet.from(targets), label)
@@ -123,6 +124,12 @@ class GoTo private (private val _targets: mutable.LinkedHashSet[Block], override
 
 object GoTo:
   def unapply(g: GoTo): Option[(Set[Block], Option[String])] = Some(g.targets, g.label)
+
+
+class Return(override val label: Option[String] = None) extends Jump {
+  override def toString: String = s"return" ++ label.map("// " + _).getOrElse("")
+  override def acceptVisit(visitor: Visitor): Jump = visitor.visitReturn(this)
+}
 
 
 sealed trait Call extends Jump {

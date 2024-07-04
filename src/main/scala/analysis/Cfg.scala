@@ -581,6 +581,17 @@ class ProgramCfgFactory:
                 cfg.addEdge(callNode, noReturn)
                 cfg.addEdge(noReturn, funcExitNode)
             }
+          case r: Return => 
+            // Branch to this call
+            cfg.addEdge(precNode, jmpNode)
+
+            // Record call association
+            procToCalls(proc) += jmpNode
+            callToNodes(funcEntryNode) += jmpNode
+
+            val returnNode = CfgProcedureReturnNode()
+            cfg.addEdge(jmpNode, returnNode)
+            cfg.addEdge(returnNode, funcExitNode)
           case iCall: IndirectCall =>
             Logger.debug(s"Indirect call found: $iCall in ${proc.name}")
 

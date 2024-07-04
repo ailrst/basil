@@ -285,16 +285,27 @@ class Procedure private (
    * @param blocks the block/blocks to remove
    */
   def removeBlocksInline(blocks: Iterable[Block]): Unit = {
+    // TODO: this really needs a unit test, the expected behaviour is quite convoluted
     for (elem <- blocks) {
       elem.jump match {
         case g: GoTo =>
+          val incoming = elem.incomingJumps.toList
           // rewrite all the jumps to include our jump targets
-          elem.incomingJumps.foreach(_.removeTarget(elem))
-          elem.incomingJumps.foreach(_.addAllTargets(g.targets))
+          incoming.foreach(_.removeTarget(elem))
+          incoming.foreach(_.addAllTargets(g.targets))
           removeBlocks(elem)
         case c: Call =>
+          // if incoming is a multitarget goto then still need a block to jump to
           // just remove statements, keep call
           elem.statements.clear()
+        case r: Return => 
+          val incoming = elem.incomingJumps.toList
+          if (incoming.size == 1 && (incoming.head != incoming.head.parent.fallthrough)) {
+            incoming.head.parent.replaceJump(Return()) 
+          } else {
+            // as above
+            elem.statements.clear()
+          }
       }
     }
   }
@@ -426,6 +437,7 @@ class Block private (
   def nextBlocks: Iterable[Block] = {
     jump match {
       case c: GoTo => c.targets
+      case c: Return => Seq()
       case c: Call => fallthrough match {
         case Some(x) => x.targets
         case _ => Seq()
@@ -476,7 +488,7 @@ class Block private (
 
 object Block {
   def procedureReturn(from: Procedure): Block = {
-    Block(from.name + "_basil_return", None, List(), IndirectCall(Register("R30", 64)))
+    Block(from.name + "_basil_return", None, List(), Return())
   }
 }
 

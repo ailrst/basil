@@ -85,6 +85,7 @@ trait IntraProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
       case s: Statement    =>  Set(s.succ().getOrElse(s.parent.jump))
       case n: GoTo         => n.targets.asInstanceOf[Set[CFGPosition]]
       case c: Call         => c.parent.fallthrough.toSet
+      case r: Return       => Set()
     }
   }
 
@@ -144,6 +145,7 @@ trait InterProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
     (pos match
       case c: DirectCall if c.target.blocks.nonEmpty  => Set(c.target)
       case c: IndirectCall if c.parent.isProcReturn => c.parent.parent.incomingCalls().flatMap(_.parent.fallthrough.toSet).toSet
+      case c: Return => c.parent.parent.incomingCalls().flatMap(_.parent.fallthrough.toSet).toSet
       case _ =>  Set.empty)
   }
 

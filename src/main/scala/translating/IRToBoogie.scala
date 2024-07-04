@@ -611,16 +611,12 @@ class IRToBoogie(var program: Program, var spec: Specification) {
         case Some(ProcRelyVersion.IfCommandContradiction) => relyfun(d.target.name).toList
         case None => List()
       }) ++ List(call, returnTarget)
+    case r: Return => List(ReturnCmd)
     case i: IndirectCall =>
-      // TODO put this elsewhere
-      if (i.target.name == "R30") {
-        List(ReturnCmd)
-      } else {
         val unresolved: List[BCmd] = List(Comment(s"UNRESOLVED: call ${i.target.name}"), BAssert(FalseBLiteral))
         i.returnTarget match {
           case Some(r) => unresolved :+ GoToCmd(Seq(r.label))
           case None    => unresolved ++ List(Comment("no return target"), BAssume(FalseBLiteral))
-        }
       }
     case g: GoTo =>
       // collects all targets of the goto with a branch condition that we need to check the security level for

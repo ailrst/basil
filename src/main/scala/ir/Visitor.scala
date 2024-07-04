@@ -48,6 +48,10 @@ abstract class Visitor {
     node
   }
 
+  def visitReturn(node: Return): Jump = {
+    node
+  }
+
   def visitBlock(node: Block): Block = {
     for (s <- node.statements) {
       node.statements.replace(s, visitStatement(s))
@@ -208,6 +212,11 @@ abstract class ReadOnlyVisitor extends Visitor {
     node
   }
 
+
+  override def visitReturn(node: Return): Jump = {
+    node
+  }
+
   override def visitBlock(node: Block): Block = {
     for (i <- node.statements) {
       visitStatement(i)
@@ -289,6 +298,10 @@ abstract class IntraproceduralControlFlowVisitor extends Visitor {
   override def visitIndirectCall(node: IndirectCall): Jump = {
     node.target = visitVariable(node.target)
     node.returnTarget.foreach(visitBlock)
+    node
+  }
+
+  override def visitReturn(node: Return): Jump = {
     node
   }
 }

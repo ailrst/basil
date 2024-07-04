@@ -59,6 +59,17 @@ class AddGammas extends CILVisitor {
 
 /* ---------------------------------------------------------------------------------------------------- */
 
+
+class ReplaceReturns extends CILVisitor {
+
+  override def vjump(j: Jump): VisitAction[Jump] = {
+    j match {
+      case IndirectCall(Register("R30", _), _, _) => ChangeTo(Return())
+      case _ => DoChildren()
+    }
+  }
+}
+
 /** Locally resolve return statements from indirect call R30 */
 
 /** Add call rely */
