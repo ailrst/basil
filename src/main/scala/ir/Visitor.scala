@@ -130,6 +130,8 @@ abstract class Visitor {
 
   def visitLocalVar(node: LocalVar): LocalVar = node
 
+  def visitGlobalVar(node: GlobalVar): GlobalVar = node
+
   def visitLiteral(node: Literal): Literal = node
 
   def visitUninterpretedFunction(node: UninterpretedFunction): UninterpretedFunction = {
@@ -435,6 +437,11 @@ class VariablesWithoutStoresLoads extends ReadOnlyVisitor {
   }
 
   override def visitLocalVar(node: LocalVar): LocalVar = {
+    variables.add(node)
+    node
+  }
+
+  override def visitGlobalVar(node: GlobalVar): GlobalVar = {
     variables.add(node)
     node
   }

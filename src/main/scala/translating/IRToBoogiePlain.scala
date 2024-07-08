@@ -47,8 +47,10 @@ class BoogieTranslator
   }
 
   def translateVar(e: Variable): BVar = e match {
-    case Register(n, s)      => BVariable(n, translateType(e.irType), Scope.Global)
-    case LocalVar(name, typ) => BVariable(name, translateType(typ), Scope.Local)
+    case Register(n, s)       => BVariable(n, translateType(e.irType), Scope.Global)
+    case LocalVar(name, typ)  => BVariable(name, translateType(typ), Scope.Local)
+    case GlobalVar(name, typ) => BVariable(name, translateType(typ), Scope.Global)
+    case m: Memory            => translateMem(m)
   }
 
   def translateMem(e: Memory): BMapVar =
@@ -58,6 +60,7 @@ class BoogieTranslator
     case TrueLiteral                          => TrueBLiteral
     case FalseLiteral                         => FalseBLiteral
     case IntLiteral(c)                        => IntBLiteral(c)
+    case OldExpr(e)                           => Old(translateExpr(e))
     case BitVecLiteral(s, c)                  => BitVecBLiteral(s, c)
     case Extract(e, start, body)              => BVExtract(e, start, translateExpr(body))
     case Repeat(repeats, body)                => BVRepeat(repeats, translateExpr(body))
@@ -117,8 +120,15 @@ class BoogieTranslator
 
   def translateProc(e: Procedure, pa: ProcAttrs): BProcedure = {
 
-    val body =
+    val locals = {
+      val vars = transforms.FindVars()
+      cilvisitor.visit_proc(vars, e)
+      vars.locals
+    }
+
+    val body: List[BCmdOrBlock] =
       (e.entryBlock.view ++ e.blocks.filterNot(x => e.entryBlock.contains(x))).map(x => translateBlock(x)).toList
+
     BProcedure(
       e.name,
       List(),

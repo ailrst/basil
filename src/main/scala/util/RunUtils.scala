@@ -197,6 +197,11 @@ object IRTransform {
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
     returnUnifier.visitProgram(ctx.program)
+
+    cilvisitor.visit_prog(transforms.AddGammas(), ctx.program)
+    transforms.replaceRelyGuarantee(ctx.program, Relation(TrueLiteral), Relation(FalseLiteral))
+    //cilvisitor.visit_prog(transforms.SecureUpdate(), ctx.program)
+
     ctx
   }
 
@@ -810,7 +815,7 @@ object RunUtils {
 
     val procs = ctx.program.procedures.map(p => translating.BoogieTranslator().translateProc(p, translating.ProcAttrs(List(), List(), List(), List(), List())))
     for (p <- procs) {
-      Logger.info(p.toString)
+      Logger.info(p.toBoogie.mkString("\n"))
     }
 
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))

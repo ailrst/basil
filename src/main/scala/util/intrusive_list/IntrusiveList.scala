@@ -240,7 +240,6 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
    * @return An ArrayBuffer containing all elements after n.
    */
   def splitOn(n: T): ArrayBuffer[T] = {
-    require(!lastElem.contains(n))
     require(containsRef(n))
 
     val ne = n.next

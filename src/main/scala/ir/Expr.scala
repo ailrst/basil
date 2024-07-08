@@ -31,26 +31,31 @@ case class Relation(val body: Expr) {
    * Resolve to a state transition/assumption by creating a procedure call to dummy procedure with the given specification
    * Returns the stub procedure ensuring the condition, and its function specification
    *
+   * Argument bindNew becomes the first statement after the call to the relation function.
+   *
    * **Mutates IR**
    */
-  def toAssumption(bindOld: Statement, relationName: Option[String] = None): (Procedure, FunctionSpec) = {
+  def toAssumption(bindNew: Statement, relationName: Option[String] = None): (Procedure, FunctionSpec) = {
     val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
     val spec = FunctionSpec(name, List(), List(), List(), List(this))
     val proc = Procedure.stub(name)
 
-    val jump = bindOld.parent.jump
-    val ft = bindOld.parent.fallthrough
+    val jump = bindNew.parent.jump
+    val ft = bindNew.parent.fallthrough
 
-    val nextBlock = Block(bindOld.parent.label + name, None, bindOld.parent.statements.splitOn(bindOld))
-    bindOld.parent.parent.addBlocks(nextBlock)
+    val nextBlock = Block(bindNew.parent.label + name, None, bindNew.parent.statements.splitOn(bindNew))
+    bindNew.parent.parent.addBlocks(nextBlock)
     nextBlock.replaceJump(jump)
     nextBlock.fallthrough = ft
 
-    bindOld.parent.replaceJump(DirectCall(proc))
-    bindOld.parent.fallthrough = Some(GoTo(List(nextBlock)))
+    bindNew.parent.replaceJump(DirectCall(proc))
+    bindNew.parent.fallthrough = Some(GoTo(List(nextBlock)))
+    bindNew.parent.statements.remove(bindNew)
+    nextBlock.statements.prepend(bindNew)
 
     (proc, spec)
   }
+
 }
 
 sealed trait Expr {
@@ -77,6 +82,8 @@ sealed trait Expr {
 case class OldExpr(body: Expr) extends Expr {
   override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
   override def toString = s"old($body)"
+  def getType = body.getType
+  def toBoogie = Old(body.toBoogie)
 }
 
 sealed trait Literal extends Expr {
@@ -423,17 +430,26 @@ case class LocalVar(override val name: String, override val irType: IRType) exte
   override def acceptVisit(visitor: Visitor): Variable = visitor.visitLocalVar(this)
 }
 
+case class GlobalVar(override val name: String, override val irType: IRType) extends Variable with Global {
+  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
+  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
+  override def toString: String = s"LocalVar(${name}_$sharedVariable, $irType)"
+  override def acceptVisit(visitor: Visitor): Variable = visitor.visitGlobalVar(this)
+}
+
 // A memory section
-sealed trait Memory extends Global {
+sealed trait Memory extends Variable with Global {
   val name: String
   val addressSize: Int
   val valueSize: Int
+  val irType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
   def toBoogie: BMapVar = BMapVar(name, MapBType(BitVecBType(addressSize), BitVecBType(valueSize)), Scope.Global)
-  def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
-  val getType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
+  override def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
+  override val getType: IRType = irType
   override def toString: String = s"Memory($name, $addressSize, $valueSize)"
 
-  def acceptVisit(visitor: Visitor): Memory =
+
+  override def acceptVisit(visitor: Visitor): Memory =
     throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 }
 
