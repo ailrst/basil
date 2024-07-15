@@ -120,18 +120,30 @@ private class ILSerialiser extends ReadOnlyVisitor {
     indentLevel += 1
 
     program ++= "in("
-    for (i <- node.in.indices) {
-      visitParameter(node.in(i))
-      if (i != node.in.size - 1) {
+    for (i <- node.formalParameters.indices) {
+      visitLocalVar(node.formalParameters(i))
+
+      node.bindingsIn.get(node.formalParameters(i)) match {
+        case Some(x) => {
+          program ++= " := "
+          visitExpr(x)
+        }
+        case None => ()
+      }
+      if (i != node.formalParameters.size - 1) {
         program ++= ", "
       }
     }
     program ++= "), "
     program ++= "out("
-    for (i <- node.out.indices) {
-      visitParameter(node.out(i))
-      if (i != node.out.size - 1)
+    var i = 0
+    for ((v,vl) <- node.bindingsOut) {
+      visitVariable(v)
+      program ++= " := " 
+      visitExpr(vl)
+      if (i != (node.bindingsOut.size - 1))
         program ++= ", "
+      i += 1
     }
     program ++= "), "
     program ++= "blocks(\n"
@@ -143,9 +155,9 @@ private class ILSerialiser extends ReadOnlyVisitor {
     node
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
+  override def visitParameter(node: LocalVar): LocalVar = {
     program ++= "Parameter("
-    visitRegister(node.value)
+    visitLocalVar(node)
     program ++= ")"
     node
   }

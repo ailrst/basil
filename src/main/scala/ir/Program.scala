@@ -64,7 +64,7 @@ class Program(var procedures: ArrayBuffer[Procedure], var mainProcedure: Procedu
       hasChanged = false
       for (p <- procedures) {
         val children = procToCalls(p)
-        val childrenModifies: mutable.Set[Global] = mutable.Set()
+        val childrenModifies: mutable.Set[Variable] = mutable.Set()
         for (c <- children) {
           childrenModifies.addAll(c.modifies)
         }
@@ -77,7 +77,7 @@ class Program(var procedures: ArrayBuffer[Procedure], var mainProcedure: Procedu
   }
 
   // this is very crude but the simplest thing for now until we have a more sophisticated specification system that can relate to the IR instead of the Boogie
-  def nameToGlobal(name: String): Global = {
+  def nameToGlobal(name: String): Variable = {
     if ((name.startsWith("R") || name.startsWith("V")) && (name.length == 2 || name.length == 3)
       && name.substring(1).forall(_.isDigit)) {
       if (name.startsWith("R")) {
@@ -157,7 +157,7 @@ class Program(var procedures: ArrayBuffer[Procedure], var mainProcedure: Procedu
 }
 
 object Procedure {
-  def stub(name: String) = Procedure(name, None, None, None, ArrayBuffer(), ArrayBuffer(), ArrayBuffer())
+  def stub(name: String) = Procedure(name, None, None, None, ArrayBuffer(), ArrayBuffer(), Map(), Map())
 }
 
 case class FunctionSpec(val procedure: String, 
@@ -171,8 +171,11 @@ class Procedure private (
                   private var _entryBlock: Option[Block],
                   private var _returnBlock: Option[Block],
                   private val _blocks: mutable.LinkedHashSet[Block],
-                  var in: ArrayBuffer[Parameter],
-                  var out: ArrayBuffer[Parameter],
+                  var formalParameters: ArrayBuffer[LocalVar],
+                  /* defines a (potentially partial) set of parameter bindings that are invariant under call-site */
+                  var bindingsIn: mutable.Map[LocalVar, Expr],  // invariant: keys(invariantParameterBindings) <= formalParameters 
+                  /* defines a (potentially partial) set of out-parameter bindings that are invariant under call-site (an atomic set of stores) */
+                  var bindingsOut: mutable.Map[Variable, Expr],
                 ) {
   private val _callers = mutable.HashSet[DirectCall]()
   _blocks.foreach(_.parent = this)
@@ -180,12 +183,12 @@ class Procedure private (
   require(_returnBlock.forall(b => _blocks.contains(b)) && _entryBlock.forall(b => _blocks.contains(b)))
   require(_blocks.isEmpty == _entryBlock.isEmpty) // blocks.nonEmpty <==> entryBlock.isDefined
 
-  def this(name: String, address: Option[Int] = None , entryBlock: Option[Block] = None, returnBlock: Option[Block] = None, blocks: Iterable[Block] = ArrayBuffer(), in: IterableOnce[Parameter] = ArrayBuffer(), out: IterableOnce[Parameter] = ArrayBuffer()) = {
-    this(name, address, entryBlock, returnBlock, mutable.LinkedHashSet.from(blocks), ArrayBuffer.from(in), ArrayBuffer.from(out))
+  def this(name: String, address: Option[Int] = None , entryBlock: Option[Block] = None, returnBlock: Option[Block] = None, blocks: Iterable[Block] = ArrayBuffer(), params: IterableOnce[LocalVar] = ArrayBuffer(), inBindings: Map[LocalVar, Expr] = Map(), outBindings: Map[Variable, Expr] = Map()) = {
+    this(name, address, entryBlock, returnBlock, mutable.LinkedHashSet.from(blocks), ArrayBuffer.from(params), mutable.Map.from(inBindings), mutable.Map.from(outBindings))
   }
 
   override def toString: String = {
-    s"Procedure $name at ${address.getOrElse("None")} with ${blocks.size} blocks and ${in.size} in and ${out.size} out parameters"
+    s"Procedure $name at ${address.getOrElse("None")} with ${blocks.size} blocks and ${formalParameters.size} in and ${bindingsOut.size} out parameters"
   }
 
   def calls: Set[Procedure] = blocks.iterator.flatMap(_.calls).toSet
@@ -356,15 +359,8 @@ class Procedure private (
   def callers(): Iterable[Procedure] = _callers.map(_.parent.parent).toSet[Procedure]
   def incomingCalls(): Iterator[DirectCall] = _callers.iterator
 
-  var modifies: mutable.Set[Global] = mutable.Set()
+  var modifies: mutable.Set[Variable] = mutable.Set()
 }
-
-class Parameter(var name: String, var size: Int, var value: Register) {
-  def toBoogie: BVariable = BParam(name, BitVecBType(size))
-  def toGamma: BVariable = BParam(s"Gamma_$name", BoolBType)
-}
-
-
 
 class Block private (
  val label: String,
@@ -428,7 +424,7 @@ class Block private (
 
   def calls: Set[Procedure] = _jump.calls
 
-  def modifies: Set[Global] = statements.flatMap(_.modifies).toSet
+  def modifies: Set[Variable] = statements.flatMap(_.modifies).toSet
   //def locals: Set[Variable] = statements.flatMap(_.locals).toSet ++ jumps.flatMap(_.locals).toSet
 
   def calledBy: Set[Block] = {

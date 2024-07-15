@@ -19,7 +19,7 @@ sealed trait Command extends HasParent[Block] {
 }
 
 sealed trait Statement extends Command, IntrusiveListElement[Statement] {
-  def modifies: Set[Global] = Set()
+  def modifies: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Statement = throw new Exception(
     "visitor " + visitor + " unimplemented for: " + this
   )
@@ -27,7 +27,7 @@ sealed trait Statement extends Command, IntrusiveListElement[Statement] {
 
 // invariant: rhs contains at most one MemoryLoad
 class Assign(var lhs: Variable, var rhs: Expr, override val label: Option[String] = None) extends Statement {
-  override def modifies: Set[Global] = lhs match {
+  override def modifies: Set[Variable] = lhs match {
     case r: Register => Set(r)
     case _           => Set()
   }
@@ -40,7 +40,7 @@ object Assign:
 
 // invariant: index and value do not contain MemoryLoads
 class MemoryAssign(var mem: Memory, var index: Expr, var value: Expr, var endian: Endian, var size: Int, override val label: Option[String] = None) extends Statement {
-  override def modifies: Set[Global] = Set(mem)
+  override def modifies: Set[Variable] = Set(mem)
   override def toString: String = s"$labelStr$mem[$index] := MemoryStore($value, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Statement = visitor.visitMemoryAssign(this)
 }
@@ -74,7 +74,7 @@ object Assume:
   def unapply(a: Assume): Option[(Expr, Option[String], Option[String], Boolean)] = Some(a.body, a.comment, a.label, a.checkSecurity)
 
 sealed trait Jump extends Command {
-  def modifies: Set[Global] = Set()
+  def modifies: Set[Variable] = Set()
   //def locals: Set[Variable] = Set()
   def calls: Set[Procedure] = Set()
   def acceptVisit(visitor: Visitor): Jump = throw new Exception("visitor " + visitor + " unimplemented for: " + this)

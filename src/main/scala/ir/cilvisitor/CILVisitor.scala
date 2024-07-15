@@ -19,7 +19,7 @@ case class ChangeDoChildrenPost[T](e: T, f: T => T) extends VisitAction[T]
 trait CILVisitor:
   def vprog(e: Program): VisitAction[Program] = DoChildren()
   def vproc(e: Procedure): VisitAction[List[Procedure]] = DoChildren()
-  def vparams(e: Iterable[Variable]): VisitAction[Iterable[Variable]] = DoChildren()
+  def vparams(e: Iterable[LocalVar]): VisitAction[Iterable[LocalVar]] = DoChildren()
   def vblock(e: Block): VisitAction[Block] = DoChildren()
 
   def vstmt(e: Statement): VisitAction[List[Statement]] = DoChildren()
@@ -53,7 +53,7 @@ def doVisit[T](v: CILVisitor, a: VisitAction[T], n: T, continue: (T) => T): T = 
 
 class CILVisitorImpl(val v: CILVisitor) {
 
-  def visit_parameters(p: Iterable[Variable]): Iterable[Variable] = {
+  def visit_parameters(p: Iterable[LocalVar]): Iterable[LocalVar] = {
     doVisit(v, v.vparams(p), p, (n) => n)
   }
 
@@ -88,8 +88,9 @@ class CILVisitorImpl(val v: CILVisitor) {
       case o: OldExpr                           => visit_expr(o.body)
       case q: QuantifierExpr => {
         val nb = visit_parameters(q.binds)
+        val ps = List.from(visit_parameters(q.binds))
         v.enter_scope(q.binds)
-        val nq = QuantifierExpr(q.kind, q.binds.map(visit_var), q.guard, visit_expr(q.body))
+        val nq = QuantifierExpr(q.kind, ps, q.guard, visit_expr(q.body))
         v.leave_scope(q.binds)
         nq
       }
@@ -144,20 +145,14 @@ class CILVisitorImpl(val v: CILVisitor) {
 
   def visit_proc(p: Procedure): List[Procedure] = {
     def continue(p: Procedure) = {
-      // TODO: change parameters to not assume registers
-      val nin = visit_parameters(p.in.map(_.value))
-      def getSize(e: Expr) = {
-        e.getType match {
-          case BitVecType(sz) => sz
-          case _ => throw Exception("Parameters have to be registers (TODO)")
-        }
-      }
-      p.in = ArrayBuffer.from(nin.map(v => Parameter(v.name, getSize(v), Register(v.name, getSize(v)))))
-      v.enter_scope(p.in.map(_.value))
+      p.formalParameters =  ArrayBuffer.from(visit_parameters(p.formalParameters))
+      p.bindingsIn =  p.bindingsIn.map((k,vl) => visit_parameters(Seq(k)).head -> visit_expr(vl))
+      v.enter_scope(p.formalParameters)
       for (b <- p.blocks) {
         p.replaceBlock(b, visit_block(b))
       }
-      v.leave_scope(p.in.map(_.value))
+      p.bindingsOut =  p.bindingsOut.map((k,vl) => visit_var(k) -> visit_expr(vl))
+      v.leave_scope(p.formalParameters)
       p
     }
 

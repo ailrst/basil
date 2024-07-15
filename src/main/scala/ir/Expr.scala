@@ -26,7 +26,7 @@ object QuantifierGuard:
     }
   }
 
-case class QuantifierExpr(kind: QuantifierSort, binds: List[Variable], guard: List[QuantifierGuard], body: Expr) extends Expr {
+case class QuantifierExpr(kind: QuantifierSort, binds: List[LocalVar], guard: List[QuantifierGuard], body: Expr) extends Expr {
   override def getType: IRType = BoolType
   def toBoogie : BExpr = {
     val b = binds.map(_.toBoogie)
@@ -379,14 +379,12 @@ case class UninterpretedFunction(name: String, params: Seq[Expr], returnType: IR
   override def variables: Set[Variable] = params.flatMap(_.variables).toSet
 }
 
-// Means something has a global scope from the perspective of the IR and Boogie
-// Not the same as global in the sense of shared memory between threads
-sealed trait Global
 
 // A variable that is accessible without a memory load/store
 sealed trait Variable extends Expr {
   val name: String
   val irType: IRType
+  val scope: Scope
   var sharedVariable: Boolean = false
 
   override def getType: IRType = irType
@@ -404,7 +402,8 @@ sealed trait Variable extends Expr {
 
 // Variable with global scope (in a 'accessible from any procedure' sense), not related to the concurrent shared memory sense
 // These are all hardware registers
-case class Register(override val name: String, size: Int) extends Variable with Global {
+case class Register(override val name: String, size: Int) extends Variable {
+  override val scope: Scope = Scope.Global
   override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Global)
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Global)
   override def toString: String = s"Register(${name}, $irType)"
@@ -414,13 +413,15 @@ case class Register(override val name: String, size: Int) extends Variable with 
 
 // Variable with scope local to the procedure, typically a temporary variable created in the lifting process
 case class LocalVar(override val name: String, override val irType: IRType) extends Variable {
+  override val scope : Scope = Scope.Local
   override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
   override def toString: String = s"LocalVar(${name}_$sharedVariable, $irType)"
   override def acceptVisit(visitor: Visitor): Variable = visitor.visitLocalVar(this)
 }
 
-case class GlobalVar(override val name: String, override val irType: IRType) extends Variable with Global {
+case class GlobalVar(override val name: String, override val irType: IRType) extends Variable {
+  override val scope : Scope = Scope.Global
   override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
   override def toString: String = s"LocalVar(${name}_$sharedVariable, $irType)"
@@ -428,12 +429,13 @@ case class GlobalVar(override val name: String, override val irType: IRType) ext
 }
 
 // A memory section
-sealed trait Memory extends Variable with Global {
+sealed trait Memory extends Variable {
   val name: String
   val addressSize: Int
   val valueSize: Int
   val irType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
   def toBoogie: BMapVar = BMapVar(name, MapBType(BitVecBType(addressSize), BitVecBType(valueSize)), Scope.Global)
+  override val scope = Scope.Global
   override def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
   override val getType: IRType = irType
   override def toString: String = s"Memory($name, $addressSize, $valueSize)"

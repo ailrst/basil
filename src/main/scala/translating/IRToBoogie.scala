@@ -434,8 +434,10 @@ class IRToBoogie(var program: Program, var spec: Specification) {
 
     val modifies: Seq[BVar] = p.modifies.toSeq
       .flatMap {
-        case m: Memory   => Seq(m.toBoogie, m.toGamma)
-        case r: Register => Seq(r.toBoogie, r.toGamma)
+        case m: Memory   => Seq(m.toBoogie,  m.toGamma)
+        case r: Register => Seq(r.toBoogie,  r.toGamma)
+        case r: LocalVar => Seq(r.toBoogie,  r.toGamma)
+        case r: GlobalVar => Seq(r.toBoogie, r.toGamma)
       }.distinct.sorted
 
     val modifiedPreserve = modifies.collect { case m: BVar if modifiedCheck.contains(m) => m }

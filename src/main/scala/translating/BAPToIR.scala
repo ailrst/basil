@@ -29,10 +29,13 @@ class BAPToIR(var program: BAPProgram, mainAddress: Int) {
         labelToBlock.addOne(b.label, block)
       }
       for (p <- s.in) {
-        procedure.in.append(p.toIR)
+        val (local, binding) = p.toIR
+        procedure.formalParameters.append(local)
+        procedure.bindingsIn(local) = binding
       }
       for (p <- s.out) {
-        procedure.out.append(p.toIR)
+        val (variable, binding) = p.toIR
+        procedure.bindingsOut(variable) = binding
       }
       if (s.address == mainAddress) {
         mainProcedure = Some(procedure)

@@ -64,18 +64,27 @@ abstract class Visitor {
     for (b <- node.blocks) {
       node.replaceBlock(b, visitBlock(b))
     }
-    for (i <- node.in.indices) {
-      node.in(i) = visitParameter(node.in(i))
+    for (i <- node.formalParameters.indices) {
+      node.formalParameters(i) = visitParameter(node.formalParameters(i))
     }
-    for (i <- node.out.indices) {
-      node.out(i) = visitParameter(node.out(i))
+
+    for ((i, v) <- node.bindingsIn) {
+      val k = visitParameter(i)
+      if (i != k) {
+        node.bindingsIn.remove(i)
+      }
+      node.bindingsIn(i) = visitExpr(v)
     }
+
+    for ((i, v) <- node.bindingsOut) {
+      node.bindingsOut(i) = visitExpr(v)
+    }
+
     node
   }
 
-  def visitParameter(node: Parameter): Parameter = {
-    node.value = visitRegister(node.value)
-    node
+  def visitParameter(node: LocalVar): LocalVar = {
+    visitLocalVar(node)
   }
 
   def visitProgram(node: Program): Program = {
@@ -231,18 +240,24 @@ abstract class ReadOnlyVisitor extends Visitor {
     for (i <- node.blocks) {
       visitBlock(i)
     }
-    for (i <- node.in) {
+
+    for (i <- node.formalParameters) {
       visitParameter(i)
     }
-    for (i <- node.out) {
+    for ((i,b) <- node.bindingsIn) {
       visitParameter(i)
+      visitExpr(b)
+    }
+
+    for ((i,b) <- node.bindingsOut) {
+      visitVariable(i)
+      visitExpr(b)
     }
     node
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
-    visitRegister(node.value)
-    node
+  override def visitParameter(node: LocalVar): LocalVar = {
+    visitLocalVar(node)
   }
 
   override def visitProgram(node: Program): Program = {
@@ -399,11 +414,12 @@ class Renamer(reserved: Set[String]) extends Visitor {
     }
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
-    if (reserved.contains(node.name)) {
-      node.name = s"#${node.name}"
+  override def visitParameter(node: LocalVar): LocalVar = {
+    var n = node
+    if (reserved.contains(n.name)) {
+      n = n.copy(name=s"#${node.name}")
     }
-    super.visitParameter(node)
+    super.visitParameter(n)
   }
 
   override def visitProcedure(node: Procedure): Procedure = {

@@ -25,14 +25,14 @@ class FindVars extends CILVisitor {
     SkipChildren()
   }
 
-  def globals = vars.collect { case g: Global =>
+  def globals = vars.collect { case g: Variable =>
     g
   }
 
 
   def shared = vars.collect { case g if g.sharedVariable => g}
 
-  def locals : mutable.ArrayBuffer[Variable] = vars.filter(v => !v.isInstanceOf[Global])
+  def locals : mutable.ArrayBuffer[Variable] = vars.filter(v => !v.isInstanceOf[Variable])
 }
 
 class FindLoads extends CILVisitor {
@@ -70,8 +70,7 @@ def gamma_mem(m: Memory) = {
 /* l should be shared for this to make sense */
 def gamma_v(l: Variable): Variable = l match {
   case m: Memory => gamma_mem(m)
-  case g: Global => GlobalVar("Gamma_" + l.name, BoolType)
-  case _ => LocalVar("Gamma_" + l.name, BoolType)
+  case g: Variable => GlobalVar("Gamma_" + l.name, BoolType)
 }
 
 def gamma_store(m: MemoryAssign) = { 

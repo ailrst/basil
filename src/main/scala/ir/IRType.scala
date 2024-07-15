@@ -23,6 +23,23 @@ case class MapType(param: IRType, result: IRType) extends IRType(s"[$param]$resu
   override def toBoogie: BType = MapBType(param.toBoogie, result.toBoogie)
 }
 
+
+def coerceToTypeSafe(e: Expr, t: IRType) = {
+  (e.getType, t) match {
+    case (_: BitVecType, o: BitVecType) => coerceToBVsafe(e, o)
+    case _ => throw Exception(s"No safe conversion ${e.getType} to $t (implemented)")
+  }
+
+}
+
+def coerceToBVsafe(e: Expr, t: BitVecType) = {
+  e.getType match {
+    case BitVecType(sz) if (t.size == sz) => e
+    case BitVecType(sz) if (t.size < sz) => Extract(t.size, 0, e)
+    case _ => throw Exception(s"No safe conversion ${e.getType} to $t")
+  }
+}
+
 def coerceToBool(e: Expr): Expr = {
   e.getType match {
     case BitVecType(s) => BinaryExpr(BVNEQ, e, BitVecLiteral(0, s))

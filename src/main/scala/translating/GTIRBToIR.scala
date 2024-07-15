@@ -131,17 +131,19 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
   // TODO this is a hack to imitate BAP so that the existing specifications relying on this will work
   // we cannot and should not rely on this at all
-  private def createArguments(name: String): (ArrayBuffer[Parameter], ArrayBuffer[Parameter]) = {
-    val args = ArrayBuffer.newBuilder[Parameter]
+  private def createArguments(name: String): ((ArrayBuffer[LocalVar], immutable.Map[LocalVar, Expr]), (immutable.Map[Variable, Expr])) = {
+    val args = ArrayBuffer.newBuilder[LocalVar]
     var regNum = 0
 
     val in = if (name == "main") {
-      ArrayBuffer(Parameter("main_argc", 32, Register("R0", 64)), Parameter("main_argv", 64, Register("R1", 64)))
+      // ArrayBuffer(Parameter("main_argc", 32, Register("R0", 64)), Parameter("main_argv", 64, Register("R1", 64)))
+      (ArrayBuffer(LocalVar("main_argc", BitVecType(32)), LocalVar("main_argv", BitVecType(64))),
+      immutable.Map(LocalVar("main_argc", BitVecType(32)) -> Extract(32, 0, Register("R0", 64)), LocalVar("main_argv", BitVecType(64)) -> Register("R1", 64)))
     } else {
-      ArrayBuffer()
+      (ArrayBuffer(), immutable.Map())
     }
 
-    val out = ArrayBuffer(Parameter(name + "_result", 32, Register("R0", 64)))
+    val out = immutable.Map[Variable, Expr](LocalVar(name + "_result", BitVecType(32)) -> Extract(32, 0, Register("R0", 64)))
 
     (in, out)
   }
@@ -254,7 +256,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
     val (in, out) = createArguments(name)
 
-    val procedure = Procedure(name, address, in = in, out = out)
+    val procedure = Procedure(name, address,  params=in._1, inBindings=in._2, outBindings=out)
     uuidToProcedure += (functionUUID -> procedure)
     entranceUUIDtoProcedure += (entranceUUID -> procedure)
 
