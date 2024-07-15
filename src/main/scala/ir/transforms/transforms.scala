@@ -216,6 +216,11 @@ class SecureUpdate(
   controls: Map[Variable, Set[Variable]],
   ) extends CILVisitor {
 
+    /*
+     * Assuming L_...() functions take dependent variables, a the test variable, and the test offset or address.  
+     */
+
+
   override def vstmt(s: Statement) : VisitAction[List[Statement]] = {
     def toOld(v: Variable) = v match {
       case v : LocalVar  => v.copy(name = v.name + "_old")

@@ -16,11 +16,10 @@ case class ChangeTo[T](e: T) extends VisitAction[T]
 // changes to e, then visits children of e, then applies f to the result
 case class ChangeDoChildrenPost[T](e: T, f: T => T) extends VisitAction[T]
 
-
 trait CILVisitor:
   def vprog(e: Program): VisitAction[Program] = DoChildren()
   def vproc(e: Procedure): VisitAction[List[Procedure]] = DoChildren()
-  def vparams(e: ArrayBuffer[Parameter]): VisitAction[ArrayBuffer[Parameter]] = DoChildren()
+  def vparams(e: Iterable[Variable]): VisitAction[Iterable[Variable]] = DoChildren()
   def vblock(e: Block): VisitAction[Block] = DoChildren()
 
   def vstmt(e: Statement): VisitAction[List[Statement]] = DoChildren()
@@ -31,9 +30,8 @@ trait CILVisitor:
   def vvar(e: Variable): VisitAction[Variable] = DoChildren()
   def vmem(e: Memory): VisitAction[Memory] = DoChildren()
 
-  def enter_scope(params: ArrayBuffer[Parameter]): Unit = ()
-  def leave_scope(outparam: ArrayBuffer[Parameter]): Unit = ()
-
+  def enter_scope(params: Iterable[Variable]): Unit = ()
+  def leave_scope(params: Iterable[Variable]): Unit = ()
 
 def doVisitList[T](v: CILVisitor, a: VisitAction[List[T]], n: T, continue: (T) => T): List[T] = {
   a match {
@@ -55,7 +53,7 @@ def doVisit[T](v: CILVisitor, a: VisitAction[T], n: T, continue: (T) => T): T = 
 
 class CILVisitorImpl(val v: CILVisitor) {
 
-  def visit_parameters(p: ArrayBuffer[Parameter]): ArrayBuffer[Parameter] = {
+  def visit_parameters(p: Iterable[Variable]): Iterable[Variable] = {
     doVisit(v, v.vparams(p), p, (n) => n)
   }
 
@@ -63,11 +61,9 @@ class CILVisitorImpl(val v: CILVisitor) {
     doVisit(v, v.vvar(n), n, (n) => n)
   }
 
-
   def visit_mem(n: Memory): Memory = {
     doVisit(v, v.vmem(n), n, (n) => n)
   }
-
 
   def visit_jump(j: Jump): Jump = {
     doVisit(v, v.vjump(j), j, (j) => j)
@@ -89,6 +85,14 @@ class CILVisitorImpl(val v: CILVisitor) {
       case UnaryExpr(op, arg)                   => UnaryExpr(op, visit_expr(arg))
       case v: Variable                          => visit_var(v)
       case UninterpretedFunction(n, params, rt) => UninterpretedFunction(n, params.map(visit_expr), rt)
+      case o: OldExpr                           => visit_expr(o.body)
+      case q: QuantifierExpr => {
+        val nb = visit_parameters(q.binds)
+        v.enter_scope(q.binds)
+        val nq = QuantifierExpr(q.kind, q.binds.map(visit_var), q.guard, visit_expr(q.body))
+        v.leave_scope(q.binds)
+        nq
+      }
     }
     doVisit(v, v.vexpr(n), n, continue)
   }
@@ -140,13 +144,20 @@ class CILVisitorImpl(val v: CILVisitor) {
 
   def visit_proc(p: Procedure): List[Procedure] = {
     def continue(p: Procedure) = {
-      p.in = visit_parameters(p.in)
-      v.enter_scope(p.in)
+      // TODO: change parameters to not assume registers
+      val nin = visit_parameters(p.in.map(_.value))
+      def getSize(e: Expr) = {
+        e.getType match {
+          case BitVecType(sz) => sz
+          case _ => throw Exception("Parameters have to be registers (TODO)")
+        }
+      }
+      p.in = ArrayBuffer.from(nin.map(v => Parameter(v.name, getSize(v), Register(v.name, getSize(v)))))
+      v.enter_scope(p.in.map(_.value))
       for (b <- p.blocks) {
         p.replaceBlock(b, visit_block(b))
       }
-      p.out = visit_parameters(p.out)
-      v.leave_scope(p.out)
+      v.leave_scope(p.in.map(_.value))
       p
     }
 

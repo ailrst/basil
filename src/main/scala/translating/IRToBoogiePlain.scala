@@ -56,6 +56,22 @@ class BoogieTranslator
   def translateMem(e: Memory): BMapVar =
     BMapVar(e.name, MapBType(BitVecBType(e.addressSize), BitVecBType(e.valueSize)), Scope.Global)
 
+  def translateQuant(q: QuantifierExpr) = {
+    val b = q.binds.map(_.toBoogie)
+    val g = q.guard.map(QuantifierGuard.toCond)
+      .foldLeft(TrueLiteral: Expr)((l,r) => BinaryExpr(BoolAND, l, r))
+      val bdy = if (q.guard.isEmpty) {
+        q.body
+      } else {
+        BinaryExpr(BoolIMPLIES, g, q.body) 
+      }
+    q.kind match {
+      case QuantifierSort.forall => ForAll(b, bdy.toBoogie)
+      case QuantifierSort.lambda => Lambda(b, bdy.toBoogie)
+      case QuantifierSort.exists => Exists(b, bdy.toBoogie)
+    }
+  }
+
   def translateExpr(e: Expr): BExpr = e match {
     case TrueLiteral                          => TrueBLiteral
     case FalseLiteral                         => FalseBLiteral
@@ -72,6 +88,7 @@ class BoogieTranslator
     // TODO: uninterpreted flag; we want to give ir functions an interpretation in the backend
     case UninterpretedFunction(name, params, returnType) =>
       BFunctionCall(name, params.map(translateExpr).toList, translateType(returnType), true)
+    case q: QuantifierExpr => translateQuant(q)
     case r: Variable => translateVar(r)
   }
 

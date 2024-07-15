@@ -526,7 +526,7 @@ case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BE
   override def loads: Set[BExpr] = guard.loads ++ thenExpr.loads ++ elseExpr.loads
 }
 
-trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends BExpr {
+trait QuantifierBExpr(sort: QuantifierSort, bound: List[BVar], body: BExpr) extends BExpr {
   override def toString: String = {
     val boundString = bound.map(_.withType).mkString(", ")
     s"($sort $boundString :: ($body))"
@@ -540,17 +540,11 @@ trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends B
   override def loads: Set[BExpr] = body.loads
 }
 
-enum Quantifier {
-  case forall
-  case exists
-  case lambda
-}
+case class ForAll(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.forall, bound, body)
 
-case class ForAll(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.forall, bound, body)
+case class Exists(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.exists, bound, body)
 
-case class Exists(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.exists, bound, body)
-
-case class Lambda(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.lambda, bound, body)
+case class Lambda(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.lambda, bound, body)
 
 case class Old(body: BExpr) extends BExpr {
   override def toString: String = s"old($body)"

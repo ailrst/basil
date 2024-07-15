@@ -4,57 +4,47 @@ import boogie._
 import scala.collection.mutable
 import ir.cilvisitor._
 
-case class Relation(val body: Expr) {
-  // A relation is not an expression since we have two states present
-  // body: an Expr containing old()
 
-  /* 
-   * Resolve to assertion by caching old in a specific state
-   * Modifies the block(s) containing oldBinding and newBinding
-   * Assertion is inserted after newBinding, and old(x) in the relation are bound
-   * to the state before bindOld
-   * Hence to relate the statements before and after a single statement you can make bindOld = bindNew
-   * 
-   * **Mutates IR**
-   *
-   * @returns the updated expressions
-   */
-  def toAssertion(bindOld: Statement, bindNew: Statement): Expr = {
-    val (origExpr: Expr, replaced: Expr, vars: mutable.Map[LocalVar, Expr]) = transforms.oldsToVars(body)
-    val assigns : List[Statement] = vars.toList.map((v: LocalVar, e: Expr) => Assign(v, e))
-    bindOld.parent.statements.insertAllBefore(Some(bindOld), assigns)
-    bindNew.parent.statements.insertAfter(bindNew, Assert(replaced))
-    replaced
+enum QuantifierSort:
+  case exists
+  case lambda
+  case forall
+
+
+enum QuantifierGuard:
+  // Structured quantifier guard for finite quantifiers we may want to expand into a disjunction, or domains
+  // we otherwise might want to handle in a special way.
+  case IntRange(v: LocalVar, begin: Int, lastExclusive: Int)
+  case BVRange(v: LocalVar, bvsize: Int, begin: Int, lastExclusive: Int) // all vars must have same bvsize 
+
+
+object QuantifierGuard:
+  def toCond(g: QuantifierGuard) = {
+    g match {
+      case IntRange(v, b, e) => BinaryExpr(BoolAND, BinaryExpr(IntGE, IntLiteral(b), v), BinaryExpr(IntLT, v, IntLiteral(e)))
+      case BVRange(v, sz, b, e) => BinaryExpr(BoolAND, BinaryExpr(BVUGE, BitVecLiteral(sz, b), v), BinaryExpr(BVULT, v, BitVecLiteral(sz, e)))
+    }
   }
 
-  /* 
-   * Resolve to a state transition/assumption by creating a procedure call to dummy procedure with the given specification
-   * Returns the stub procedure ensuring the condition, and its function specification
-   *
-   * Argument bindNew becomes the first statement after the call to the relation function.
-   *
-   * **Mutates IR**
-   */
-  def toAssumption(bindNew: Statement, relationName: Option[String] = None): (Procedure, FunctionSpec) = {
-    val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
-    val spec = FunctionSpec(name, List(), List(), List(), List(this))
-    val proc = Procedure.stub(name)
-
-    val jump = bindNew.parent.jump
-    val ft = bindNew.parent.fallthrough
-
-    val nextBlock = Block(bindNew.parent.label + name, None, bindNew.parent.statements.splitOn(bindNew))
-    bindNew.parent.parent.addBlocks(nextBlock)
-    nextBlock.replaceJump(jump)
-    nextBlock.fallthrough = ft
-
-    bindNew.parent.replaceJump(DirectCall(proc))
-    bindNew.parent.fallthrough = Some(GoTo(List(nextBlock)))
-    bindNew.parent.statements.remove(bindNew)
-    nextBlock.statements.prepend(bindNew)
-
-    (proc, spec)
+case class QuantifierExpr(kind: QuantifierSort, binds: List[Variable], guard: List[QuantifierGuard], body: Expr) extends Expr {
+  override def getType: IRType = BoolType
+  def toBoogie : BExpr = {
+    val b = binds.map(_.toBoogie)
+    val g = guard.map(QuantifierGuard.toCond)
+      .foldLeft(TrueLiteral: Expr)((l,r) => BinaryExpr(BoolAND, l, r))
+      val bdy = if (guard.isEmpty) {
+        body
+      } else {
+        BinaryExpr(BoolIMPLIES, g, body) 
+      }
+    kind match {
+      case QuantifierSort.forall => ForAll(b, bdy.toBoogie)
+      case QuantifierSort.lambda => Lambda(b, bdy.toBoogie)
+      case QuantifierSort.exists => Exists(b, bdy.toBoogie)
+      }
   }
+  override def gammas: Set[Expr] = Set()
+  override def variables: Set[Variable] = body.variables.toSet.diff(binds.toSet)
 
 }
 

@@ -16,6 +16,8 @@ class Interpreter() {
 
   def eval(exp: Expr, env: mutable.Map[Variable, BitVecLiteral]): BitVecLiteral = {
     exp match {
+      case q: OldExpr => ???
+      case q: QuantifierExpr => ???
       case id: Variable =>
         env.get(id) match {
           case Some(value) =>
@@ -260,6 +262,14 @@ class Interpreter() {
           }
           interpretProcedure(dc.target)
           break
+        case r: Return => {
+          if (returnBlock.nonEmpty) {
+            nextBlock = Some(returnBlock.pop())
+          } else {
+            //Exit Interpreter
+            nextBlock = None
+          }
+        }
         case ic: IndirectCall =>
           Logger.debug(s"$ic")
           if (ic.target == Register("R30", 64) && ic.returnTarget.isEmpty) {
