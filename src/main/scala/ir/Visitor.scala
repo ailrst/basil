@@ -44,7 +44,7 @@ abstract class Visitor {
   }
 
   def visitIndirectCall(node: IndirectCall): Jump = {
-    node.target = visitVariable(node.target)
+    node.target = visitValueVariable(node.target)
     node
   }
 
@@ -134,6 +134,10 @@ abstract class Visitor {
   def visitSharedMemory(node: SharedMemory): Memory = node
 
   def visitVariable(node: Variable): Variable = node.acceptVisit(this)
+
+  def visitValueVariable(node: ValueVariable): ValueVariable = node.acceptVisit(this)
+
+  def visitRefVariable(node: RefVariable): RefVariable = node.acceptVisit(this)
 
   def visitRegister(node: Register): Register = node
 
@@ -313,7 +317,7 @@ abstract class IntraproceduralControlFlowVisitor extends Visitor {
   }
 
   override def visitIndirectCall(node: IndirectCall): Jump = {
-    node.target = visitVariable(node.target)
+    node.target = visitValueVariable(node.target)
     node.returnTarget.foreach(visitBlock)
     node
   }

@@ -624,7 +624,9 @@ class IRToBoogie(var program: Program, var spec: Specification) {
       // collects all targets of the goto with a branch condition that we need to check the security level for
       // and collects the variables for that
       val conditions = g.targets.flatMap(_.statements.headOption.collect { case a: Assume if a.checkSecurity => a })
-      val conditionVariables = conditions.flatMap(_.body.variables)
+      val conditionVariables : List[ValueVariable] = conditions.flatMap(_.body.variables).collect {
+        case v: ValueVariable => v
+      }.toList
       val gammas = conditionVariables.map(_.toGamma).toList.sorted
       val conditionAssert: List[BCmd] = if (gammas.size > 1) {
         val andedConditions = gammas.tail.foldLeft(gammas.head)((ands: BExpr, next: BExpr) => BinaryBExpr(BoolAND, ands, next))
@@ -679,10 +681,16 @@ class IRToBoogie(var program: Program, var spec: Specification) {
           (List(rely, gammaValueCheck) ++ oldAssigns ++ oldGammaAssigns :+ store) ++ secureUpdate ++ guaranteeChecks ++ stateSplit
       }
     case l: Assign =>
-      val lhs = l.lhs.toBoogie
-      val rhs = l.rhs.toBoogie
-      val lhsGamma = l.lhs.toGamma
-      val rhsGamma = l.rhs.toGamma
+      val lhs : BVar = l.lhs.toBoogie match {
+        case b: BVar => b
+        case _ => throw Exception("Assign to ref not translatable")
+      }
+      val rhs : BExpr = l.rhs.toBoogie
+      val lhsGamma : BVar = l.lhs.toGamma match {
+        case b: BVar => b
+        case _ => throw Exception("Assign to ref not translatable")
+      }
+      val rhsGamma : BExpr = l.rhs.toGamma
       val assign = AssignCmd(List(lhs, lhsGamma), List(rhs, rhsGamma))
       val loads = l.rhs.loads
       if (loads.size > 1) {

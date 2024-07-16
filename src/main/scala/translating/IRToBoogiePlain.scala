@@ -44,10 +44,11 @@ class BoogieTranslator
     case IntType       => IntBType
     case BitVecType(s) => BitVecBType(s)
     case MapType(p, r) => MapBType(translateType(p), translateType(r))
+    case RefType(t,s)  => translateType(t)
   }
 
   def translateVar(e: Variable): BVar = e match {
-    case Register(n, s)       => BVariable(n, translateType(e.irType), Scope.Global)
+    case Register(n, s)       => BVariable(n, translateType(e.getType), Scope.Global)
     case LocalVar(name, typ)  => BVariable(name, translateType(typ), Scope.Local)
     case GlobalVar(name, typ) => BVariable(name, translateType(typ), Scope.Global)
     case m: Memory            => translateMem(m)

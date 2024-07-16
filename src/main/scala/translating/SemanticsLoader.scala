@@ -537,7 +537,7 @@ class SemanticsLoader(parserMap: immutable.Map[String, Array[Array[StmtContext]]
     visitBits(ctx.bits)
   }
 
-  private def visitLexpr(ctx: LexprContext): Option[Variable] = {
+  private def visitLexpr(ctx: LexprContext): Option[ValueVariable] = {
     ctx match {
       case l: LExprVarContext => visitLExprVar(l)
       case l: LExprFieldContext => Some(visitLExprField(l))
@@ -545,7 +545,7 @@ class SemanticsLoader(parserMap: immutable.Map[String, Array[Array[StmtContext]]
     }
   }
 
-  private def visitLExprVar(ctx: LExprVarContext): Option[Variable] = {
+  private def visitLExprVar(ctx: LExprVarContext): Option[ValueVariable] = {
     val name = visitIdent(ctx.ident)
     name match {
       case n if constMap.contains(n) => Some(LocalVar(n + "$" + blockCount + "$" + instructionCount, constMap(n)))

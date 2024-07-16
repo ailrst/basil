@@ -222,7 +222,7 @@ trait BAPVar extends BAPVariable {
   val name: String
   override val size: Int
   override def toString: String = name
-  override def toIR: Variable
+  override def toIR: ValueVariable
 }
 
 case class BAPRegister(override val name: String, override val size: Int) extends BAPVar {

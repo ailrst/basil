@@ -38,6 +38,16 @@ class Assign(var lhs: Variable, var rhs: Expr, override val label: Option[String
 object Assign:
   def unapply(l: Assign): Option[(Variable, Expr, Option[String])] = Some(l.lhs, l.rhs, l.label)
 
+
+//class Store(var lhs: RefVariable, var rhs: Expr, override val label: Option[String] = None)  extends Statement {
+//  override def modifies: Set[Variable] = Set(lhs)
+//  override def toString: String = s"[$lhs] := $rhs"
+//}
+//
+//class Load(var lhs: ValueVariable, var rhs: RefVariable, override val label: Option[String] = None)  extends Statement {
+//}
+
+
 // invariant: index and value do not contain MemoryLoads
 class MemoryAssign(var mem: Memory, var index: Expr, var value: Expr, var endian: Endian, var size: Int, override val label: Option[String] = None) extends Statement {
   override def modifies: Set[Variable] = Set(mem)
@@ -172,7 +182,7 @@ class DirectCall(val target: Procedure,
 object DirectCall:
   def unapply(i: DirectCall): Option[(Procedure, Option[Block], Option[String])] = Some(i.target, i.returnTarget, i.label)
 
-class IndirectCall(var target: Variable,
+class IndirectCall(var target: ValueVariable,
                    override val returnTarget: Option[Block] = None,
                    override val label: Option[String] = None
                   ) extends Call {
@@ -185,4 +195,4 @@ class IndirectCall(var target: Variable,
 }
 
 object IndirectCall:
-  def unapply(i: IndirectCall): Option[(Variable, Option[Block], Option[String])] = Some(i.target, i.returnTarget, i.label)
+  def unapply(i: IndirectCall): Option[(ValueVariable, Option[Block], Option[String])] = Some(i.target, i.returnTarget, i.label)

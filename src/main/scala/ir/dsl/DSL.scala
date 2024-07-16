@@ -39,7 +39,7 @@ trait EventuallyJump {
   def resolve(p: Program): Jump
 }
 
-case class EventuallyIndirectCall(target: Variable, fallthrough: Option[DelayNameResolve]) extends EventuallyJump {
+case class EventuallyIndirectCall(target: ValueVariable, fallthrough: Option[DelayNameResolve]) extends EventuallyJump {
   override def resolve(p: Program): IndirectCall = {
     IndirectCall(target, fallthrough.flatMap(_.resolveBlock(p)))
   }
@@ -75,7 +75,7 @@ def goto(targets: List[String]): EventuallyGoto = {
 
 def directCall(tgt: String, fallthrough: Option[String]): EventuallyCall = EventuallyCall(DelayNameResolve(tgt), fallthrough.map(x => DelayNameResolve(x)))
 
-def indirectCall(tgt: Variable, fallthrough: Option[String]): EventuallyIndirectCall = EventuallyIndirectCall(tgt, fallthrough.map(x => DelayNameResolve(x)))
+def indirectCall(tgt: ValueVariable, fallthrough: Option[String]): EventuallyIndirectCall = EventuallyIndirectCall(tgt, fallthrough.map(x => DelayNameResolve(x)))
 // def directcall(tgt: String) = EventuallyCall(DelayNameResolve(tgt), None)
 
 

@@ -26,7 +26,7 @@ case class ReachingDefinitionsAnalysis(program: Program) {
    * Good enough as stmts are unique
    */
   private def generateUniqueDefinition(
-      variable: Variable
+      variable: ValueVariable
   ): Assign = {
     Assign(variable, BitVecLiteral(0, 0))
   }

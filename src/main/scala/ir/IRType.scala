@@ -42,6 +42,7 @@ enum AccessType {
  */
 case class RefType(val value: IRType, val shared: AccessType) extends IRType(s"ref<${value.name}>") {
   override def toBoogie: BType = value.toBoogie
+  println(name)
 }
 
 def coerceToTypeSafe(e: Expr, t: IRType) = {
