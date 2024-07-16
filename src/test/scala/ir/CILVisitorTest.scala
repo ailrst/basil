@@ -7,7 +7,6 @@ import util.intrusive_list.*
 import ir.dsl.*
 import ir.cilvisitor.*
 
-
 class CILVisTest extends AnyFunSuite {
 
   def getRegister(name: String) = Register(name, 64)
@@ -29,6 +28,7 @@ class CILVisTest extends AnyFunSuite {
           case g: GoTo         => res.addAll(g.targets.map(t => s"gt_${t.label}").toList)
           case r: IndirectCall => res.append("indirect")
           case r: DirectCall   => res.append("direct")
+          case r: Return       => res.append("return")
         }
         DoChildren()
       }
@@ -124,7 +124,6 @@ class CILVisTest extends AnyFunSuite {
       }
 
     }
-
     val v = VarTrace()
     visit_proc(v, program.procedures.head)
     assert(v.res.toList == List("R31", "R6", "R6"))
@@ -136,6 +135,41 @@ class CILVisTest extends AnyFunSuite {
     val v3 = RegReplacePost()
     visit_proc(v3, program.procedures.head)
     assert(v3.res.toList == List("elR31", "elR6", "elR6"))
+
+  }
+
+  test("no-op doesnt copy") {
+    class NoChange extends CILVisitor {
+
+      override def vstmt(e: Statement) = {
+        val old = e
+        ChangeDoChildrenPost(List(e), (e => { assert(e.head eq old); e }))
+      }
+
+      override def vexpr(e: Expr) = {
+        val old = e
+        ChangeDoChildrenPost(e, (e => { assert(e eq old); e }))
+      }
+    }
+
+    val program: Program = prog(
+      proc(
+        "main",
+        block(
+          "0x0",
+          Assign(getRegister("R6"), UnaryExpr(BVNOT, BinaryExpr(BVADD, BitVecLiteral(0, 64), getRegister("R31")))),
+          goto("0x1")
+        ),
+        block(
+          "0x1",
+          MemoryAssign(mem, BinaryExpr(BVADD, getRegister("R6"), bv64(4)), bv64(10), Endian.LittleEndian, 64),
+          goto("returntarget")
+        ),
+        block("returntarget", ret)
+      )
+    )
+
+    visit_prog(NoChange(), program)
 
   }
 
