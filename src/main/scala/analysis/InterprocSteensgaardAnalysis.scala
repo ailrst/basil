@@ -190,17 +190,9 @@ class InterprocSteensgaardAnalysis(
     expr match { // TODO: Stack detection here should be done in a better way or just merged with data
       case binOp: BinaryExpr if binOp.arg1 == stackPointer =>
         evaluateExpressionWithSSA(binOp.arg2, constantProp(n), n, reachingDefs).foreach { b =>
-          if binOp.arg2.variables.exists { v => v.sharedVariable } then {
-            Logger.debug("Shared stack object: " + b)
-            Logger.debug("Shared in: " + expr)
-            val regions = mmm.findSharedStackObject(b.value)
-            Logger.debug("found: " + regions)
-            res ++= regions
-          } else {
-            val region = mmm.findStackObject(b.value)
-            if (region.isDefined) {
-              res = res + region.get
-            }
+          val region = mmm.findStackObject(b.value)
+          if (region.isDefined) {
+            res = res + region.get
           }
         }
         res

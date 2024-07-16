@@ -30,8 +30,6 @@ class FindVars extends CILVisitor {
   }
 
 
-  def shared = vars.collect { case g if g.sharedVariable => g}
-
   def locals : mutable.ArrayBuffer[Variable] = vars.filter(v => !v.isInstanceOf[Variable])
 }
 
@@ -100,8 +98,8 @@ class AddGammas extends CILVisitor {
 
   override def vstmt(s: Statement) = {
     s match {
-      case a: Assign if a.lhs.sharedVariable => ChangeTo(List(a, Assign(gamma_v(a.lhs), gamma_e(a.rhs))))
-      case m: MemoryAssign if m.mem.isInstanceOf[SharedMemory] => ChangeTo(List(m, gamma_store(m)))
+      //case a: Assign if a.lhs.sharedVariable => ChangeTo(List(a, Assign(gamma_v(a.lhs), gamma_e(a.rhs))))
+      case m: MemoryAssign if m.mem.shared == AccessType.Shared => ChangeTo(List(m, gamma_store(m)))
       case _         => SkipChildren()
     }
 
@@ -181,11 +179,11 @@ def replaceRelyGuarantee(prog: Program, rely: Relation, guarantee: Relation) = {
   class RelyGuarantee() extends CILVisitor {
     val statements : mutable.ArrayBuffer[Statement] = mutable.ArrayBuffer()
     override def vstmt(s: Statement) : VisitAction[List[Statement]] = s match {
-        case Assign(r, e, _) if r.sharedVariable && !r.name.startsWith("Gamma") => {
-          statements.append(s)
-          SkipChildren()
-        }
-        case MemoryAssign(m, ind, value, endian, size, label) if !m.name.startsWith("Gamma") =>  {
+        //case Assign(r, e, _) if r.sharedVariable && !r.name.startsWith("Gamma") => {
+        //  statements.append(s)
+        //  SkipChildren()
+        //}
+        case MemoryAssign(m, ind, value, endian, size, label) if !m.name.startsWith("Gamma") && m.shared == AccessType.Shared  =>  {
           statements.append(s)
           SkipChildren()
         }
@@ -246,10 +244,10 @@ class SecureUpdate(
     }
 
     s match {
-      case Assign(r, e, _) if r.sharedVariable && !r.name.startsWith("Gamma") => {
-        ChangeTo(secureUpdateCheck(s, r, e, None))
-      } 
-      case MemoryAssign(m, ind, value, endian, size, label) if !m.name.startsWith("Gamma") => 
+      //case Assign(r, e, _) if r.sharedVariable && !r.name.startsWith("Gamma") => {
+      //  ChangeTo(secureUpdateCheck(s, r, e, None))
+      //} 
+      case MemoryAssign(m, ind, value, endian, size, label) if !m.name.startsWith("Gamma") && m.shared == AccessType.Shared => 
         ChangeTo(secureUpdateCheck(s, m, value, Some(ind)))
       case _ => SkipChildren()
     }
