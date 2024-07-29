@@ -1,6 +1,8 @@
 
 function {:bvbuiltin "bvuge"} bvuge64(bv64, bv64) returns (bool);
 function {:bvbuiltin "bvugt"} bvugt64(bv64, bv64) returns (bool);
+function {:bvbuiltin "bvule"} bvule64(bv64, bv64) returns (bool);
+function {:bvbuiltin "bvult"} bvult64(bv64, bv64) returns (bool);
 
 
 var malloc_count: int;

@@ -49,7 +49,7 @@ class UsedMemory() extends cilvisitor.CILVisitor {
       case m: MemoryLoad => memory.addOne(m.mem)
       case _             => ()
     }
-    SkipChildren()
+    DoChildren()
   }
 
   override def vstmt(s: Statement) = {
@@ -77,7 +77,7 @@ class FindVars extends CILVisitor {
   }
 
   def globals = vars.collect {
-    case g: Variable if g.scope == Scope.Global =>
+    case g if g.scope == Scope.Global =>
       g
   }
 
