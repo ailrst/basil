@@ -336,12 +336,12 @@ object IRTransform {
   }
 
   def resolveIndirectCallsUsingPointsTo(
-     cfg: ProgramCfg,
-     pointsTos: Map[RegisterVariableWrapper, Set[RegisterVariableWrapper | MemoryRegion]],
-     regionContents: Map[MemoryRegion, Set[BitVecLiteral | MemoryRegion]],
-     reachingDefs: Map[CFGPosition, (Map[Variable, Set[Assign]], Map[Variable, Set[Assign]])],
-     IRProgram: Program
-   ): Boolean = {
+      cfg: ProgramCfg,
+      pointsTos: Map[RegisterVariableWrapper, Set[RegisterVariableWrapper | MemoryRegion]],
+      regionContents: Map[MemoryRegion, Set[BitVecLiteral | MemoryRegion]],
+      reachingDefs: Map[CFGPosition, (Map[Variable, Set[Assign]], Map[Variable, Set[Assign]])],
+      IRProgram: Program
+  ): Boolean = {
     var modified: Boolean = false
     val worklist = ListBuffer[CfgNode]()
     cfg.startNode.succIntra.union(cfg.startNode.succInter).foreach(node => worklist.addOne(node))
@@ -363,7 +363,7 @@ object IRTransform {
           if (regionContents.contains(stackRegion)) {
             for (c <- regionContents(stackRegion)) {
               c match {
-                case bitVecLiteral: BitVecLiteral => Logger.debug("hi: " + bitVecLiteral)//???
+                case bitVecLiteral: BitVecLiteral => Logger.debug("hi: " + bitVecLiteral) //???
                 case memoryRegion: MemoryRegion =>
                   result.addAll(searchRegion(memoryRegion))
               }
@@ -377,7 +377,7 @@ object IRTransform {
             result.add(dataRegion.regionIdentifier) // TODO: may need to investigate if we should add the parent region
             for (c <- regionContents(dataRegion)) {
               c match {
-                case bitVecLiteral: BitVecLiteral => Logger.debug("hi: " + bitVecLiteral)//???
+                case bitVecLiteral: BitVecLiteral => Logger.debug("hi: " + bitVecLiteral) //???
                 case memoryRegion: MemoryRegion =>
                   result.addAll(searchRegion(memoryRegion))
               }
@@ -395,12 +395,13 @@ object IRTransform {
 
     def resolveAddresses(variable: Variable, n: CfgNode): mutable.Set[String] = {
       val names = mutable.Set[String]()
-      val variableWrapper = RegisterVariableWrapper(variable, getUse(variable, n.asInstanceOf[CfgCommandNode].data, reachingDefs))
+      val variableWrapper =
+        RegisterVariableWrapper(variable, getUse(variable, n.asInstanceOf[CfgCommandNode].data, reachingDefs))
       pointsTos.get(variableWrapper) match {
         case Some(value) =>
           value.map {
             case v: RegisterVariableWrapper => names.addAll(resolveAddresses(v.variable, n))
-            case m: MemoryRegion => names.addAll(searchRegion(m))
+            case m: MemoryRegion            => names.addAll(searchRegion(m))
           }
           names
         case None => names
@@ -423,7 +424,8 @@ object IRTransform {
             val targetNames = resolveAddresses(indirectCall.target, n)
             Logger.debug(s"Points-To approximated call ${indirectCall.target} with $targetNames")
             Logger.debug(IRProgram.procedures)
-            val targets: mutable.Set[Procedure] = targetNames.map(name => IRProgram.procedures.find(_.name == name).getOrElse(addFakeProcedure(name)))
+            val targets: mutable.Set[Procedure] =
+              targetNames.map(name => IRProgram.procedures.find(_.name == name).getOrElse(addFakeProcedure(name)))
 
             if (targets.size == 1) {
               modified = true
@@ -440,7 +442,10 @@ object IRTransform {
                 Logger.debug(targets)
                 val address = t.address.match {
                   case Some(a) => a
-                  case None => throw Exception(s"resolved indirect call $indirectCall to procedure which does not have address: $t")
+                  case None =>
+                    throw Exception(
+                      s"resolved indirect call $indirectCall to procedure which does not have address: $t"
+                    )
                 }
                 val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(address, 64)))
                 val newLabel: String = block.label + t.name
@@ -485,6 +490,7 @@ object IRTransform {
 /** Methods relating to program static analysis.
   */
 object StaticAnalysis {
+
   /** Run all static analysis passes on the provided IRProgram.
     */
   def analyse(
@@ -512,7 +518,6 @@ object StaticAnalysis {
     Logger.info("Subroutine Addresses:")
     Logger.info(subroutines)
 
-
     // reducible loops
     val detector = LoopDetector(IRProgram)
     val foundLoops = detector.identify_loops()
@@ -525,7 +530,10 @@ object StaticAnalysis {
     config.analysisDotPath.foreach { s =>
       val newCFG = ProgramCfgFactory().fromIR(IRProgram)
       writeToFile(newCFG.toDot(x => x.toString, Output.dotIder), s"${s}_resolvedCFG-reducible.dot")
-      writeToFile(dotBlockGraph(IRProgram, IRProgram.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"${s}_blockgraph-after-reduce-$iteration.dot")
+      writeToFile(
+        dotBlockGraph(IRProgram, IRProgram.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap),
+        s"${s}_blockgraph-after-reduce-$iteration.dot"
+      )
     }
 
     val mergedSubroutines = subroutines ++ externalAddresses
@@ -563,25 +571,45 @@ object StaticAnalysis {
 
     config.analysisDotPath.foreach(s => {
       writeToFile(
-        toDot(IRProgram, IRProgram.filter(_.isInstanceOf[Command]).map(b => b -> reachingDefinitionsAnalysisResults(b).toString).toMap),
+        toDot(
+          IRProgram,
+          IRProgram.filter(_.isInstanceOf[Command]).map(b => b -> reachingDefinitionsAnalysisResults(b).toString).toMap
+        ),
         s"${s}_reachingDefinitions$iteration.dot"
       )
     })
 
-
     Logger.info("[!] Running RegToMemAnalysisSolver")
-    val regionAccessesAnalysisSolver = RegionAccessesAnalysisSolver(cfg, constPropResult, reachingDefinitionsAnalysisResults)
+    val regionAccessesAnalysisSolver =
+      RegionAccessesAnalysisSolver(cfg, constPropResult, reachingDefinitionsAnalysisResults)
     val regionAccessesAnalysisResults = regionAccessesAnalysisSolver.analyze()
 
-    config.analysisDotPath.foreach(s => writeToFile(cfg.toDot(Output.labeler(regionAccessesAnalysisResults, true), Output.dotIder), s"${s}_RegTo$iteration.dot"))
-    config.analysisResultsPath.foreach(s => writeToFile(printAnalysisResults(cfg, regionAccessesAnalysisResults, iteration), s"${s}_RegTo$iteration.txt"))
+    config.analysisDotPath.foreach(s =>
+      writeToFile(
+        cfg.toDot(Output.labeler(regionAccessesAnalysisResults, true), Output.dotIder),
+        s"${s}_RegTo$iteration.dot"
+      )
+    )
+    config.analysisResultsPath.foreach(s =>
+      writeToFile(printAnalysisResults(cfg, regionAccessesAnalysisResults, iteration), s"${s}_RegTo$iteration.txt")
+    )
 
     Logger.info("[!] Running Constant Propagation with SSA")
     val constPropSolverWithSSA = ConstantPropagationSolverWithSSA(IRProgram, reachingDefinitionsAnalysisResults)
     val constPropResultWithSSA = constPropSolverWithSSA.analyze()
 
     Logger.info("[!] Running MRA")
-    val mraSolver = MemoryRegionAnalysisSolver(IRProgram, globalAddresses, globalOffsets, mergedSubroutines, constPropResult, ANRResult, RNAResult, regionAccessesAnalysisResults, reachingDefinitionsAnalysisResults)
+    val mraSolver = MemoryRegionAnalysisSolver(
+      IRProgram,
+      globalAddresses,
+      globalOffsets,
+      mergedSubroutines,
+      constPropResult,
+      ANRResult,
+      RNAResult,
+      regionAccessesAnalysisResults,
+      reachingDefinitionsAnalysisResults
+    )
     val mraResult = mraSolver.analyze()
 
     config.analysisDotPath.foreach(s => {
@@ -608,7 +636,14 @@ object StaticAnalysis {
     mmm.logRegions()
 
     Logger.info("[!] Running Steensgaard")
-    val steensgaardSolver = InterprocSteensgaardAnalysis(IRProgram, constPropResultWithSSA, regionAccessesAnalysisResults, mmm, reachingDefinitionsAnalysisResults, globalOffsets)
+    val steensgaardSolver = InterprocSteensgaardAnalysis(
+      IRProgram,
+      constPropResultWithSSA,
+      regionAccessesAnalysisResults,
+      mmm,
+      reachingDefinitionsAnalysisResults,
+      globalOffsets
+    )
     steensgaardSolver.analyze()
     val steensgaardResults = steensgaardSolver.pointsTo()
     val memoryRegionContents = steensgaardSolver.getMemoryRegionContents
@@ -616,7 +651,15 @@ object StaticAnalysis {
 
     Logger.info("[!] Running VSA")
     val vsaSolver =
-      ValueSetAnalysisSolver(IRProgram, globalAddresses, externalAddresses, globalOffsets, subroutines, mmm, constPropResult)
+      ValueSetAnalysisSolver(
+        IRProgram,
+        globalAddresses,
+        externalAddresses,
+        globalOffsets,
+        subroutines,
+        mmm,
+        constPropResult
+      )
     val vsaResult: Map[CFGPosition, LiftedElement[Map[Variable | MemoryRegion, Set[Value]]]] = vsaSolver.analyze()
 
     Logger.info("[!] Running Interprocedural Live Variables Analysis")
@@ -828,11 +871,15 @@ object RunUtils {
     val boogieTranslator = IRToBoogie(ctx.program, ctx.specification)
     val boogieProgram = boogieTranslator.translate(q.boogieTranslation)
 
-    BASILResult(ctx, analysis, boogieProgram)
+    val otherBoogieTranslator = translating.BoogieTranslator()
+
+    val otherBoogieProgram = otherBoogieTranslator.translateProg(ctx.program, Map.empty)
+
+    BASILResult(ctx, analysis, otherBoogieProgram)
   }
 
   /** Use static analysis to resolve indirect calls and replace them in the IR until fixed point.
-   */
+    */
   def staticAnalysis(config: StaticAnalysisConfig, ctx: IRContext): StaticAnalysisContext = {
     var iteration = 1
     var modified: Boolean = true
@@ -842,7 +889,8 @@ object RunUtils {
       val result = StaticAnalysis.analyse(ctx, config, iteration)
       analysisResult.append(result)
       Logger.info("[!] Replacing Indirect Calls")
-      modified = IRTransform.resolveIndirectCallsUsingPointsTo(result.cfg,
+      modified = IRTransform.resolveIndirectCallsUsingPointsTo(
+        result.cfg,
         result.steensgaardResults,
         result.memoryRegionContents,
         result.reachingDefs,

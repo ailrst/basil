@@ -5,6 +5,7 @@ import specification.*
 import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 /** Plain translation of BASIL IR to Boogie program, without any VC generation.
   *
@@ -25,26 +26,23 @@ trait Translator[TYP, EXP, PROC, BLOCK, STMT, JMP, VAR, MEM, PA, BA] {
   def translateBlock(b: Block, attrs: BA): BLOCK
 
   def translateProc(e: Procedure, attrs: PA): PROC
-
 }
 
-case class ProcAttrs(
-    modifies: List[Variable],
-    requires: List[Expr],
-    ensures: List[Expr],
-    freeRequires: List[Expr],
-    freeEnsures: List[Expr]
+case class ProcSpec(
+    val requires: List[Expr] = List.empty,
+    val ensures: List[Expr] = List.empty,
+    val freeRequires: List[Expr] = List.empty,
+    val freeEnsures: List[Expr] = List.empty
 )
 
-class BoogieTranslator
-    extends Translator[BType, BExpr, BProcedure, BBlock, BCmd, BCmd, BVar, BMapVar, ProcAttrs, Unit] {
+class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd, BCmd, BVar, BMapVar, ProcSpec, Unit] {
 
   def translateType(e: IRType): BType = e match {
     case BoolType      => BoolBType
     case IntType       => IntBType
     case BitVecType(s) => BitVecBType(s)
     case MapType(p, r) => MapBType(translateType(p), translateType(r))
-    case RefType(t,s)  => translateType(t)
+    case RefType(t, s) => translateType(t)
   }
 
   def translateVar(e: Variable): BVar = e match {
@@ -59,13 +57,14 @@ class BoogieTranslator
 
   def translateQuant(q: QuantifierExpr) = {
     val b = q.binds.map(_.toBoogie)
-    val g = q.guard.map(QuantifierGuard.toCond)
-      .foldLeft(TrueLiteral: Expr)((l,r) => BinaryExpr(BoolAND, l, r))
-      val bdy = if (q.guard.isEmpty) {
-        q.body
-      } else {
-        BinaryExpr(BoolIMPLIES, g, q.body) 
-      }
+    val g = q.guard
+      .map(QuantifierGuard.toCond)
+      .foldLeft(TrueLiteral: Expr)((l, r) => BinaryExpr(BoolAND, l, r))
+    val bdy = if (q.guard.isEmpty) {
+      q.body
+    } else {
+      BinaryExpr(BoolIMPLIES, g, q.body)
+    }
     q.kind match {
       case QuantifierSort.forall => ForAll(b, bdy.toBoogie)
       case QuantifierSort.lambda => Lambda(b, bdy.toBoogie)
@@ -90,7 +89,7 @@ class BoogieTranslator
     case UninterpretedFunction(name, params, returnType) =>
       BFunctionCall(name, params.map(translateExpr).toList, translateType(returnType), true)
     case q: QuantifierExpr => translateQuant(q)
-    case r: Variable => translateVar(r)
+    case r: Variable       => translateVar(r)
   }
 
   def slToBoogie(e: List[Statement]) = e.map(translateStatement)
@@ -136,16 +135,11 @@ class BoogieTranslator
     )
   }
 
-  def translateProc(e: Procedure, pa: ProcAttrs): BProcedure = {
-
-    val locals = {
-      val vars = transforms.FindVars()
-      cilvisitor.visit_proc(vars, e)
-      vars.locals
-    }
-
+  def translateProc(e: Procedure, pa: ProcSpec): BProcedure = {
     val body: List[BCmdOrBlock] =
       (e.entryBlock.view ++ e.blocks.filterNot(x => e.entryBlock.contains(x))).map(x => translateBlock(x)).toList
+
+    val modifies = transforms.ProcModifies.get(e)
 
     BProcedure(
       e.name,
@@ -157,10 +151,38 @@ class BoogieTranslator
       List(),
       pa.freeRequires.map(translateExpr),
       pa.freeEnsures.map(translateExpr),
-      pa.modifies.map(translateVar).toSet,
-      body
+      modifies.map(translateVar).toSet,
+      body,
+      List(BAttribute("extern"))
     )
-
   }
 
+  def translateProg(p: Program, procspecs: Map[String, ProcSpec]) = {
+    val procs = p.procedures.map(p => translateProc(p, procspecs.get(p.name).getOrElse(ProcSpec())))
+
+    def fundef(o: FunctionOp) = {
+      o match {
+        case l: LOp => LOpDefinition(l, Map.empty)
+        case o      => functionOpToDefinition(BoogieGeneratorConfig(), o)
+      }
+    }
+
+    val funDeps = procs.flatMap(p => p.functionOps).toSet
+    var funDefs = funDeps.map(fundef)
+    var nfunDefs = funDefs ++ funDefs.flatMap(p => p.functionOps).map(fundef)
+
+    // fixed point transitive closure of used function ops
+    while (nfunDefs.size != funDefs.size) {
+      funDefs = nfunDefs
+      nfunDefs = funDefs ++ funDefs.flatMap(p => p.functionOps).map(fundef)
+    }
+
+    val memory = transforms.UsedMemory.get(p).map(translateMem).map(m => BVarDecl(m, List.empty)).toSet
+    val globals = transforms.FindVars.globals(p).map(translateVar).map(v => BVarDecl(v, List.empty)).toSet
+    val modifies = procs.flatMap(_.modifies).map(m => BVarDecl(m, List.empty)).toSet
+    val statevars = modifies ++ memory ++ globals
+
+    val decls: List[BDeclaration] = statevars.toList ++ nfunDefs ++ procs
+    BProgram(decls)
+  }
 }
