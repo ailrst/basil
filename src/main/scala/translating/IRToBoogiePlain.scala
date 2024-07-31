@@ -1,5 +1,5 @@
 package translating
-import ir.{BoolOR, *}
+import ir.*
 import boogie.*
 import specification.*
 import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion}
@@ -27,13 +27,6 @@ trait Translator[TYP, EXP, PROC, BLOCK, STMT, JMP, VAR, MEM, PA, BA] {
 
   def translateProc(e: Procedure, attrs: PA): PROC
 }
-
-case class ProcSpec(
-    val requires: List[Expr] = List.empty,
-    val ensures: List[Expr] = List.empty,
-    val freeRequires: List[Expr] = List.empty,
-    val freeEnsures: List[Expr] = List.empty
-)
 
 class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd, BCmd, BVar, BMapVar, ProcSpec, Unit] {
 
@@ -85,11 +78,24 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
     case UnaryExpr(op, arg)                   => UnaryBExpr(op, translateExpr(arg))
     case BinaryExpr(op, arg1, arg2)           => BinaryBExpr(op, translateExpr(arg1), translateExpr(arg2))
     case MemoryLoad(mem, index, endian, size) => BMemoryLoad(translateMem(mem), translateExpr(index), endian, size)
-    // TODO: uninterpreted flag; we want to give ir functions an interpretation in the backend
-    case UninterpretedFunction(name, params, returnType) =>
-      BFunctionCall(name, params.map(translateExpr).toList, translateType(returnType), true)
+    case FApply(name, params, returnType, uninterpreted) =>
+      BFunctionCall(name, params.map(translateExpr).toList, translateType(returnType), uninterpreted)
     case q: QuantifierExpr => translateQuant(q)
     case r: Variable       => translateVar(r)
+  }
+
+  def translateFunction(f: PureFunction) = f match {
+    case UninterpretedFun(name, formalParams, returnType) =>
+      BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), None)
+    case BoogieFunction(name, formalParams, returnType, body) =>
+      BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), Some(body))
+    case IRFunction(name, formalParams, returnType, body) =>
+      BFunction(
+        name,
+        formalParams.map((n, t) => BParam(n, t.toBoogie)),
+        BParam(returnType.toBoogie),
+        Some(body.toBoogie)
+      )
   }
 
   def slToBoogie(e: List[Statement]) = e.map(translateStatement)
@@ -145,20 +151,20 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
       e.name,
       List(),
       List(),
+      pa.ensures.map(m => translateExpr(m.body)),
       pa.requires.map(translateExpr),
-      pa.ensures.map(translateExpr),
       List(),
       List(),
+      pa.freeEnsures.map(m => translateExpr(m.body)),
       pa.freeRequires.map(translateExpr),
-      pa.freeEnsures.map(translateExpr),
       modifies.map(translateVar).toSet,
       body,
       List(BAttribute("extern"))
     )
   }
 
-  def translateProg(p: Program, procspecs: Map[String, ProcSpec]) = {
-    val procs = p.procedures.map(p => translateProc(p, procspecs.get(p.name).getOrElse(ProcSpec())))
+  def translateProg(p: Program, spec: ProgSpec) = {
+    val procs = p.procedures.map(p => translateProc(p, spec.procedures.get(p.name).getOrElse(ProcSpec())))
 
     def fundef(o: FunctionOp) = {
       o match {
@@ -183,7 +189,9 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
     val modifies = procs.flatMap(_.modifies).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
     val statevars = modifies ++ memory ++ globals
 
-    val decls: List[BDeclaration] = statevars.toList ++ nfunDefs ++ procs
+    val specFuncs = spec.functions.map(translateFunction)
+
+    val decls: List[BDeclaration] = statevars.toList ++ nfunDefs ++ specFuncs ++ procs
     BProgram(decls)
   }
 }

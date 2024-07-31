@@ -92,7 +92,7 @@ class Interpreter() {
         val index: Int = eval(ml.index, env).value.toInt
         getMemory(index, ml.size, ml.endian, mems)
 
-      case u: UninterpretedFunction =>
+      case u: FApply =>
         Logger.debug(s"\t$u")
         ???
     }

@@ -32,6 +32,7 @@ import analysis.CfgCommandNode
 import ir.cilvisitor
 import ir.transforms
 
+import specification.ProgSpec
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -46,6 +47,7 @@ case class IRContext(
     globals: Set[SpecGlobal],
     globalOffsets: Map[BigInt, BigInt],
     specification: Specification,
+    IRSpecification: (Program => ProgSpec),
     program: Program // internally mutable
 )
 
@@ -76,7 +78,7 @@ object IRLoading {
   /** Create a context from just an IR program.
     */
   def load(p: Program): IRContext = {
-    IRContext(Set.empty, Set.empty, Map.empty, IRLoading.loadSpecification(None, p, Set.empty), p)
+    IRContext(Set.empty, Set.empty, Map.empty, IRLoading.loadSpecification(None, p, Set.empty), IRLoading.loadIRSpecification(None, Set.empty), p)
   }
 
   /** Load a program from files using the provided configuration.
@@ -95,8 +97,9 @@ object IRLoading {
     }
 
     val specification = IRLoading.loadSpecification(q.specFile, program, globals)
+    val IRSpecification = IRLoading.loadIRSpecification(q.specFile, globals)
 
-    IRContext(externalFunctions, globals, globalOffsets, specification, program)
+    IRContext(externalFunctions, globals, globalOffsets, specification, IRSpecification, program)
   }
 
   def loadBAP(fileName: String): BAPProgram = {
@@ -162,6 +165,26 @@ object IRLoading {
     ReadELFLoader.visitSyms(parser.syms(), config)
   }
 
+  def loadIRSpecification(filename: Option[String], globals: Set[SpecGlobal])(program: Program): ProgSpec = {
+        filename match {
+        case Some(s) =>
+          val specLexer = SpecificationsLexer(CharStreams.fromFileName(s))
+          val specTokens = CommonTokenStream(specLexer)
+          val specParser = SpecificationsParser(specTokens)
+          specParser.setBuildParseTree(true)
+
+          val forwardDeclaredL: Map[Memory, Expr => FApply] = program.collect {
+            case m : MemoryAssign => m.mem
+          }.toSet.map(rgn => rgn -> ((addr: Expr) => FApply("L$" + rgn.name, Seq(rgn, addr), BoolType, false))).toMap
+
+          val globalvars = transforms.FindVars.globals(program).toSet
+          val IRspecLoader = SpecificationIRLoader(globals, globalvars, program, forwardDeclaredL)
+          IRspecLoader.visitSpecification(specParser.specification())
+
+        case None => ProgSpec()
+      }
+  }
+
   def loadSpecification(filename: Option[String], program: Program, globals: Set[SpecGlobal]): Specification = {
     filename match {
       case Some(s) =>
@@ -171,6 +194,7 @@ object IRLoading {
         specParser.setBuildParseTree(true)
         val specLoader = SpecificationLoader(globals, program)
         specLoader.visitSpecification(specParser.specification())
+
       case None => Specification(globals, Map(), List(), List(), List(), Set())
     }
   }
@@ -198,11 +222,19 @@ object IRTransform {
     renamer.visitProgram(ctx.program)
     returnUnifier.visitProgram(ctx.program)
 
-    //cilvisitor.visit_prog(transforms.AddGammas(), ctx.program)
-    //transforms.replaceRelyGuarantee(ctx.program, Relation(TrueLiteral), Relation(FalseLiteral))
-    //cilvisitor.visit_prog(transforms.SecureUpdate(), ctx.program)
+    val forwardDeclaredL: Map[Memory, Expr => FApply] = ctx.program.collect {
+      case m : MemoryAssign => m.mem
+    }.toSet.map(rgn => rgn -> ((addr: Expr) => FApply("L$" + rgn.name, Seq(rgn, addr), BoolType, false))).toMap
 
-    ctx
+    cilvisitor.visit_prog(transforms.AddGammas(forwardDeclaredL), ctx.program)
+
+    val spec = ctx.IRSpecification(ctx.program)
+
+
+    transforms.replaceRelyGuarantee(ctx.program, spec)
+    cilvisitor.visit_prog(transforms.SecureUpdate(spec), ctx.program)
+
+    ctx.copy(IRSpecification = (_) => spec)
   }
 
   /** Resolve indirect calls to an address-conditional choice between direct calls using the Value Set Analysis results.
@@ -852,9 +884,9 @@ object RunUtils {
 
   def loadAndTranslate(q: BASILConfig): BASILResult = {
     Logger.info("[!] Loading Program")
-    val ctx = IRLoading.load(q.loading)
+    var ctx = IRLoading.load(q.loading)
 
-    IRTransform.doCleanup(ctx)
+    ctx = IRTransform.doCleanup(ctx)
 
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))
@@ -872,8 +904,7 @@ object RunUtils {
     val boogieProgram = boogieTranslator.translate(q.boogieTranslation)
 
     val otherBoogieTranslator = translating.BoogieTranslator()
-
-    val otherBoogieProgram = otherBoogieTranslator.translateProg(ctx.program, Map.empty)
+    val otherBoogieProgram = otherBoogieTranslator.translateProg(ctx.program, ctx.IRSpecification(ctx.program))
 
     BASILResult(ctx, analysis, otherBoogieProgram)
   }

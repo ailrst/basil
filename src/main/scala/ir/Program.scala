@@ -160,9 +160,32 @@ object Procedure {
   def stub(name: String) = Procedure(name, None, None, None, ArrayBuffer(), ArrayBuffer(), Map(), Map())
 }
 
-case class FunctionSpec(val procedure: String, 
-  val requires: List[Expr], val ensures: List[Relation], 
-  val freeRequires: List[Expr], val freeEnsures: List[Relation])
+
+sealed trait PureFunction {
+  def name: String
+  def formalParams: List[(String, IRType)] 
+  def returnType: IRType
+
+  def call(actualParams: List[Expr]) = {
+    val typecomparison = actualParams.map(_.getType).zip(formalParams.map(_._2))
+    if (!typecomparison.foldLeft(true)((c,r) => c && (r._1 == r._2))) {
+      throw Exception(s"Type mismatch on function call.$typecomparison $actualParams")
+    }
+    FApply(name, actualParams, returnType)
+  }
+}
+
+case class UninterpretedFun(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), None)
+}
+
+case class BoogieFunction(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType, body: BExpr) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), Some(body))
+}
+
+case class IRFunction(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType, body: Expr) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), Some(body.toBoogie))
+}
 
 
 class Procedure private (

@@ -107,10 +107,10 @@ class CILVisitorImpl(val v: CILVisitor) {
         if (narg ne arg) UnaryExpr(op, narg) else n
       }
       case v: Variable => visit_var(v)
-      case UninterpretedFunction(name, params, rt) => {
+      case FApply(name, params, rt, _) => {
         val nparams = params.map(visit_expr)
-        val updated = (params.zip(params).map((a, b) => a ne b)).contains(true)
-        if (updated) UninterpretedFunction(name, nparams, rt) else n
+        val updated = (params.zip(nparams).map((a, b) => a ne b)).contains(true)
+        if (updated) FApply(name, nparams, rt) else n
       }
       case o: OldExpr => visit_expr(o.body)
       case q: QuantifierExpr => {

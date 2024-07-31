@@ -1,8 +1,37 @@
 package specification
 
+import ir.transforms
+import scala.collection.mutable
 import boogie._
 import ir._
 import util.Logger
+
+case class ProcSpec(
+    val requires: List[Expr] = List.empty,
+    val ensures: List[Relation] = List.empty,
+    val freeRequires: List[Expr] = List.empty,
+    val freeEnsures: List[Relation] = List.empty,
+    val rely: List[Relation] = List.empty,
+    val guarantee: List[Relation] = List.empty,
+    val modifies: List[Variable] = List.empty
+)
+case class ProgSpec(
+    val globals: List[SpecGlobal] = List.empty,
+    val lPreds: Map[Memory, Map[SpecGlobal, Expr]] = Map.empty, // region -> address -> security classification
+    val procedures: mutable.Map[String, ProcSpec] = mutable.Map.empty,
+    val rely: Relation = Relation(TrueLiteral),
+    val guarantee: Relation = Relation(FalseLiteral),
+    val functions: List[PureFunction] = List.empty,
+    val lCalls: Map[Memory, (Expr => FApply)] = Map.empty
+) {
+
+  def controlled: Map[Memory, Set[MemoryLoad]] = lPreds.flatMap((variable, lp) =>
+    lp.map((v, e) => (v.toIRLoad().mem -> transforms.sharedAccesses(e)._2.toSet)).toMap[Memory, Set[MemoryLoad]]
+  )
+
+  def controls: Set[MemoryLoad] = lPreds.flatMap((v, e) => e.flatMap((sg, e) => transforms.sharedAccesses(e)._2.toSet)).toSet
+
+}
 
 trait SpecVar extends BExpr {
   override def getType: BType = {
@@ -24,6 +53,9 @@ case class SpecGlobal(name: String, override val size: Int, arraySize: Option[In
   override val toOldVar: BVar = BVariable(s"${name}_old", BitVecBType(size), Scope.Local)
   override val toOldGamma: BVar = BVariable(s"Gamma_${name}_old", BoolBType, Scope.Local)
   val toAxiom: BAxiom = BAxiom(BinaryBExpr(BoolEQ, toAddrVar, BitVecBLiteral(address, 64)), List.empty)
+
+  def toIRLoad() = MemoryLoad(SharedMemory("mem", 64, 8), BitVecLiteral(address, 64), Endian.LittleEndian, size)
+
   override def resolveSpec: BMemoryLoad = BMemoryLoad(
     BMapVar("mem", MapBType(BitVecBType(64), BitVecBType(8)), Scope.Global),
     toAddrVar,

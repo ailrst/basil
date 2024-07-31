@@ -3,14 +3,15 @@ import ir._
 import ir.cilvisitor._
 import scala.collection.mutable
 import boogie.Scope
+import specification._
+import util.Logger
 
 /** IR transforms which consume static analysis results and transform over the IR in-place.
   *
   * This includes lifting, the addition of ghost state, and VC generation
   */
 
-/** Adding Gamma variables
-  */
+/** Adding Gamma variables */
 
 class ProcModifies() extends cilvisitor.CILVisitor {
   val modifies = mutable.Set[RefVariable | GlobalVar]()
@@ -42,7 +43,7 @@ object ProcModifies:
   }
 
 class UsedMemory() extends cilvisitor.CILVisitor {
-  val memory = mutable.ArrayBuffer[Memory]()
+  val memory = mutable.Set[Memory]()
 
   override def vexpr(e: Expr) = {
     e match {
@@ -69,10 +70,10 @@ object UsedMemory:
   }
 
 class FindVars extends CILVisitor {
-  val vars = mutable.ArrayBuffer[Variable]()
+  val vars = mutable.HashSet[Variable]()
 
   override def vvar(v: Variable) = {
-    vars.append(v)
+    vars.add(v)
     SkipChildren()
   }
 
@@ -81,7 +82,7 @@ class FindVars extends CILVisitor {
       g
   }
 
-  def locals: mutable.ArrayBuffer[Variable] = vars.collect {
+  def locals = vars.collect {
     case l: Variable if l.scope == Scope.Local => l
   }
 }
@@ -112,12 +113,23 @@ def exprVars(e: Expr): List[Variable] = {
   v.vars.toList
 }
 
-def sharedAccesses(e: Expr): (List[Variable], List[MemoryLoad]) = {
+def exprLoads(e: Expr): List[MemoryLoad] = {
+  val l = FindLoads()
+  visit_expr(l, e)
+  l.vars.toList
+}
+
+def sharedAccesses(e: Expr): (List[RefVariable], List[MemoryLoad]) = {
   val v = FindVars()
   visit_expr(v, e)
   val l = FindLoads()
   visit_expr(l, e)
-  (v.globals.toList, l.vars.filter(_.mem.isInstanceOf[SharedMemory]).toList)
+  (
+    v.vars.collect {
+      case v: RefVariable if v.shared == AccessType.Shared => v
+    }.toList,
+    l.vars.filter(_.mem.isInstanceOf[SharedMemory]).toList
+  )
 }
 
 def gamma_mem(m: Memory) = {
@@ -130,21 +142,29 @@ def gamma_v(l: Variable): Variable = l match {
   case g: Variable => GlobalVar("Gamma_" + l.name, BoolType)
 }
 
-def gamma_store(m: MemoryAssign) = {
+def gamma_store(m: MemoryAssign, L: Map[Memory, Expr => FApply]) = {
   val gm = SharedMemory("Gamma_" + m.mem.name, m.mem.addressSize, 1)
-  MemoryAssign(gm, m.index, gamma_e(m.value), Endian.LittleEndian, m.size / m.mem.valueSize)
+  MemoryAssign(gm, m.index, gamma_e(m.value, L), Endian.LittleEndian, m.size / m.mem.valueSize)
 }
 
-def gamma_load(m: MemoryLoad) = {
+def load_to_gamma(m: MemoryLoad) = {
   val gm = gamma_v(m.mem).asInstanceOf[SharedMemory]
-  // (any bit set to 0)
   BinaryExpr(BVEQ, BitVecLiteral(0, m.size), UnaryExpr(BVNOT, MemoryLoad(gm, m.index, Endian.LittleEndian, m.size)))
 }
 
-def gamma_e(e: Expr): Expr = {
-  val (vars, loads) = sharedAccesses(e)
-  val vargs = vars.map(gamma_v)
-  val loadgs = loads.map(gamma_load)
+def gamma_load(m: MemoryLoad, L: Map[Memory, Expr => FApply]) = {
+  // L : region -> (fun region, address -> gamma)
+  val gammaLoad = load_to_gamma(m)
+
+  L.get(m.mem) match {
+    case Some(e) => BinaryExpr(BoolOR, gammaLoad, e(m.index))
+    case None    => gammaLoad
+  }
+}
+
+def gamma_e(e: Expr, L: Map[Memory, Expr => FApply]): Expr = {
+  val vargs = exprVars(e).map(gamma_v)
+  val loadgs = exprLoads(e).map(l => gamma_load(l, L))
   val gs = (vargs ++ loadgs) match {
     case Nil       => TrueLiteral
     case hd :: Nil => hd
@@ -153,12 +173,12 @@ def gamma_e(e: Expr): Expr = {
   gs
 }
 
-class AddGammas extends CILVisitor {
+class AddGammas(L: Map[Memory, Expr => FApply]) extends CILVisitor {
 
   override def vstmt(s: Statement) = {
     s match {
       //case a: Assign if a.lhs.sharedVariable => ChangeTo(List(a, Assign(gamma_v(a.lhs), gamma_e(a.rhs))))
-      case m: MemoryAssign if m.mem.shared == AccessType.Shared => ChangeTo(List(m, gamma_store(m)))
+      case m: MemoryAssign if m.mem.shared == AccessType.Shared => ChangeTo(List(m, gamma_store(m, L)))
       case _                                                    => SkipChildren()
     }
 
@@ -203,12 +223,14 @@ class OldsToVars(val bindVars: OldAction) extends CILVisitor {
     * variables Collect: Simply collect all old() sub-expressions
     */
   val olds = mutable.Map[LocalVar, Expr]()
+  val oldVars = mutable.Map[Expr, LocalVar]()
 
   override def vexpr(e: Expr): VisitAction[Expr] = e match {
     case OldExpr(x) => {
-      val variable = LocalVar(OldCounter.next(), x.getType)
+      val variable = oldVars.get(e).getOrElse(LocalVar(OldCounter.next(), x.getType))
       if (getOlds(x).size > 0) then throw Exception("Nested old() expressions are not allowed: " + e.toString())
       olds(variable) = x
+      oldVars(x) = variable
       bindVars match {
         case OldAction.Replace => ChangeTo(variable)
         case OldAction.Collect => SkipChildren()
@@ -230,7 +252,10 @@ def getOlds(e: Expr): List[Expr] = {
   v.olds.toList.map(_._2)
 }
 
-def replaceRelyGuarantee(prog: Program, rely: Relation, guarantee: Relation) = {
+def replaceRelyGuarantee(prog: Program, spec: ProgSpec) = {
+
+  prog.procedures += spec.rely.assumptionProc
+  spec.procedures(spec.rely.assumptionProc.name) = spec.rely.assumptionSpec
 
   class RelyGuarantee() extends CILVisitor {
     val statements: mutable.ArrayBuffer[Statement] = mutable.ArrayBuffer()
@@ -255,22 +280,23 @@ def replaceRelyGuarantee(prog: Program, rely: Relation, guarantee: Relation) = {
   }
 
   for (s <- stmts) {
-    val (proc, spec) = rely.toAssumption(s, Some("rely"))
-    guarantee.toAssertion(
+    val (proc: Procedure, fspec: ProcSpec) = spec.rely.toAssumption(s)
+    spec.guarantee.toAssertion(
       s,
       s.succ().getOrElse(throw Exception("Nothing defined: " + s.parent.toString))
     ) // skip over gamma assignment
   }
+
 }
 
 /* secure update */
 
 class SecureUpdate(
     // rely-guarantee should run first, so that this puts vcs between rely and guarantee checks
-    controlledBy: Map[Variable, Set[Variable]],
-    Ls: Map[Variable, UninterpretedFunction],
-    controls: Map[Variable, Set[Variable]]
+    spec: specification.ProgSpec
 ) extends CILVisitor {
+
+  // controls: Map[Variable, Set[Variable]]
 
   /*
    * Assuming L_...() functions take dependent variables, a the test variable, and the test offset or address.
@@ -284,25 +310,70 @@ class SecureUpdate(
       case m: Memory    => LocalVar(m.name + "_old", m.getType)
     }
 
-    def secureUpdateCheck(statement: Statement, variable: Variable, assignment: Expr, offset: Option[Expr] = None) = {
+    def secureUpdateCheck(statement: Statement, variable: Memory, assignment: Expr, address: Expr) = {
+      // currently variable is always a Memory, it probably has to be a shared ref variable
       val ind = BitVecLiteral(0, 64)
-      var L = Ls.get(variable).map(L => L.copy(params = L.params ++ Seq(offset.getOrElse(BitVecLiteral(0, 64))))).get
-      val saveUOld = controlledBy.get(variable).get.map(y => Assign(toOld(y), y))
-      val po1 = Assert(BinaryExpr(BoolIMPLIES, L, gamma_e(assignment)))
-      val oldMapping = saveUOld.map(y => y.rhs -> y.lhs).toMap
 
-      val po2p = controls
-        .get(variable)
-        .get
-        .map(y => {
-          var oldLy = Ls.get(y).map(Ly => Ly.copy(params = Ly.params.map(x => oldMapping.get(x).getOrElse(x)))).get
-          var Ly = Ls.get(y).get
-          BinaryExpr(BoolIMPLIES, Ly, BinaryExpr(BoolOR, oldLy, gamma_v(y)))
+      // observable memory dependencies of L
+      // val controls = spec.lPreds(variable).toList.flatMap((v, e) => sharedAccesses(e)._2)
+      // domain of L (everything else maps to high)
+      // val controlled = spec.lPreds(variable).toList.map((v, e) => v.toIRLoad())
+
+      def L(variable: Variable, addr: Expr) = FApply("L$" + variable.name, Seq(variable, addr), BoolType)
+
+      // just repalce the updated /variable with old(variable)
+      class LoadToOld extends CILVisitor {
+        override def vexpr(e: Expr) = e match {
+          case l: MemoryLoad if l.mem == variable => ChangeTo(OldExpr(l)) // we could remove this also just save variables at the region level? (not for memory)
+          //case v: RefVariable if v.shared == AccessType.Shared => ChangeTo(OldExpr(v))
+          case v: RefVariable if v == variable => ChangeTo(OldExpr(v))
+          case _                               => DoChildren()
+        }
+      }
+
+      val loadToOld = LoadToOld()
+      val lRelations = spec.lPreds.toList
+        .map((y, defins) => (y, defins.toSet.map(_._2).flatMap(sharedAccesses(_)._2.map(_.mem))))
+        // .filter((y: Memory, controls: Set[Memory]) => (controls.contains(variable)))
+        .flatMap((y, _) => {
+          val Ly = spec.lCalls(y)
+          spec.lPreds(y)
+            .map((sg, e) => {
+              val address = BitVecLiteral(sg.address, 64)
+              (
+                BinaryExpr(
+                  BoolIMPLIES,
+                  Ly(address),
+                  (BinaryExpr(BoolOR, visit_expr(loadToOld, Ly(address)), gamma_load(sg.toIRLoad(), spec.lCalls)))
+                )
+              )
+            })
         })
-        .foldLeft(TrueLiteral: Expr)((x, y) => BinaryExpr(BoolAND, x, y))
-      val po2 = Assert(po2p)
+//                Relation(
+//                  BinaryExpr(
+//                    BoolIMPLIES,
+//                    spec.lCalls(y),
+//                    (BinaryExpr(BoolOR, visit_expr(loadToOld, Ly), gamma_load(y.toIRLoad(), spec.lCalls)))
+//                  )
+//                )
+//              )
+//            )
+//        )
 
-      List(po1) ++ saveUOld ++ List(statement, po2)
+      val lRelation = lRelations.toList match {
+        case Nil      => Some(Relation(FalseLiteral))
+        case h :: Nil => Some(Relation(h))
+        case h :: tl  => Some(Relation(lRelations.reduce((l, r) => (BinaryExpr(BoolAND, l, r)))))
+      }
+
+      val po1 = Assert(BinaryExpr(BoolIMPLIES, L(variable, address), gamma_e(assignment, spec.lCalls)))
+      val (saveUOlds, po2) = lRelation
+        .map(lRelation =>
+          val (saveUOlds, po2) = lRelation.toAssertion()
+          (saveUOlds, List(po2))
+        )
+        .getOrElse(List.empty, List.empty)
+      saveUOlds ++ List(statement, po1) ++ po2
     }
 
     s match {
@@ -311,7 +382,7 @@ class SecureUpdate(
       //}
       case MemoryAssign(m, ind, value, endian, size, label)
           if !m.name.startsWith("Gamma") && m.shared == AccessType.Shared =>
-        ChangeTo(secureUpdateCheck(s, m, value, Some(ind)))
+        ChangeTo(secureUpdateCheck(s, m, value, ind))
       case _ => SkipChildren()
     }
   }

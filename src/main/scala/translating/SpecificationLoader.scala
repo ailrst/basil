@@ -11,8 +11,7 @@ import scala.jdk.CollectionConverters._
 // take symbol table entries as input
 // parse all global defs and check sizes
 // use these new nameToGlobals going forward when parsing the rest of the spec
-
-type bindingsType = Map[Variable, Expr]
+type BindingsType = Map[Variable, Expr]
 
 case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   private val idToSymbol = symbols.map(g => (g.name, g)).toMap
@@ -154,7 +153,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitExpr(
       ctx: ExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = {
     val exprs = ctx.impliesExpr.asScala.map(e => visitImpliesExpr(e, nameToGlobals, params))
     if (exprs.size > 1) {
@@ -167,7 +166,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitImpliesExpr(
       ctx: ImpliesExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = Option(ctx.arg2) match {
     case Some(_) =>
       BinaryBExpr(
@@ -181,7 +180,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitLogicalExpr(
       ctx: LogicalExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = {
     val rels = ctx.relExpr.asScala.map(r => visitRelExpr(r, nameToGlobals, params))
     if (rels.size > 1) {
@@ -199,7 +198,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitRelExpr(
       ctx: RelExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = Option(ctx.arg2) match {
     case Some(_) =>
       BinaryBExpr(
@@ -213,7 +212,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitTerm(
       ctx: TermContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = Option(ctx.arg2) match {
     case Some(_) =>
       BinaryBExpr(
@@ -227,7 +226,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitFactor(
       ctx: FactorContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = Option(ctx.arg2) match {
     case Some(_) =>
       BinaryBExpr(
@@ -241,7 +240,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitUnaryExpr(
       ctx: UnaryExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = ctx match {
     case n: NegExprContext       => UnaryBExpr(BVNEG, visitUnaryExpr(n.unaryExpr, nameToGlobals, params))
     case a: AtomUnaryExprContext => visitAtomExpr(a.atomExpr, nameToGlobals, params)
@@ -251,7 +250,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitAtomExpr(
       ctx: AtomExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): BExpr = ctx match {
     case b: BoolLitExprContext     => visitBoolLit(b.boolLit)
     case i: IdExprContext          => visitId(i.id, nameToGlobals, params)
@@ -266,7 +265,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitArrayAccess(
       ctx: ArrayAccessContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): ArrayAccess = {
     val global = visitId(ctx.id, nameToGlobals, params) match {
       case g: SpecGlobal => g
@@ -296,13 +295,13 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
   def visitOldExpr(
       ctx: OldExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): Old = Old(visitExpr(ctx.expr, nameToGlobals, params))
 
   def visitIfThenElseExpr(
       ctx: IfThenElseExprContext,
       nameToGlobals: Map[String, SpecGlobal],
-      params: bindingsType = Map()
+      params: BindingsType = Map()
   ): IfThenElse = {
     IfThenElse(
       visitExpr(ctx.guard, nameToGlobals, params),
@@ -318,7 +317,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
     case "false" => FalseBLiteral
   }
 
-  def visitId(ctx: IdContext, nameToGlobals: Map[String, SpecGlobal], params: bindingsType = Map()): BExpr = {
+  def visitId(ctx: IdContext, nameToGlobals: Map[String, SpecGlobal], params: BindingsType = Map()): BExpr = {
     val id = ctx.getText
     id match {
       case id if id.startsWith("Gamma_R") => {
@@ -376,7 +375,7 @@ case class SpecificationLoader(symbols: Set[SpecGlobal], program: Program) {
     val name = ctx.id.getText
     val irProc = program.procedures.collectFirst { case p if p.name == name => p }
 
-    val params: bindingsType = irProc match {
+    val params: BindingsType = irProc match {
       case None => Map()
       case Some(p) =>
         p.formalParameters.map((v:LocalVar) => (v -> p.bindingsIn.get(v).map(coerceToTypeSafe(_, v.getType)).getOrElse(v))).toMap[Variable, Expr] 

@@ -5,21 +5,26 @@ import scala.collection.mutable
 import ir.cilvisitor._
 
 
-/**
- * This contains IR expressions and langauge constructs that are used in specifications.
- */
 
 
-case class Macro(val bindings: List[LocalVar], val body: Expr) {
-
-
-}
-
-
-
-case class Relation(val body: Expr) {
+case class Relation(val body: Expr, relationName: Option[String] = None) {
   // A relation is not an expression since we have two states present
   // body: an Expr containing old()
+
+  val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
+  val assumptionProc = Procedure.stub(name)
+  val assumptionSpec = specification.ProcSpec(ensures=List(this))
+
+  /**
+   * Get a list of assignments to local variables storing the terms that appear as old() in body,
+   * and an assertion in terms of the old vars. 
+   */
+  def toAssertion(): (List[Statement], Assert) = {
+    val (origExpr: Expr, replaced: Expr, vars: mutable.Map[LocalVar, Expr]) = transforms.oldsToVars(body)
+    val assigns : List[Statement] = vars.toList.map((v: LocalVar, e: Expr) => Assign(v, e))
+    (assigns, Assert(replaced)) 
+  }
+
 
   /* 
    * Resolve to assertion by binding old to a specific state by caching it in a temporary variable.
@@ -28,17 +33,15 @@ case class Relation(val body: Expr) {
    * to the state before bindOld
    * Hence to relate the statements before and after a single statement you can make bindOld = bindNew
    * 
-   * **Mutates IR**
-   *
    * @returns the updated expressions
    */
   def toAssertion(bindOld: Statement, bindNew: Statement): Expr = {
-    val (origExpr: Expr, replaced: Expr, vars: mutable.Map[LocalVar, Expr]) = transforms.oldsToVars(body)
-    val assigns : List[Statement] = vars.toList.map((v: LocalVar, e: Expr) => Assign(v, e))
+    val (assigns, replaced) = toAssertion()
     bindOld.parent.statements.insertAllBefore(Some(bindOld), assigns)
-    bindNew.parent.statements.insertAfter(bindNew, Assert(replaced))
-    replaced
+    bindNew.parent.statements.insertAfter(bindNew, replaced)
+    replaced.body
   }
+
 
   /* 
    * Resolve to a state transition/assumption by creating a procedure call to dummy procedure with the given specification
@@ -48,10 +51,8 @@ case class Relation(val body: Expr) {
    *
    * **Mutates IR**
    */
-  def toAssumption(bindNew: Statement, relationName: Option[String] = None): (Procedure, FunctionSpec) = {
+  def toAssumption(bindNew: Statement): (Procedure, specification.ProcSpec) = {
     val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
-    val spec = FunctionSpec(name, List(), List(), List(), List(this))
-    val proc = Procedure.stub(name)
 
     val jump = bindNew.parent.jump
     val ft = bindNew.parent.fallthrough
@@ -61,12 +62,12 @@ case class Relation(val body: Expr) {
     nextBlock.replaceJump(jump)
     nextBlock.fallthrough = ft
 
-    bindNew.parent.replaceJump(DirectCall(proc))
+    bindNew.parent.replaceJump(DirectCall(assumptionProc))
     bindNew.parent.fallthrough = Some(GoTo(List(nextBlock)))
     bindNew.parent.statements.remove(bindNew)
     nextBlock.statements.prepend(bindNew)
 
-    (proc, spec)
+    (assumptionProc, assumptionSpec)
   }
 
 }

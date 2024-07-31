@@ -371,10 +371,11 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
 
-case class UninterpretedFunction(name: String, params: Seq[Expr], returnType: IRType) extends Expr {
+
+case class FApply(val name: String, val params: Seq[Expr], val returnType: IRType, val uninterpreted: Boolean = false) extends Expr {
   override def getType: IRType = returnType
-  override def toBoogie: BFunctionCall = BFunctionCall(name, params.map(_.toBoogie).toList, returnType.toBoogie, true)
-  override def acceptVisit(visitor: Visitor): Expr = visitor.visitUninterpretedFunction(this)
+  override def toBoogie: BFunctionCall = BFunctionCall(name, params.map(_.toBoogie).toList, returnType.toBoogie, uninterpreted)
+  override def acceptVisit(visitor: Visitor): Expr = visitor.visitFApply(this)
   override def gammas: Set[Expr] = params.flatMap(_.gammas).toSet
   override def variables: Set[Variable] = params.flatMap(_.variables).toSet
 }
@@ -441,7 +442,7 @@ case class GlobalVar(override val name: String, val irType: IRType) extends Valu
 /*
  * A variable that is accessible only through loads and stores.
  * This is not related to addressing and offsets, arithmetic on 
- * references is not defined: this represents a scala object
+ * references is not defined: this represents a memory object
  * whose access is a side-effect (that is potentially observable
  * by other threads).
  *
@@ -477,6 +478,7 @@ sealed trait Memory(override val name: String, override val shared: AccessType) 
 // A stack memory section: updates are only observable by the owning thread.
 case class StackMemory(override val name: String, val addressSize: Int, val valueSize: Int) 
   extends Memory(name, AccessType.Unshared) {
+  override def toString: String = s"StackMemory($name, $addressSize, $valueSize)"
 
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitStackMemory(this)
 }
@@ -487,6 +489,7 @@ case class StackMemory(override val name: String, val addressSize: Int, val valu
 case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
   extends Memory(name, AccessType.Shared) {
 
+  override def toString: String = s"SharedMemory($name, $addressSize, $valueSize)"
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitSharedMemory(this)
 }
 
