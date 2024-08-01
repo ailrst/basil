@@ -33,7 +33,7 @@ private class ILSerialiser extends ReadOnlyVisitor {
   override def visitStatement(node: Statement): Statement = node.acceptVisit(this)
 
   override def visitAssign(node: Assign): Statement = {
-    program ++= "LocalAssign("
+    program ++= "Assign("
     visitVariable(node.lhs)
     program ++= " := "
     visitExpr(node.rhs)
@@ -256,6 +256,11 @@ private class ILSerialiser extends ReadOnlyVisitor {
 
 }
 
+def serialiseIL(p: Procedure): String = {
+  val s = ILSerialiser()
+  s.visitProcedure(p)
+  s.program.toString()
+}
 def serialiseIL(p: Program): String = {
   val s = ILSerialiser()
   s.visitProgram(p)

@@ -2,7 +2,7 @@ package translating
 import ir.*
 import boogie.*
 import specification.*
-import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion}
+import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion, Logger}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
@@ -28,7 +28,7 @@ trait Translator[TYP, EXP, PROC, BLOCK, STMT, JMP, VAR, MEM, PA, BA] {
   def translateProc(e: Procedure, attrs: PA): PROC
 }
 
-class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd, BCmd, BVar, BMapVar, ProcSpec, Unit] {
+object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd, BCmd, BVar, BMapVar, ProcSpec, Unit] {
 
   def translateType(e: IRType): BType = e match {
     case BoolType      => BoolBType
@@ -42,6 +42,7 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
     case Register(n, s)       => BVariable(n, translateType(e.getType), Scope.Global)
     case LocalVar(name, typ)  => BVariable(name, translateType(typ), Scope.Local)
     case GlobalVar(name, typ) => BVariable(name, translateType(typ), Scope.Global)
+    case GlobalConst(name, typ) => BVariable(name, translateType(typ), Scope.Const)
     case m: Memory            => translateMem(m)
   }
 
@@ -173,7 +174,21 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
       }
     }
 
-    val funDeps = procs.flatMap(p => p.functionOps).toSet
+
+    val memory = transforms.UsedMemory.get(p).map(translateMem).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
+    val globals =
+      transforms.FindVars.globals(p).map(translateVar).map(v => BVarDecl(v, List(BAttribute("extern")))).toSet
+    val varsInModifies = procs.flatMap(_.modifies).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
+    val statevars = varsInModifies ++ memory ++ globals
+
+    val specFuncs = spec.functionDeclarations.map(translateFunction)
+
+    val axioms = spec.axioms.map(translateExpr).map(BAxiom(_))
+
+    val defs : List[BDeclaration] =  procs.toList ++ specFuncs ++ axioms
+    val variables : List[BDeclaration] = spec.variableDeclarations.map(v => BVarDecl(translateVar(v), List()))
+
+    val funDeps = (defs).flatMap(p => p.functionOps).toSet
     var funDefs = funDeps.map(fundef)
     var nfunDefs = funDefs ++ funDefs.flatMap(p => p.functionOps).map(fundef)
 
@@ -183,15 +198,7 @@ class BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCmd
       nfunDefs = funDefs ++ funDefs.flatMap(p => p.functionOps).map(fundef)
     }
 
-    val memory = transforms.UsedMemory.get(p).map(translateMem).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
-    val globals =
-      transforms.FindVars.globals(p).map(translateVar).map(v => BVarDecl(v, List(BAttribute("extern")))).toSet
-    val modifies = procs.flatMap(_.modifies).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
-    val statevars = modifies ++ memory ++ globals
-
-    val specFuncs = spec.functions.map(translateFunction)
-
-    val decls: List[BDeclaration] = statevars.toList ++ nfunDefs ++ specFuncs ++ procs
+    val decls: List[BDeclaration] = statevars.toList ++ variables ++ nfunDefs ++ specFuncs ++ axioms ++ procs
     BProgram(decls)
   }
 }

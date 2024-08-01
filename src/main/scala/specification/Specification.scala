@@ -21,8 +21,10 @@ case class ProgSpec(
     val procedures: mutable.Map[String, ProcSpec] = mutable.Map.empty,
     val rely: Relation = Relation(TrueLiteral),
     val guarantee: Relation = Relation(FalseLiteral),
-    val functions: List[PureFunction] = List.empty,
-    val lCalls: Map[Memory, (Expr => FApply)] = Map.empty
+    val functionDeclarations: List[PureFunction] = List.empty,
+    val lCalls: Map[Memory, (Expr => FApply)] = Map.empty,
+    val variableDeclarations: List[Variable] = List.empty,
+    val axioms: List[Expr] = List.empty,
 ) {
 
   def controlled: Map[Memory, Set[MemoryLoad]] = lPreds.flatMap((variable, lp) =>
@@ -50,11 +52,12 @@ case class SpecGlobal(name: String, override val size: Int, arraySize: Option[In
     extends SpecGlobalOrAccess {
   override def specGlobals: Set[SpecGlobalOrAccess] = Set(this)
   override val toAddrVar: BVar = BVariable("$" + s"${name}_addr", BitVecBType(64), Scope.Const)
+  val toAddrVarIR: GlobalConst = GlobalConst("$" + s"${name}_addr", BitVecType(64))
   override val toOldVar: BVar = BVariable(s"${name}_old", BitVecBType(size), Scope.Local)
   override val toOldGamma: BVar = BVariable(s"Gamma_${name}_old", BoolBType, Scope.Local)
   val toAxiom: BAxiom = BAxiom(BinaryBExpr(BoolEQ, toAddrVar, BitVecBLiteral(address, 64)), List.empty)
 
-  def toIRLoad() = MemoryLoad(SharedMemory("mem", 64, 8), BitVecLiteral(address, 64), Endian.LittleEndian, size)
+  def toIRLoad() = MemoryLoad(SharedMemory("mem", 64, 8), toAddrVarIR, Endian.LittleEndian, size)
 
   override def resolveSpec: BMemoryLoad = BMemoryLoad(
     BMapVar("mem", MapBType(BitVecBType(64), BitVecBType(8)), Scope.Global),
@@ -140,6 +143,9 @@ case class ArrayAccess(global: SpecGlobal, index: Int) extends SpecGlobalOrAcces
   private val accessIndex = BitVecBLiteral(index * (global.size / 8), 64)
   override val toOldVar: BVar = BVariable(s"${global.name}$$${index}_old", BitVecBType(global.size), Scope.Local)
   override val toAddrVar: BExpr = BinaryBExpr(BVADD, global.toAddrVar, accessIndex)
+
+  def toIRLoad() = MemoryLoad(SharedMemory("mem", 64, 8), BinaryExpr(BVADD, global.toAddrVarIR, BitVecLiteral(index * (global.size / 8), 64)), Endian.LittleEndian, size)
+
   override val toOldGamma: BVar = BVariable(s"Gamma_${global.name}$$${index}_old", BoolBType, Scope.Local)
   override def specGlobals: Set[SpecGlobalOrAccess] = Set(this)
   override def resolveSpec: BMemoryLoad = BMemoryLoad(

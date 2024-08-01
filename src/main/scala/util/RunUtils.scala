@@ -181,7 +181,11 @@ object IRLoading {
           val IRspecLoader = SpecificationIRLoader(globals, globalvars, program, forwardDeclaredL)
           IRspecLoader.visitSpecification(specParser.specification())
 
-        case None => ProgSpec()
+        case None => {
+          // add default L definition
+          val ls = translating.LFunctionDefsBoogie(Map((SharedMemory("mem", 64, 8), Map()))).toList
+          ProgSpec(functionDeclarations=ls.map(_._2).map(_._1), lCalls=ls.map((k,v) => k -> v._2).toMap)
+        }
       }
   }
 
@@ -903,8 +907,7 @@ object RunUtils {
     val boogieTranslator = IRToBoogie(ctx.program, ctx.specification)
     val boogieProgram = boogieTranslator.translate(q.boogieTranslation)
 
-    val otherBoogieTranslator = translating.BoogieTranslator()
-    val otherBoogieProgram = otherBoogieTranslator.translateProg(ctx.program, ctx.IRSpecification(ctx.program))
+    val otherBoogieProgram = translating.BoogieTranslator.translateProg(ctx.program, ctx.IRSpecification(ctx.program))
 
     BASILResult(ctx, analysis, otherBoogieProgram)
   }

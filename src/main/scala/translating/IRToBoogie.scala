@@ -864,6 +864,21 @@ def functionOpToDefinition(config: BoogieGeneratorConfig, f: FunctionOp): BFunct
       val body = IfThenElse(wrap, BinaryBExpr(BoolAND, above, below), BinaryBExpr(BoolOR, above, below))
       BFunction(b.fnName, in, out, Some(body), List(inlineAttr))
 
+    case r: RepeatBits => {
+      val inarg = BParam("arg", BitVecBType(r.argsize))
+      val body = (1 to r.repeats - 1).map((_) => inarg).foldLeft(inarg: BExpr)((b: BExpr, c: BExpr) => BinaryBExpr(BVCONCAT, b, c))
+      BFunction(r.name, List(inarg), r.out, Some(body), List(inlineAttr))
+    }
+    case b: BVToBool => {
+      val inarg = BParam("arg", BitVecBType(1))
+      val body = IfThenElse(BinaryBExpr(BVEQ, BitVecBLiteral(0, 1), inarg), FalseBLiteral, TrueBLiteral)
+      BFunction(b.name, List(inarg), b.out, Some(body), List(inlineAttr))
+    }
+    case b: BoolToBV => {
+      val inarg = BParam("arg", BoolBType)
+      val body = IfThenElse(inarg, BitVecBLiteral(0,1), BitVecBLiteral(1,1))
+      BFunction(b.name, List(inarg), b.out, Some(body), List(inlineAttr))
+    }
     case l: LOp => ???
     case u: BUninterpreted =>
       BFunction(u.name, u.in.map(BParam(_)), BParam(u.out), None)

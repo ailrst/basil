@@ -125,11 +125,12 @@ case class Repeat(repeats: Int, body: Expr) extends Expr {
   override def toBoogie: BExpr = BVRepeat(repeats, body.toBoogie)
   override def gammas: Set[Expr] = body.gammas
   override def variables: Set[Variable] = body.variables
-  override def getType: BitVecType = BitVecType(bodySize * repeats)
   private def bodySize: Int = body.getType match {
     case bv: BitVecType => bv.size
-    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of repeat: " + this)
+    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of repeat: ")
   }
+
+  override def getType: BitVecType = BitVecType(bodySize * repeats)
   override def toString: String = s"Repeat($repeats, $body)"
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitRepeat(this)
   override def loads: Set[MemoryLoad] = body.loads
@@ -169,6 +170,8 @@ case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
   override def variables: Set[Variable] = arg.variables
   override def loads: Set[MemoryLoad] = arg.loads
   override def getType: IRType = (op, arg.getType) match {
+    case (BoolToBV1, _)              => BitVecType(1)
+    case (BV1ToBool, _)              => BoolType
     case (_: BoolUnOp, BoolType)     => BoolType
     case (_: BVUnOp, bv: BitVecType) => bv
     case (_: IntUnOp, IntType)       => IntType
@@ -196,6 +199,7 @@ sealed trait BoolUnOp(op: String) extends UnOp {
 }
 
 case object BoolNOT extends BoolUnOp("!")
+case object BoolToBV1 extends BoolUnOp("bool2bv")
 
 sealed trait IntUnOp(op: String) extends UnOp {
   override def toString: String = op
@@ -208,6 +212,7 @@ sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
 }
 
+case object BV1ToBool extends BVUnOp("bv2bool")
 case object BVNOT extends BVUnOp("not")
 case object BVNEG extends BVUnOp("neg")
 
@@ -431,12 +436,20 @@ case class LocalVar(override val name: String, val irType: IRType) extends Value
 case class GlobalVar(override val name: String, val irType: IRType) extends ValueVariable {
   override def getType = irType
   override val scope : Scope = Scope.Global
-  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
-  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
-  override def toString: String = s"LocalVar(${name}, $irType)"
+  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Global)
+  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Global)
+  override def toString: String = s"GlobalVar(${name}, $irType)"
   override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitGlobalVar(this)
 }
 
+case class GlobalConst(override val name: String, val irType: IRType) extends ValueVariable {
+  override def getType = irType
+  override val scope : Scope = Scope.Const
+  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Const)
+  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Const)
+  override def toString: String = s"GlobalConst(${name}, $irType)"
+  override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitGlobalConst(this)
+}
 
 
 /*

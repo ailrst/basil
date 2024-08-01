@@ -145,6 +145,8 @@ abstract class Visitor {
 
   def visitGlobalVar(node: GlobalVar): GlobalVar = node
 
+  def visitGlobalConst(node: GlobalConst): GlobalConst = node
+
   def visitLiteral(node: Literal): Literal = node
 
   def visitFApply(node: FApply): FApply = {

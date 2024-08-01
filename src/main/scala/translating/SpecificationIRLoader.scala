@@ -69,7 +69,10 @@ case class SpecificationIRLoader(
 
     val ls = LFunctionDefsBoogie(allLP).toList
 
-    ProgSpec(globals.toList, allLP, mutable.Map.from(subroutines), rely, guarantee, ls.map(_._2).map(_._1), ls.map((k,v) => k -> v._2).toMap)
+    val constants = symbols.map(s => BinaryExpr(BVEQ, s.toAddrVarIR,  BitVecLiteral(s.address, 64))).toList
+    val vardecls = symbols.map(s => s.toAddrVarIR).toList
+
+    ProgSpec(globals.toList, allLP, mutable.Map.from(subroutines), rely, guarantee, ls.map(_._2).map(_._1), ls.map((k,v) => k -> v._2).toMap, vardecls, constants)
   }
 
   def visitLPred(ctx: LPredContext, symbols: Set[SpecGlobal], nameToGlobals: Map[String, Expr]): (SpecGlobal, Expr) = {
@@ -345,7 +348,7 @@ def LFunctionDefsBoogie(lPreds: Map[Memory, Map[SpecGlobal, Expr]]): Map[Memory,
       val regionDepends = (defin.toSet.flatMap((v,e) => transforms.sharedAccesses(e)._1) + v).toList
 
       val indexVar = BParam("index", addressType)
-      val params = regionDepends.map((r: RefVariable) => (r.name, r.getType))++ List(("index", BitVecType(v.addressSize)))
+      val params = regionDepends.map((r: RefVariable) => (r.name, r.getType)) ++ List(("index", BitVecType(v.addressSize)))
 
       val LPreds = defin.map((k, v) => k -> v.toBoogie.resolveSpecL)
       val body: BExpr = LPreds.keys.foldLeft(FalseBLiteral) { (ite: BExpr, next: SpecGlobal) =>
