@@ -45,6 +45,36 @@ object ProcModifies:
     r.toSet
   }
 
+  class ModifiesFixedPoint() {
+    val worklist = mutable.ArrayBuffer[Procedure]()
+    val lattice = mutable.HashMap[Procedure, Set[Variable]]()
+
+    def analyse(p: Program) : Map[Procedure, Set[Variable]] = {
+      worklist.addAll(p.procedures)
+
+      while (worklist.nonEmpty) {
+        val proc = worklist.remove(0)
+        val calling = proc.calls.toSet.flatMap(p => lattice.get(p).getOrElse(Set()))
+        val newv = get(proc) ++ calling
+
+        if (lattice.get(proc).map(_ != newv).getOrElse(true)) {
+          lattice(proc) = newv
+          worklist.addAll(proc.callers())
+        }
+      }
+
+      lattice.toMap
+    }
+  }
+
+  def inferModifies(p: Program): Map[Procedure, Set[Variable]] = {
+    val analysis = ModifiesFixedPoint()
+    analysis.analyse(p)
+  }
+
+
+
+
 class UsedMemory() extends cilvisitor.CILVisitor {
   val memory = mutable.Set[Memory]()
 
@@ -284,19 +314,23 @@ def replaceRelyGuarantee(prog: Program, spec: ProgSpec) = {
     }
   }
 
-  val stmts = {
-    val vs = RelyGuarantee()
-    cilvisitor.visit_prog(vs, prog)
-    vs.statements
+  if (spec.rely != Relation(TrueLiteral) && spec.guarantee != Relation(FalseLiteral)) {
+    val stmts = {
+      val vs = RelyGuarantee()
+      cilvisitor.visit_prog(vs, prog)
+      vs.statements
+    }
+
+    for (s <- stmts) {
+      val (proc: Procedure, fspec: ProcSpec) = spec.rely.toAssumption(s)
+      spec.guarantee.toAssertion(
+        s,
+        s.succ().getOrElse(throw Exception("Nothing defined: " + s.parent.toString))
+      ) // skip over gamma assignment
+    }
   }
 
-  for (s <- stmts) {
-    val (proc: Procedure, fspec: ProcSpec) = spec.rely.toAssumption(s)
-    spec.guarantee.toAssertion(
-      s,
-      s.succ().getOrElse(throw Exception("Nothing defined: " + s.parent.toString))
-    ) // skip over gamma assignment
-  }
+
 
 }
 
@@ -364,7 +398,7 @@ class SecureUpdate(
         })
 
       val lRelation = lRelations.toList match {
-        case Nil      => Some(Relation(FalseLiteral))
+        case Nil      => None
         case h :: Nil => Some(Relation(h))
         case h :: tl  => Some(Relation(lRelations.reduce((l, r) => (BinaryExpr(BoolAND, l, r)))))
       }

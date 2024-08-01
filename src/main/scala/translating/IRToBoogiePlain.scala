@@ -146,7 +146,7 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
     val body: List[BCmdOrBlock] =
       (e.entryBlock.view ++ e.blocks.filterNot(x => e.entryBlock.contains(x))).map(x => translateBlock(x)).toList
 
-    val modifies = transforms.ProcModifies.get(e)
+    val modifies = e.modifies.map(translateVar).toSet
 
     BProcedure(
       e.name,
@@ -158,14 +158,23 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
       List(),
       pa.freeEnsures.map(m => translateExpr(m.body)),
       pa.freeRequires.map(translateExpr),
-      modifies.map(translateVar).toSet,
+      modifies,
       body,
       List(BAttribute("extern"))
     )
   }
 
   def translateProg(p: Program, spec: ProgSpec) = {
+
+    val modifies = transforms.ProcModifies.inferModifies(p)
+
+    for (p <- p.procedures) {
+      p.modifies.addAll(modifies(p))
+    }
+
     val procs = p.procedures.map(p => translateProc(p, spec.procedures.get(p.name).getOrElse(ProcSpec())))
+
+
 
     def fundef(o: FunctionOp) = {
       o match {

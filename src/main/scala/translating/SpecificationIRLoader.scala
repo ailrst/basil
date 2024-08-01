@@ -23,7 +23,7 @@ case class SpecificationIRLoader(
     forwardDeclaredL: Map[Memory, Expr => FApply]
 ) {
   private val nameToGlobals: Map[String, Expr] =
-    (symbols.map(g => (g.name -> g.toIRLoad())) ++ variables.map(v => v.name -> v)).toMap
+    (symbols.map(g => (g.name -> g.toIRLoad())) ++ variables.map(v => v.name -> v) + ("main_argc" -> Register("R0", 64))).toMap
   //private val params: BindingsType = symbols.map(g => (g.name, g.toIRLoad())).toMap
 
   def visitSpecification(ctx: SpecificationContext): ProgSpec = {
@@ -142,7 +142,10 @@ case class SpecificationIRLoader(
             v match {
               case m: MemoryLoad => m.mem
               case v: Variable   => v
-              case _             => ???
+              case _             => {
+                Logger.info(s"$v") 
+                ???
+              }
             }
           }
           case None => throw Exception(s"modifies clause mentions undefined variable $v")
@@ -258,7 +261,7 @@ case class SpecificationIRLoader(
       case o: OldExprContext     => OldExpr(visitExpr(o.expr, nameToGlobals))
       case p: ParenExprContext   => visitExpr(p.expr, params)
       //case i: IfThenElseExprContext  => visitIfThenElseExpr(i, nameToGlobals, params)
-      // case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess, nameToGlobals, params)
+       case a: ArrayAccessExprContext => visitArrayAccess(a.arrayAccess, params)
       case b: BvExprContext => visitBv(b.bv)
     }
   }
@@ -266,6 +269,18 @@ case class SpecificationIRLoader(
   def visitBv(ctx: BvContext): BitVecLiteral = {
     BitVecLiteral(BigInt(ctx.value.getText), Integer.parseInt(ctx.BVSIZE.getText.stripPrefix("bv")))
   }
+
+  def visitArrayAccess(
+      ctx: ArrayAccessContext,
+      params: Map[String, Expr] = Map()
+  ): Expr = {
+    val global = symbols.find(_.name == ctx.id.getText) match {
+      case Some(g) =>  g
+      case _ => throw new Exception("invalid array access '" + ctx.getText + "' to non-global in specification")
+    }
+    ArrayAccess(global, Integer.parseInt(ctx.nat.getText)).toIRLoad()
+  }
+
 
   //def visitIfThenElseExpr(
   //    ctx: IfThenElseExprContext,
@@ -298,7 +313,10 @@ case class SpecificationIRLoader(
           case Some(p: Variable)   => ir.transforms.gamma_v(p)
           case Some(p: MemoryLoad) => ir.transforms.load_to_gamma(p)
           // case Some(p) => ir.transforms.gamma_e(p) // probably shouldn't be reachable
-          case _ => ???
+          case p => {
+            Logger.error(s"$p : $gamma_id")
+            ???
+          }
         }
       }
       case id if id.startsWith("R") => {
