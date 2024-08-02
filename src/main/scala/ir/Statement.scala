@@ -50,6 +50,7 @@ object Assign:
 
 // invariant: index and value do not contain MemoryLoads
 class MemoryAssign(var mem: Memory, var index: Expr, var value: Expr, var endian: Endian, var size: Int, override val label: Option[String] = None) extends Statement {
+  require(size >= mem.valueSize)
   override def modifies: Set[Variable] = Set(mem)
   override def toString: String = s"$labelStr$mem[$index] := MemoryStore($value, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Statement = visitor.visitMemoryAssign(this)

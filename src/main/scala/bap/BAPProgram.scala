@@ -49,6 +49,7 @@ case class BAPParameter(name: String, size: Int, value: BAPVar) {
   def toIR: (LocalVar, Expr) = {
     val register = value.toIR
     register match {
+      case Register(rn, sz) if sz > size => (LocalVar(name, BitVecType(size)), Extract(size, 0, register))
       case r: Register => (LocalVar(name, BitVecType(size)), register)
       case _           => throw Exception(s"subroutine parameter $this refers to non-register variable $value")
     }

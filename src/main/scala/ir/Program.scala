@@ -1,5 +1,6 @@
 package ir
 
+import util.Logger
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{IterableOnceExtensionMethods, View, immutable, mutable}
 import boogie.*

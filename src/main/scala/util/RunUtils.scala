@@ -182,9 +182,24 @@ object IRLoading {
           IRspecLoader.visitSpecification(specParser.specification())
 
         case None => {
+          val mem = SharedMemory("mem", 64, 8)
+          val gammamem = SharedMemory("Gamma_mem", 64, 1)
+          val i = LocalVar("i", BitVecType(64))
+          // val defaultRely =  (QuantifierExpr(QuantifierSort.forall, List(i), List(), BinaryExpr(BVEQ, OldExpr(MemoryLoad(mem, i, Endian.LittleEndian, 8)), MemoryLoad(mem, i, Endian.LittleEndian, mem.valueSize))))
+
+          val defaultRely =  (QuantifierExpr(QuantifierSort.forall, List(i), List(), BinaryExpr(BoolIMPLIES, 
+            BinaryExpr(BVEQ, OldExpr(MemoryLoad(mem, i, Endian.LittleEndian, 8)), MemoryLoad(mem, i, Endian.LittleEndian, 8)),
+            BinaryExpr(BVEQ, OldExpr(MemoryLoad(gammamem, i, Endian.LittleEndian, 1)), MemoryLoad(gammamem, i, Endian.LittleEndian, 1)),
+            )))
+
+          val defaultGuarantee = TrueLiteral
           // add default L definition
-          val ls = translating.LFunctionDefsBoogie(Map((SharedMemory("mem", 64, 8), Map()))).toList
-          ProgSpec(functionDeclarations=ls.map(_._2).map(_._1), lCalls=ls.map((k,v) => k -> v._2).toMap)
+          val forwardDeclaredL: Map[Memory, Expr => FApply] = program.collect {
+            case m : MemoryAssign => m.mem
+          }.toSet.map(rgn => rgn -> ((addr: Expr) => FApply("L$" + rgn.name, Seq(rgn, addr), BoolType, false))).toMap
+          val ls = forwardDeclaredL.map((m, f) => translating.LFunctionDefsBoogie(Map((m, Map())))).toList
+          val spec = ProgSpec(functionDeclarations=ls.flatMap(m => m.map(_._2).map(_._1)), lCalls=ls.flatMap(m => m.map((k,v) => k -> v._2)).toMap, rely=Relation(defaultRely, Some("rely")), guarantee=Relation(defaultGuarantee, Some("guarantee")))
+          spec
         }
       }
   }
@@ -225,6 +240,7 @@ object IRTransform {
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
     returnUnifier.visitProgram(ctx.program)
+    StackSubstituter().visitProgram(ctx.program)
 
     val forwardDeclaredL: Map[Memory, Expr => FApply] = ctx.program.collect {
       case m : MemoryAssign => m.mem
@@ -233,7 +249,6 @@ object IRTransform {
     cilvisitor.visit_prog(transforms.AddGammas(forwardDeclaredL), ctx.program)
 
     val spec = ctx.IRSpecification(ctx.program)
-
 
     transforms.replaceRelyGuarantee(ctx.program, spec)
     cilvisitor.visit_prog(transforms.SecureUpdate(spec), ctx.program)
@@ -513,9 +528,6 @@ object IRTransform {
     Logger.info(
       s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
     )
-
-    val stackIdentification = StackSubstituter()
-    stackIdentification.visitProgram(ctx.program)
 
     val specModifies = ctx.specification.subroutines.map(s => s.name -> s.modifies).toMap
     ctx.program.setModifies(specModifies)
@@ -904,8 +916,9 @@ object RunUtils {
     IRTransform.prepareForTranslation(q.loading, ctx)
 
     Logger.info("[!] Translating to Boogie")
-    val boogieTranslator = IRToBoogie(ctx.program, ctx.specification)
-    val boogieProgram = boogieTranslator.translate(q.boogieTranslation)
+    //val boogieTranslator = IRToBoogie(ctx.program, ctx.specification)
+    //val boogieProgram = boogieTranslator.translate(q.boogieTranslation)
+    // Logger.info(serialiseIL(ctx.program))
 
     val otherBoogieProgram = translating.BoogieTranslator.translateProg(ctx.program, ctx.IRSpecification(ctx.program))
 

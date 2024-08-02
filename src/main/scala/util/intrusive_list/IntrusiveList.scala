@@ -242,7 +242,6 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
   def splitOn(n: T): ArrayBuffer[T] = {
     require(containsRef(n))
 
-    val ne = n.next
 
     val newlist = ArrayBuffer[T]()
     var next = n.next
@@ -255,6 +254,29 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
 
     newlist
   }
+
+  /**
+   * Removes all elements before the provided element n and returns an ArrayBuffer containing the removed elements,
+   * maintaining the ordering.
+   *
+   * @param n The element to split on, becomes the first in the existing list.
+   * @return An ArrayBuffer containing all elements after n.
+   */
+  def splitOnBefore(n: T): ArrayBuffer[T] = {
+    require(containsRef(n))
+
+    val newlist = ArrayBuffer[T]()
+    var prev = n.prev
+    while (prev.isDefined) {
+      remove(prev.get)
+      newlist.addOne(prev.get)
+
+      prev = n.prev
+    }
+
+    newlist.reverse
+  }
+
 
 
   /**

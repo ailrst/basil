@@ -609,7 +609,9 @@ case class BVFunctionOp(name: String, bvbuiltin: String, in: List[BVar], out: BV
 }
 
 case class MemoryLoadOp(addressSize: Int, valueSize: Int, endian: Endian, bits: Int) extends FunctionOp {
+  require(bits >= valueSize)
   val accesses: Int = bits / valueSize
+  assert(accesses > 0)
 
   val fnName: String = endian match {
     case Endian.LittleEndian => s"memory_load${bits}_${addressSize}_${valueSize}_le"
@@ -617,6 +619,7 @@ case class MemoryLoadOp(addressSize: Int, valueSize: Int, endian: Endian, bits: 
   }
 }
 case class MemoryStoreOp(addressSize: Int, valueSize: Int, endian: Endian, bits: Int) extends FunctionOp {
+  require(bits >= valueSize)
   val accesses: Int = bits / valueSize
 
   val fnName: String = endian match {
@@ -725,6 +728,7 @@ case class BMemoryLoad(memory: BMapVar, index: BExpr, endian: Endian, bits: Int)
 }
 
 case class BMemoryStore(memory: BMapVar, index: BExpr, value: BExpr, endian: Endian, bits: Int) extends BExpr {
+
   override def toString: String = s"$fnName($memory, $index, $value)"
 
   val fnName: String = endian match {
@@ -741,6 +745,9 @@ case class BMemoryStore(memory: BMapVar, index: BExpr, value: BExpr, endian: End
     case b: BitVecBType => b.size
     case _              => throw new Exception(s"MemoryStore does not have Bitvector type: $this")
   }
+
+
+  assert(bits >= valueSize)
 
   override val getType: BType = memory.getType
   override def functionOps: Set[FunctionOp] =
@@ -783,6 +790,9 @@ case class GammaStore(gammaMap: BMapVar, index: BExpr, value: BExpr, bits: Int, 
     case _              => throw new Exception(s"GammaStore does not have Bitvector type: $this")
   }
 
+  if (accesses == 0) {
+    throw Exception(s"GammaStore $gammaMap $index $value $bits $accesses") 
+  }
   val valueSize: Int = bits / accesses
 
   override val getType: BType = gammaMap.getType

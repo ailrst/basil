@@ -20,7 +20,7 @@ case class ProgSpec(
     val lPreds: Map[Memory, Map[SpecGlobal, Expr]] = Map.empty, // region -> address -> security classification
     val procedures: mutable.Map[String, ProcSpec] = mutable.Map.empty,
     val rely: Relation = Relation(TrueLiteral),
-    val guarantee: Relation = Relation(FalseLiteral),
+    val guarantee: Relation = Relation(TrueLiteral),
     val functionDeclarations: List[PureFunction] = List.empty,
     val lCalls: Map[Memory, (Expr => FApply)] = Map.empty,
     val variableDeclarations: List[Variable] = List.empty,

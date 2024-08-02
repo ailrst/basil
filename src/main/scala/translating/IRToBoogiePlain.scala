@@ -136,10 +136,11 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
 
   def translateBlock(b: Block, unused: Unit = ()): BBlock = translateBlock(b)
   def translateBlock(b: Block): BBlock = {
-    BBlock(
+    val bl = BBlock(
       b.label,
       slToBoogie(b.statements.toList) ++ List(translateJump(b.jump)) ++ b.fallthrough.map(translateJump).toList
     )
+    bl
   }
 
   def translateProc(e: Procedure, pa: ProcSpec): BProcedure = {
@@ -166,6 +167,10 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
 
   def translateProg(p: Program, spec: ProgSpec) = {
 
+    for (p <- p.procedures) {
+      p.modifies.addAll(spec.procedures.get(p.name).map(_.modifies).getOrElse(List()))
+    }
+
     val modifies = transforms.ProcModifies.inferModifies(p)
 
     for (p <- p.procedures) {
@@ -174,8 +179,6 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
 
     val procs = p.procedures.map(p => translateProc(p, spec.procedures.get(p.name).getOrElse(ProcSpec())))
 
-
-
     def fundef(o: FunctionOp) = {
       o match {
         case l: LOp => LOpDefinition(l, Map.empty)
@@ -183,10 +186,8 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
       }
     }
 
-
     val memory = transforms.UsedMemory.get(p).map(translateMem).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
-    val globals =
-      transforms.FindVars.globals(p).map(translateVar).map(v => BVarDecl(v, List(BAttribute("extern")))).toSet
+    val globals = transforms.FindVars.globals(p).map(translateVar).map(v => BVarDecl(v, List(BAttribute("extern")))).toSet
     val varsInModifies = procs.flatMap(_.modifies).map(m => BVarDecl(m, List(BAttribute("extern")))).toSet
     val statevars = varsInModifies ++ memory ++ globals
 

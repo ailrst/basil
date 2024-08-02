@@ -17,7 +17,6 @@ enum QuantifierGuard:
   case IntRange(v: LocalVar, begin: Int, lastExclusive: Int)
   case BVRange(v: LocalVar, bvsize: Int, begin: Int, lastExclusive: Int) // all vars must have same bvsize 
 
-
 object QuantifierGuard:
   def toCond(g: QuantifierGuard) = {
     g match {
@@ -45,7 +44,6 @@ case class QuantifierExpr(kind: QuantifierSort, binds: List[LocalVar], guard: Li
   }
   override def gammas: Set[Expr] = Set()
   override def variables: Set[Variable] = body.variables.toSet.diff(binds.toSet)
-
 }
 
 sealed trait Expr {
@@ -361,6 +359,7 @@ enum Endian {
 }
 
 case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) extends Expr {
+  require(size >= mem.valueSize)
   override def toBoogie: BMemoryLoad = BMemoryLoad(mem.toBoogie, index.toBoogie, endian, size)
   override def toGamma: BExpr = mem match {
     case m: StackMemory =>

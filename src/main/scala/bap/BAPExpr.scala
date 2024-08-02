@@ -236,6 +236,7 @@ case class BAPLocalVar(override val name: String, override val size: Int) extend
 /** A load from memory at location exp
   */
 case class BAPMemAccess(memory: BAPMemory, index: BAPExpr, endian: Endian, override val size: Int) extends BAPVariable {
+  require(size >= memory.valueSize)
   override def toString: String = s"${memory.name}[$index]"
   override def toIR: MemoryLoad = {
     MemoryLoad(memory.toIRMemory, index.toIR, endian, size)

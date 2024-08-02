@@ -1,5 +1,6 @@
 package ir.cilvisitor
 
+import util.Logger
 import ir.*
 import scala.collection.mutable.ArrayBuffer
 
@@ -73,7 +74,11 @@ class CILVisitorImpl(val v: CILVisitor) {
     doVisit(v, v.vfallthrough(j), j, (j) => j)
   }
 
+  var depth = 0;
+  val debug = false
+
   def visit_expr(n: Expr): Expr = {
+    if debug then Logger.info( (" " * depth ) + s" visit $n")
     def continue(n: Expr): Expr = n match {
       case n: Literal => n
       case MemoryLoad(mem, index, endian, size) => {
@@ -112,7 +117,10 @@ class CILVisitorImpl(val v: CILVisitor) {
         val updated = (params.zip(nparams).map((a, b) => a ne b)).contains(true)
         if (updated) FApply(name, nparams, rt) else n
       }
-      case o: OldExpr => visit_expr(o.body)
+      case o: OldExpr => {
+        val b = visit_expr(o.body)
+        if (b ne o.body) then OldExpr(b) else o
+      }
       case q: QuantifierExpr => {
         val nb = visit_parameters(q.binds)
         val ps = List.from(visit_parameters(q.binds))
@@ -124,7 +132,10 @@ class CILVisitorImpl(val v: CILVisitor) {
         nq
       }
     }
-    doVisit(v, v.vexpr(n), n, continue)
+    depth += 1
+    val r = doVisit(v, v.vexpr(n), n, continue)
+    depth -= 1
+    r
   }
 
   def visit_stmt(s: Statement): List[Statement] = {
@@ -150,7 +161,8 @@ class CILVisitorImpl(val v: CILVisitor) {
       }
       case n: NOP => n
     }
-    doVisitList(v, v.vstmt(s), s, continue)
+    val r = doVisitList(v, v.vstmt(s), s, continue)
+    r
   }
 
   def visit_block(b: Block): Block = {
@@ -160,8 +172,8 @@ class CILVisitorImpl(val v: CILVisitor) {
         r match {
           case Nil => b.statements.remove(s)
           case n :: tl =>
-            b.statements.replace(s, n)
-            b.statements.insertAllAfter(Some(n), tl)
+            val ns = b.statements.replace(s, n)
+            b.statements.insertAllAfter(Some(ns), tl)
         }
       })
       b.replaceJump(visit_jump(b.jump))

@@ -3,6 +3,8 @@ package ir
 import boogie._
 import scala.collection.mutable
 import ir.cilvisitor._
+import util.Logger
+import scala.util.matching.Regex
 
 
 
@@ -13,7 +15,7 @@ case class Relation(val body: Expr, relationName: Option[String] = None) {
 
   val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
   val assumptionProc = Procedure.stub(name)
-  val assumptionSpec = specification.ProcSpec(ensures=List(this))
+  val assumptionSpec = specification.ProcSpec(ensures=List(this), modifies=transforms.sharedAccesses(body)._2.map(_.mem))
 
   /**
    * Get a list of assignments to local variables storing the terms that appear as old() in body,
@@ -52,20 +54,22 @@ case class Relation(val body: Expr, relationName: Option[String] = None) {
    * **Mutates IR**
    */
   def toAssumption(bindNew: Statement): (Procedure, specification.ProcSpec) = {
-    val name = relationName.getOrElse("Relation" + transforms.OldCounter.next())
-
     val jump = bindNew.parent.jump
-    val ft = bindNew.parent.fallthrough
 
-    val nextBlock = Block(bindNew.parent.label + name, None, bindNew.parent.statements.splitOn(bindNew))
-    bindNew.parent.parent.addBlocks(nextBlock)
-    nextBlock.replaceJump(jump)
-    nextBlock.fallthrough = ft
+    val target = bindNew.parent
 
-    bindNew.parent.replaceJump(DirectCall(assumptionProc))
-    bindNew.parent.fallthrough = Some(GoTo(List(nextBlock)))
-    bindNew.parent.statements.remove(bindNew)
-    nextBlock.statements.prepend(bindNew)
+    val afterStatements = bindNew.parent.statements.splitOn(bindNew) 
+
+    val n = Regex(s"_${name}_[0-9]+$$")
+    val suffix = s"_${name}_"
+    val endBlock = Block(n.replaceAllIn(bindNew.parent.label, "") + suffix  + transforms.OldCounter.nextInt(), None, afterStatements, jump)
+
+    val callBlock = Block(n.replaceAllIn(bindNew.parent.label, "") +  suffix + transforms.OldCounter.nextInt(), None, List(), DirectCall(assumptionProc, Some(endBlock)))
+
+    target.parent.addBlocks(callBlock)
+    target.parent.addBlocks(endBlock)
+
+    bindNew.parent.replaceJump(GoTo(callBlock))
 
     (assumptionProc, assumptionSpec)
   }

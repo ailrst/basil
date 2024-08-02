@@ -105,10 +105,10 @@ private class ILSerialiser extends ReadOnlyVisitor {
     }
     indentLevel -= 1
     program ++= getIndent() + "),\n"
-    program ++= getIndent() + "jumps(\n"
-    program ++= getIndent()
+    program ++= getIndent() + "jumps("
     visitJump(node.jump)
     program ++= ")\n"
+    node.fallthrough.foreach(f => program ++= s"${getIndent()}fallthrough($f)\n" )
     indentLevel -= 1
     program ++= getIndent()
     program ++= ")\n"
