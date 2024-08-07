@@ -29,7 +29,7 @@ lazy val root = project
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
   )
 
-scalacOptions ++= Seq("-deprecation", "-feature")
+scalacOptions ++= Seq("-deprecation", "-feature", "-Wnonunit-statement")
 
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
