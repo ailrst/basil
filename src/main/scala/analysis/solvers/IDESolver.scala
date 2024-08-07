@@ -256,10 +256,7 @@ abstract class BackwardIDESolver[D, T, L <: Lattice[T]](program: Program)
 
   protected def isCall(call: CFGPosition): Boolean =
     call match
-      case goto: GoTo if goto.isAfterCall =>
-        goto.parent.jump match
-          case directCall: DirectCall => (!directCall.successor.isInstanceOf[Halt])
-          case _ => false
+      case directCall: DirectCall => (!directCall.successor.isInstanceOf[Halt])
       case _ => false
 
   protected def isExit(exit: CFGPosition): Boolean =

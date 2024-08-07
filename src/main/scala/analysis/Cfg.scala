@@ -543,6 +543,11 @@ class ProgramCfgFactory:
             cfg.addEdge(jmpNode, callRet)
             val returnTarget = nexts
             cfg.addEdge(callRet, jmpNode)
+          case h: Halt =>  {
+            assert(false);
+            // not possible since s is only Statement.
+          }
+          case _ => ()
           }
         }
 

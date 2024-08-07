@@ -245,11 +245,6 @@ class Interpreter() {
                 break
             }
           }
-        case dc: DirectCall =>
-          Logger.debug(s"$dc")
-          returnCmd.push(dc.successor)
-          interpretProcedure(dc.target)
-          break
         case r: Return => {
           nextCmd = Some(returnCmd.pop())
         }
@@ -257,19 +252,6 @@ class Interpreter() {
           Logger.debug("Halt")
           nextCmd = None
         }
-        case ic: IndirectCall =>
-          Logger.debug(s"$ic")
-          if (ic.target == Register("R30", 64)) {
-            if (returnCmd.nonEmpty) {
-              nextCmd = Some(returnCmd.pop())
-            } else {
-              //Exit Interpreter
-              nextCmd = None
-            }
-            break
-          } else {
-            ???
-          }
       }
     }
   }
@@ -298,14 +280,42 @@ class Interpreter() {
           case BitVecLiteral(value, size) =>
             Logger.debug(s"MemoryAssign ${assign.mem} := 0x${value.toString(16)}[u$size]\n")
         }
-      case _ : NOP =>
+      case _ : NOP => ()
       case assert: Assert =>
-        Logger.debug(assert)
         // TODO
-
+        Logger.debug(assert)
+        evalBool(assert.body, regs) match {
+          case TrueLiteral => ()
+          case FalseLiteral => throw Exception(s"Assertion failed ${assert}")
+        }
       case assume: Assume =>
-        Logger.debug(assume)
         // TODO, but already taken into effect if it is a branch condition
+        Logger.debug(assume)
+        evalBool(assume.body, regs) match {
+          case TrueLiteral => ()
+          case FalseLiteral => {
+            nextCmd = None
+            Logger.debug(s"Assumption not satisfied: $assume")
+          }
+        }
+      case dc: DirectCall =>
+        Logger.debug(s"$dc")
+        returnCmd.push(dc.successor)
+        interpretProcedure(dc.target)
+        break
+      case ic: IndirectCall =>
+        Logger.debug(s"$ic")
+        if (ic.target == Register("R30", 64)) {
+          if (returnCmd.nonEmpty) {
+            nextCmd = Some(returnCmd.pop())
+          } else {
+            //Exit Interpreter
+            nextCmd = None
+          }
+          break
+        } else {
+          ???
+        }
     }
   }
 

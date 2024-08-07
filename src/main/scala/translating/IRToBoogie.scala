@@ -649,6 +649,8 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
       }
       val jump = GoToCmd(g.targets.map(_.label).toSeq)
       conditionAssert :+ jump
+    case r: Return => List(ReturnCmd)
+    case r: Halt => List(BAssert(FalseBLiteral))
   }
 
   def translate(j: Call): List[BCmd] = j match {
@@ -668,19 +670,11 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
         case Some(ProcRelyVersion.IfCommandContradiction) => relyfun(d.target.name).toList
         case None => List()
       }) ++ List(call)
-    case r: Return => List(ReturnCmd)
-    case r: Halt => List(BAssert(FalseBLiteral))
-    case i: IndirectCall =>
-      // TODO put this elsewhere
-      if (i.target.name == "R30") {
-        List(ReturnCmd)
-      } else {
-        val unresolved: List[BCmd] = List(Comment(s"UNRESOLVED: call ${i.target.name}"), BAssert(FalseBLiteral))
-        List(Comment("no return target"), BAssume(FalseBLiteral))
-      }
+    case i: IndirectCall => List(Comment(s"UNRESOLVED: call ${i.target.name}"), BAssert(FalseBLiteral))
   }
 
   def translate(s: Statement): List[BCmd] = s match {
+    case d: Call => translate(d)
     case m: NOP => List.empty
     case m: MemoryAssign =>
       val lhs = m.mem.toBoogie

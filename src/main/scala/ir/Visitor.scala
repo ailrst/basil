@@ -430,8 +430,11 @@ class VariablesWithoutStoresLoads extends ReadOnlyVisitor {
 
 }
 
+
+// todo: replace
+
 class ConvertToSingleProcedureReturn extends Visitor {
-  override def visitJump(node: Jump): Jump = {
+  override def visitStatement(node: Statement): Statement = {
     node match
       case c: IndirectCall =>
         val returnBlock = node.parent.parent.returnBlock match {
@@ -441,8 +444,15 @@ class ConvertToSingleProcedureReturn extends Visitor {
             node.parent.parent.returnBlock = b
             b
         }
+        assert(c.parent.statements.lastOption.contains(c))
+        val block = c.parent
+        if (block.jump.isInstanceOf[Halt] && c.parent.isProcReturn) {
+          block.replaceJump(GoTo(Seq(returnBlock)))
+          block.statements.remove(c)
+        }
+        node
+
         // if we are return outside the return block then replace with a goto to the return block
-        if c.target.name == "R30" && !c.parent.isProcReturn then GoTo(Seq(returnBlock)) else node
       case _ => node
   }
 }

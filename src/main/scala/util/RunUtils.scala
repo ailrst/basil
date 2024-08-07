@@ -29,6 +29,7 @@ import java.util.Base64
 import spray.json.DefaultJsonProtocol.*
 import util.intrusive_list.IntrusiveList
 import analysis.CfgCommandNode
+import cilvisitor._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -197,6 +198,10 @@ object IRTransform {
     }
     val externalRemover = ExternalRemover(externalNamesLibRemoved.toSet)
     val renamer = Renamer(boogieReserved)
+
+    val v = transforms.ReplaceReturns()
+    ctx.program.procedures.foreach( p => visit_proc(v, p))
+
     val returnUnifier = ConvertToSingleProcedureReturn()
 
     externalRemover.visitProgram(ctx.program)
