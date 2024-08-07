@@ -11,7 +11,7 @@ case class PerformanceTimer(timerName: String = "") {
   def checkPoint(name: String): Long = {
       val delta = elapsed()
       lastCheckpoint = System.currentTimeMillis()
-      checkpoints.put(name, delta)
+      ignore(checkpoints.put(name, delta))
       Logger.info(s"PerformanceTimer $timerName [$name]: ${delta}ms")
       delta
   }

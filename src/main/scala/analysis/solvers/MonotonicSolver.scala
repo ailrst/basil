@@ -4,6 +4,8 @@ import analysis._
 
 import scala.collection.mutable
 
+def ignore(x: Any) = ()
+
 /** Fixpoint solver.
   *
   * @tparam N
@@ -27,7 +29,7 @@ trait SimpleMonotonicSolver[A, T, L <: Lattice[T]] extends MapLatticeSolver[A, T
     val xn = x(n)
     val y = funsub(n, x)
     if y != xn || !loopEscape.contains(n) then
-      loopEscape.add(n)
+      ignore(loopEscape.add(n))
       x += n -> y
       add(outdep(n))
 

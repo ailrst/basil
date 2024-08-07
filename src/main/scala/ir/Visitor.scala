@@ -3,6 +3,8 @@ package ir
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import util.intrusive_list.IntrusiveList
+import util.ignore
+
 
 abstract class Visitor {
 
@@ -50,9 +52,9 @@ abstract class Visitor {
 
   def visitBlock(node: Block): Block = {
     for (s <- node.statements) {
-      node.statements.replace(s, visitStatement(s))
+      node.statements.replace(s, visitStatement(s)): Unit
     }
-    node.replaceJump(visitJump(node.jump))
+    node.replaceJump(visitJump(node.jump)): Unit
     node
   }
 
@@ -136,62 +138,62 @@ abstract class Visitor {
 
 abstract class ReadOnlyVisitor extends Visitor {
   override def visitExtract(node: Extract): Expr = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
   override def visitRepeat(node: Repeat): Expr = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
   override def visitZeroExtend(node: ZeroExtend): Expr = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
   override def visitSignExtend(node: SignExtend): Expr = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
   override def visitUnaryExpr(node: UnaryExpr): Expr = {
-    visitExpr(node.arg)
+    ignore(visitExpr(node.arg))
     node
   }
 
   override def visitBinaryExpr(node: BinaryExpr): Expr = {
-    visitExpr(node.arg1)
-    visitExpr(node.arg2)
+    ignore(visitExpr(node.arg1))
+    ignore(visitExpr(node.arg2))
     node
   }
 
   override def visitMemoryLoad(node: MemoryLoad): Expr = {
-    visitMemory(node.mem)
-    visitExpr(node.index)
+    ignore(visitMemory(node.mem))
+    ignore(visitExpr(node.index))
     node
   }
 
   override def visitAssign(node: Assign): Statement = {
-    visitVariable(node.lhs)
-    visitExpr(node.rhs)
+    ignore(visitVariable(node.lhs))
+    ignore(visitExpr(node.rhs))
     node
   }
 
   override def visitMemoryAssign(node: MemoryAssign): Statement = {
-    visitMemory(node.mem)
-    visitExpr(node.index)
-    visitExpr(node.value)
+    ignore(visitMemory(node.mem))
+    ignore(visitExpr(node.index))
+    ignore(visitExpr(node.value))
     node
   }
 
   override def visitAssume(node: Assume): Statement = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
   override def visitAssert(node: Assert): Statement = {
-    visitExpr(node.body)
+    ignore(visitExpr(node.body))
     node
   }
 
@@ -204,33 +206,33 @@ abstract class ReadOnlyVisitor extends Visitor {
   }
 
   override def visitIndirectCall(node: IndirectCall): Jump = {
-    visitVariable(node.target)
+    ignore(visitVariable(node.target))
     node
   }
 
   override def visitBlock(node: Block): Block = {
     for (i <- node.statements) {
-      visitStatement(i)
+      ignore(visitStatement(i))
     }
-    visitJump(node.jump)
+    ignore(visitJump(node.jump))
     node
   }
 
   override def visitProcedure(node: Procedure): Procedure = {
     for (i <- node.blocks) {
-      visitBlock(i)
+      ignore(visitBlock(i))
     }
     for (i <- node.in) {
-      visitParameter(i)
+      ignore(visitParameter(i))
     }
     for (i <- node.out) {
-      visitParameter(i)
+      ignore(visitParameter(i))
     }
     node
   }
 
   override def visitParameter(node: Parameter): Parameter = {
-    visitRegister(node.value)
+    ignore(visitRegister(node.value))
     node
   }
 
@@ -243,7 +245,7 @@ abstract class ReadOnlyVisitor extends Visitor {
 
   override def visitUninterpretedFunction(node: UninterpretedFunction): UninterpretedFunction = {
     for (i <- node.params) {
-      visitExpr(i)
+      ignore(visitExpr(i))
     }
     node
   }
@@ -271,8 +273,8 @@ abstract class IntraproceduralControlFlowVisitor extends Visitor {
     for (i <- node.statements) {
       visitStatement(i)
     }
-    visitedBlocks.add(node)
-    node.replaceJump(visitJump(node.jump))
+    ignore(visitedBlocks.add(node))
+    ignore(node.replaceJump(visitJump(node.jump)))
     node
   }
 
@@ -302,7 +304,7 @@ class StackSubstituter extends IntraproceduralControlFlowVisitor {
   override def visitProcedure(node: Procedure): Procedure = {
     // reset for each procedure
     stackRefs.clear()
-    stackRefs.add(stackPointer)
+    ignore(stackRefs.add(stackPointer))
     super.visitProcedure(node)
   }
 
@@ -322,7 +324,7 @@ class StackSubstituter extends IntraproceduralControlFlowVisitor {
 
     // update stack references
     val variableVisitor = VariablesWithoutStoresLoads()
-    variableVisitor.visitExpr(node.rhs)
+    ignore(variableVisitor.visitExpr(node.rhs))
 
     val rhsStackRefs = variableVisitor.variables.toSet.intersect(stackRefs)
     if (rhsStackRefs.nonEmpty) {
@@ -417,12 +419,12 @@ class VariablesWithoutStoresLoads extends ReadOnlyVisitor {
   val variables: mutable.Set[Variable] = mutable.Set()
 
   override def visitRegister(node: Register): Register = {
-    variables.add(node)
+    ignore(variables.add(node))
     node
   }
 
   override def visitLocalVar(node: LocalVar): LocalVar = {
-    variables.add(node)
+    ignore(variables.add(node))
     node
   }
 

@@ -3,6 +3,7 @@ package analysis
 import analysis.*
 import ir.*
 import util.Logger
+import util.ignore
 
 import scala.collection.mutable
 
@@ -49,7 +50,7 @@ class MemoryModelMap {
         } else {
           val currentMaxRange = currentStackMap.keys.maxBy(_.end)
           val currentMaxRegion = currentStackMap(currentMaxRange)
-          currentStackMap.remove(currentMaxRange)
+          ignore(currentStackMap.remove(currentMaxRange))
           val updatedRange = RangeKey(currentMaxRange.start, offset - 1)
           currentStackMap.addOne(updatedRange -> currentMaxRegion)
           currentStackMap(RangeKey(offset, MAX_BIGINT)) = s
@@ -61,7 +62,7 @@ class MemoryModelMap {
         } else {
           val currentMaxRange = currentDataMap.keys.maxBy(_.end)
           val currentMaxRegion = currentDataMap(currentMaxRange)
-          currentDataMap.remove(currentMaxRange)
+          ignore(currentDataMap.remove(currentMaxRange))
           val updatedRange = RangeKey(currentMaxRange.start, offset - 1)
           currentDataMap.addOne(updatedRange -> currentMaxRegion)
           currentDataMap(RangeKey(offset, MAX_BIGINT)) = d
@@ -185,7 +186,7 @@ class MemoryModelMap {
 
   def popContext(): Unit = {
     if (contextStack.size > 1) {
-      contextStack.pop()
+      ignore(contextStack.pop())
       stackMap.clear()
       for (stackRgn <- contextStack.top) {
         add(stackRgn.start.value, stackRgn)
@@ -193,7 +194,7 @@ class MemoryModelMap {
     }
 
     if (sharedContextStack.size > 1) {
-      sharedContextStack.pop()
+      ignore(sharedContextStack.pop())
       sharedStackMap.clear()
       for (stackRgn <- sharedContextStack.top) {
         add(stackRgn.start.value, stackRgn, true)

@@ -3,6 +3,7 @@ package analysis
 import ir.{CFGPosition, Command, IntraProcIRCursor, Program, Procedure, Block, GoTo, IRWalk}
 import util.intrusive_list.IntrusiveList
 import util.Logger
+import util.ignore
 
 import scala.collection.mutable
 
@@ -299,7 +300,7 @@ class LoopTransform(loops: Set[Loop]) {
     val NGoTo = GoTo(conns)
 
     val N = Block(s"${IRWalk.procedure(loop.header).name}_N_$i", jump = NGoTo)
-    IRWalk.procedure(loop.header).addBlocks(N)
+    ignore(IRWalk.procedure(loop.header).addBlocks(N))
 
     val newLoop = Loop(N)
     newLoop.edges ++= body
@@ -310,7 +311,7 @@ class LoopTransform(loops: Set[Loop]) {
 
       origNode match {
         case origBlock: Block =>
-          origBlock.replaceJump(GoTo(List(N)))
+          ignore(origBlock.replaceJump(GoTo(List(N))))
           newLoop.addEdge(LoopEdge(origBlock, N))
           newLoop.addEdge(LoopEdge(N, origDest))
 
@@ -336,7 +337,7 @@ class LoopTransform(loops: Set[Loop]) {
 
       origNode match {
         case origBlock: Block =>
-          origBlock.replaceJump(GoTo(List(N)))
+          ignore(origBlock.replaceJump(GoTo(List(N))))
           val toEdge = LoopEdge(origBlock, N)
 
           newLoop.addEdge(toEdge)

@@ -196,7 +196,7 @@ abstract class IDESolver[E <: Procedure | Command, EE <: Procedure | Command, C 
 
   def analyze(): Map[CFGPosition, Map[D, T]] = {
     val phase1 = Phase1(program)
-    phase1.analyze()
+    ignore(phase1.analyze())
     val phase2 = Phase2(program, phase1)
     phase2.restructure(phase2.analyze())
   }

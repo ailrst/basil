@@ -2,6 +2,7 @@ package ir.dsl
 import ir.*
 import scala.collection.mutable
 import scala.collection.immutable.*
+import util.ignore
 
 val R0: Register = Register("R0", 64)
 val R1: Register = Register("R1", 64)
@@ -83,7 +84,7 @@ case class EventuallyBlock(label: String, sl: Seq[Statement], j: EventuallyJump)
   val tempBlock: Block = Block(label, None, sl, GoTo(List.empty))
 
   def resolve(prog: Program): Block = {
-    tempBlock.replaceJump(j.resolve(prog))
+    ignore(tempBlock.replaceJump(j.resolve(prog)))
     tempBlock
   }
 }
@@ -104,7 +105,7 @@ case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {
   val jumps: Map[Block, EventuallyJump] = blocks.map(b => b.tempBlock -> b.j).toMap
 
   def resolve(prog: Program): Procedure = {
-    jumps.map((b, j) => b.replaceJump(j.resolve(prog)))
+    jumps.foreach((b, j) => b.replaceJump(j.resolve(prog)))
     tempProc
   }
 

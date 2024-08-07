@@ -1,6 +1,7 @@
 package util.intrusive_list
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import util.ignore
 
 // TODO: implement IterableOps
 //   So need iterablefactory https://docs.scala-lang.org/overviews/core/custom-collections.html
@@ -49,7 +50,7 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
   override def knownSize: Int = numElems
 
   override def addOne(elem: T): IntrusiveList.this.type = {
-    append(elem)
+    ignore(append(elem))
     this
   }
 
@@ -182,13 +183,13 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
     assert(newElem.unitary)
     assert(!containsRef(newElem))
     onInsert(newElem)
-    if (size > 0) {
+    ignore(if (size > 0) {
       insertBefore(firstElem.get, newElem)
     } else {
       firstElem = Some(newElem)
       lastElem = Some(newElem)
       numElems = 1
-    }
+    })
     newElem
   }
 
@@ -203,13 +204,13 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
     assert(newElem.unitary)
     assert(!containsRef(newElem))
     onInsert(newElem)
-    if (size > 0) {
-      insertAfter(lastElem.get, newElem)
+    ignore(if (size > 0) {
+      insertAfter(lastElem.get, newElem) 
     } else {
       firstElem = Some(newElem)
       lastElem = Some(newElem)
       numElems = 1
-    }
+    })
     newElem
   }
 
@@ -248,9 +249,8 @@ final class IntrusiveList[T <: IntrusiveListElement[T]] private (
     val newlist = ArrayBuffer[T]()
     var next = n.next
     while (next.isDefined) {
-      remove(next.get)
-      newlist.addOne(next.get)
-
+      ignore(remove(next.get))
+      ignore(newlist.addOne(next.get))
       next = n.next
     }
 
@@ -432,8 +432,8 @@ trait IntrusiveListElement[T <: IntrusiveListElement[T]]:
   }
 
   private[intrusive_list] final def replace(elem: T): T = {
-    insertAfter(elem)
-    remove()
+    ignore(insertAfter(elem))
+    ignore(remove())
     elem
   }
 

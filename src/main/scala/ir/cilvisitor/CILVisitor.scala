@@ -2,6 +2,7 @@ package ir.cilvisitor
 
 import ir.*
 import scala.collection.mutable.ArrayBuffer
+import util.ignore
 
 /** A new visitor based off CIL.
   *
@@ -126,11 +127,11 @@ class CILVisitorImpl(val v: CILVisitor) {
         r match {
           case Nil => b.statements.remove(s)
           case n :: tl =>
-            b.statements.replace(s, n)
+            ignore(b.statements.replace(s, n))
             b.statements.insertAllAfter(Some(n), tl)
         }
       })
-      b.replaceJump(visit_jump(b.jump))
+      ignore(b.replaceJump(visit_jump(b.jump)))
       b.fallthrough = visit_fallthrough(b.fallthrough)
       b
     }

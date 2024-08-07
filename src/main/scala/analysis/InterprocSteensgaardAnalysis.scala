@@ -4,6 +4,7 @@ import analysis.solvers.{Cons, Term, UnionFindSolver, Var}
 import ir.*
 import util.Logger
 import scala.collection.mutable
+import util.ignore
 
 /** Wrapper for variables so we can have Steensgaard-specific equals method indirectly
  * Relies on the SSA sets intersection being non-empty
@@ -329,8 +330,8 @@ class InterprocSteensgaardAnalysis(
             if (!memoryRegionContents.contains(x)) {
               memoryRegionContents.addOne(x -> mutable.Set())
             }
-            memoryRegionContents(x).addAll(X2)
-            memoryRegionContents(x).addAll(possibleRegions.filter(r => r != x))
+            ignore(memoryRegionContents(x).addAll(X2))
+            ignore(memoryRegionContents(x).addAll(possibleRegions.filter(r => r != x)))
           )
           X2.foreach(x => unify(alpha, ExpressionVariable(x)))
           possibleRegions.foreach(x => unify(alpha, ExpressionVariable(x)))

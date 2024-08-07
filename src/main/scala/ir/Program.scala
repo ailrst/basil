@@ -5,6 +5,7 @@ import scala.collection.{IterableOnceExtensionMethods, View, immutable, mutable}
 import boogie.*
 import analysis.BitVectorEval
 import util.intrusive_list.*
+import util.ignore
 
 class Program(var procedures: ArrayBuffer[Procedure],
               var mainProcedure: Procedure,
@@ -22,7 +23,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
     val reachableNames = mutable.HashMap[String, Int]()
     while (toVisit.nonEmpty) {
       val next = toVisit.head
-      toVisit.remove(next)
+      ignore(toVisit.remove(next))
 
       if (next._1 <= depth) {
 
@@ -227,7 +228,7 @@ class Procedure private (
     block.parent = this
     if (!_blocks.contains(block)) {
       block.parent = this
-      _blocks.add(block)
+      ignore(_blocks.add(block))
       if (entryBlock.isEmpty) {
         entryBlock = block
       }
@@ -248,7 +249,7 @@ class Procedure private (
       val isReturn: Boolean = returnBlock.contains(oldBlock)
       val incoming = oldBlock.incomingJumps
       removeBlocksDisconnect(oldBlock)
-      addBlocks(block)
+      ignore(addBlocks(block))
       for (elem <- incoming) {
         elem.addTarget(block)
       }
@@ -358,7 +359,7 @@ class Procedure private (
       val calledBy = p.calls
       for (c <- p.calls) {
         if (!reachable.contains(c)) {
-          reachable.add(c)
+          ignore(reachable.add(c))
           toVisit.enqueue(c)
         }
       }
@@ -430,7 +431,7 @@ class Block private (
   def addIncomingJump(g: GoTo): Boolean = _incomingJumps.add(g)
   
   def removeIncomingJump(g: GoTo): Unit = {
-    _incomingJumps.remove(g)
+    ignore(_incomingJumps.remove(g))
     assert(!incomingJumps.contains(g))
   }
 

@@ -24,6 +24,7 @@ import boundary.break
 import java.nio.ByteBuffer
 import util.intrusive_list.*
 import util.Logger
+import util.ignore
 
 /**
   * TempIf class, used to temporarily store information about Jumps so that multiple parse runs are not needed.
@@ -188,7 +189,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
           } else {
             handleMultipleEdges(block, outgoingEdges, procedure)
           }
-          block.replaceJump(jump)
+          ignore(block.replaceJump(jump))
 
           if (block.statements.nonEmpty) {
             cleanUpIfPCAssign(block, procedure)
@@ -200,7 +201,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
     val sections = mods.flatMap(_.sections)
 
     val initialMemory: ArrayBuffer[MemorySection] = ArrayBuffer()
-    sections.map {elem =>
+    sections.foreach {elem =>
       val bytestoInt = elem.byteIntervals.head.contents.toByteArray.map(byte => BigInt(byte))
       val bytes = bytestoInt.map {byte =>
         if (byte < 0) {
@@ -265,7 +266,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
     var blockCount = 0
     for (blockUUID <- blockUUIDsSorted) {
-      createBlock(blockUUID, procedure, entranceUUID, blockCount)
+      ignore(createBlock(blockUUID, procedure, entranceUUID, blockCount))
       blockCount += 1
     }
     procedure
@@ -276,7 +277,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
     val blockAddress = blockUUIDToAddress.get(blockUUID)
     val block = Block(blockLabel, blockAddress)
-    procedure.addBlocks(block)
+    ignore(procedure.addBlocks(block))
     if (uuidToBlock.contains(blockUUID)) {
       // TODO this is a case that requires special consideration
       throw Exception(s"block ${byteStringToString(blockUUID)} is in multiple functions")
@@ -355,9 +356,9 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
       newBlockCount += 1
       newBlocks.append(afterBlock)
 
-      afterBlock.replaceJump(currentBlock.jump)
-      trueBlock.replaceJump(GoTo(afterBlock))
-      falseBlock.replaceJump(GoTo(afterBlock))
+      ignore(afterBlock.replaceJump(currentBlock.jump))
+      ignore(trueBlock.replaceJump(GoTo(afterBlock)))
+      ignore(falseBlock.replaceJump(GoTo(afterBlock)))
     } else {
       // if statement is at end of block - only need to create new blocks for the if statement's contents
       // need to copy jump as it can't have multiple parents
@@ -367,11 +368,11 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
         case DirectCall(target, returnTarget, label) => DirectCall(target, returnTarget, label)
         case _ => throw Exception("this shouldn't be reachable")
       }
-      trueBlock.replaceJump(currentBlock.jump)
-      falseBlock.replaceJump(jumpCopy)
+      ignore(trueBlock.replaceJump(currentBlock.jump))
+      ignore(falseBlock.replaceJump(jumpCopy))
     }
-    currentBlock.replaceJump(GoTo(mutable.Set(trueBlock, falseBlock)))
-    currentBlock.statements.remove(i)
+    ignore(currentBlock.replaceJump(GoTo(mutable.Set(trueBlock, falseBlock))))
+    ignore(currentBlock.statements.remove(i))
 
     newBlocks
   }
@@ -390,7 +391,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
               case Assign(lhs: Register, rhs: Register, _) if lhs.name == "_PC" => rhs
               case _ => throw Exception(s"no assignment to program counter found before indirect call in block ${block.label}")
             }
-            block.statements.remove(block.statements.last) // remove _PC assignment
+            ignore(block.statements.remove(block.statements.last)) // remove _PC assignment
             IndirectCall(target, None)
           } else if (proxySymbols.size > 1) {
             // TODO requires further consideration once encountered
@@ -630,7 +631,7 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
 
     val newBlocks = ArrayBuffer(trueBlock, falseBlock)
     procedure.addBlocks(newBlocks)
-    block.statements.remove(tempIf)
+    ignore(block.statements.remove(tempIf))
 
     GoTo(newBlocks)
   }

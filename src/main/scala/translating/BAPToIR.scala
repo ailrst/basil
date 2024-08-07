@@ -9,6 +9,7 @@ import scala.collection.mutable
 import scala.collection.mutable.Map
 import scala.collection.mutable.ArrayBuffer
 import util.intrusive_list.*
+import util.ignore
 
 class BAPToIR(var program: BAPProgram, mainAddress: Int) {
 
@@ -22,7 +23,7 @@ class BAPToIR(var program: BAPProgram, mainAddress: Int) {
       val procedure = Procedure(s.name, Some(s.address))
       for (b <- s.blocks) {
         val block = Block(b.label, b.address)
-        procedure.addBlocks(block)
+        ignore(procedure.addBlocks(block))
         if (b.address.isDefined && b.address.isDefined && b.address.get == procedure.address.get) {
           procedure.entryBlock = block
         }
@@ -50,7 +51,7 @@ class BAPToIR(var program: BAPProgram, mainAddress: Int) {
         }
         val (jump, newBlocks) = translate(b.jumps, block)
         procedure.addBlocks(newBlocks)
-        block.replaceJump(jump)
+        ignore(block.replaceJump(jump))
         assert(jump.hasParent)
       }
 

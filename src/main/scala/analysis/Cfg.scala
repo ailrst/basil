@@ -9,6 +9,7 @@ import scala.util.control.Breaks.break
 import util.Logger
 
 import scala.annotation.tailrec
+import util.ignore
 
 /** Node in the control-flow graph.
   */
@@ -550,7 +551,7 @@ class ProgramCfgFactory:
             }
           case dCall: DirectCall =>
             val targetProc: Procedure = dCall.target
-            funcEntryNode.callers.add(procToCfg(targetProc)._1)
+            ignore(funcEntryNode.callers.add(procToCfg(targetProc)._1))
 
             val callNode = CfgJumpNode(dCall, block, funcEntryNode)
 

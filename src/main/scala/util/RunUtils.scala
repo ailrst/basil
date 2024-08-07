@@ -33,6 +33,8 @@ import analysis.CfgCommandNode
 import scala.annotation.tailrec
 import scala.collection.mutable
 
+def ignore(x: Any) = ()
+
 /** This file contains the main program execution. See RunUtils.loadAndTranslate for the high-level process.
   */
 
@@ -199,9 +201,9 @@ object IRTransform {
     val renamer = Renamer(boogieReserved)
     val returnUnifier = ConvertToSingleProcedureReturn()
 
-    externalRemover.visitProgram(ctx.program)
-    renamer.visitProgram(ctx.program)
-    returnUnifier.visitProgram(ctx.program)
+    ignore(externalRemover.visitProgram(ctx.program))
+    ignore(renamer.visitProgram(ctx.program))
+    ignore(returnUnifier.visitProgram(ctx.program))
     ctx
   }
 
@@ -222,7 +224,7 @@ object IRTransform {
       if (!visited.contains(node)) {
         process(node)
         node.succIntra.union(node.succInter).foreach(node => worklist.addOne(node))
-        visited.add(node)
+        ignore(visited.add(node))
       }
     }
 
@@ -371,10 +373,10 @@ object IRTransform {
           }
           result
         case dataRegion: DataRegion =>
-          if (!regionContents.contains(dataRegion) || regionContents(dataRegion).isEmpty) {
+          ignore(if (!regionContents.contains(dataRegion) || regionContents(dataRegion).isEmpty) {
             result.add(dataRegion.regionIdentifier)
           } else {
-            result.add(dataRegion.regionIdentifier) // TODO: may need to investigate if we should add the parent region
+            ignore(result.add(dataRegion.regionIdentifier)) // TODO: may need to investigate if we should add the parent region
             for (c <- regionContents(dataRegion)) {
               c match {
                 case bitVecLiteral: BitVecLiteral => Logger.debug("hi: " + bitVecLiteral)//???
@@ -382,7 +384,7 @@ object IRTransform {
                   result.addAll(searchRegion(memoryRegion))
               }
             }
-          }
+          })
           result
       }
     }
@@ -398,10 +400,10 @@ object IRTransform {
       val variableWrapper = RegisterVariableWrapper(variable, getUse(variable, i, reachingDefs))
       pointsTos.get(variableWrapper) match {
         case Some(value) =>
-          value.map {
+          ignore(value.map {
             case v: RegisterVariableWrapper => names.addAll(resolveAddresses(v.variable, i))
             case m: MemoryRegion => names.addAll(searchRegion(m))
-          }
+          })
           names
         case None => names
       }
@@ -473,8 +475,7 @@ object IRTransform {
       s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
     )
 
-    val stackIdentification = StackSubstituter()
-    stackIdentification.visitProgram(ctx.program)
+    ignore(StackSubstituter().visitProgram(ctx.program))
 
     val specModifies = ctx.specification.subroutines.map(s => s.name -> s.modifies).toMap
     ctx.program.setModifies(specModifies)
@@ -749,7 +750,7 @@ object StaticAnalysis {
 
     while (toVisit.nonEmpty) {
       val next = toVisit.pop()
-      visited.add(next)
+      ignore(visited.add(next))
       toVisit.pushAll(
         IntraProcBlockIRCursor
           .succ(next)
@@ -796,7 +797,7 @@ object StaticAnalysis {
       while (stack.nonEmpty) {
         val next = stack.pop()
         if (!visited.contains(next)) {
-          visited.add(next)
+          ignore(visited.add(next))
           next.match {
             case c: CfgCommandNode =>
               if (c.block.label != previousBlock) {
@@ -881,9 +882,9 @@ object RunUtils {
 
   def loadAndTranslate(q: BASILConfig): BASILResult = {
     Logger.info("[!] Loading Program")
-    val ctx = IRLoading.load(q.loading)
+    var ctx = IRLoading.load(q.loading)
 
-    IRTransform.doCleanup(ctx)
+    ctx = IRTransform.doCleanup(ctx)
 
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))

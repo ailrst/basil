@@ -140,7 +140,7 @@ trait LinkedHashSetWorklist[N] extends Worklist[N]:
     worklist.addAll(first)
     while worklist.nonEmpty do
       val n = worklist.head
-      worklist.remove(n)
+      ignore(worklist.remove(n))
       process(n)
 
 
