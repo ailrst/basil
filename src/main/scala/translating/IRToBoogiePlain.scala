@@ -178,6 +178,7 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
     }
 
     val procs = p.procedures.map(p => translateProc(p, spec.procedures.get(p.name).getOrElse(ProcSpec())))
+    Logger.error(s"speecs ${spec.procedures}")
 
     def fundef(o: FunctionOp) = {
       o match {

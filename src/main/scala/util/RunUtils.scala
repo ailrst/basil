@@ -907,6 +907,7 @@ object RunUtils {
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-after-analysis.il"))
+    q.loading.dumpIL.foreach(s => writeToFile(CTranslator.translateProg(ctx.program), s"$s.c"))
 
     if (q.runInterpret) {
       val interpreter = Interpreter()
