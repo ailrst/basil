@@ -57,7 +57,6 @@ extension (p: Command)
     p match {
       case g: Jump => g.parent.statements.lastOption.map(_.isInstanceOf[Call]).getOrElse(false)
       case g: Statement => g.parent.statements.prevOption(g).map(_.isInstanceOf[Call]).getOrElse(false)
-      case _ => false
     }
   }
 

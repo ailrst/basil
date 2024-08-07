@@ -1,15 +1,46 @@
 package ir.transforms
 
+import util.Logger
 import ir.cilvisitor._
 import ir._
 
+
 class ReplaceReturns extends CILVisitor {
 
-  override def vjump(j: Jump): VisitAction[Jump] = {
+  override def vstmt(j: Statement): VisitAction[List[Statement]] = {
     j match {
-      case IndirectCall(Register("R30", _), _)    => ChangeTo(Return())
-      case _                                      => DoChildren()
+      case IndirectCall(Register("R30", _), _) => {
+        assert(j.parent.statements.lastOption.contains(j))
+        if (j.parent.jump.isInstanceOf[Halt | Return]) {
+          j.parent.replaceJump(Return())
+          ChangeTo(List())
+        } else {
+          SkipChildren()
+        }
+      }
+      case _ => SkipChildren()
     }
   }
+
+  override def vjump(j: Jump) = SkipChildren()
 }
 
+class ConvertSingleReturn extends CILVisitor {
+
+  override def vjump(j: Jump) = j match {
+    case r: Return if !(j.parent.parent.returnBlock.contains(j.parent)) => ChangeTo(GoTo(Seq(j.parent.parent.returnBlock.get)))
+    case _ => SkipChildren()
+  }
+
+  override def vstmt(s: Statement) = SkipChildren()
+}
+
+def addReturnBlocks(p: Program) = {
+  p.procedures.foreach(p => {
+
+    val containsReturn = p.blocks.map(_.jump).find(_.isInstanceOf[Return]).isDefined
+    if (containsReturn) {
+      p.returnBlock = p.addBlocks(Block(label=p.name + "_return",jump=Return()))
+    }
+  })
+}

@@ -199,14 +199,12 @@ object IRTransform {
     val externalRemover = ExternalRemover(externalNamesLibRemoved.toSet)
     val renamer = Renamer(boogieReserved)
 
-    val v = transforms.ReplaceReturns()
-    ctx.program.procedures.foreach( p => visit_proc(v, p))
-
-    val returnUnifier = ConvertToSingleProcedureReturn()
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), ctx.program)
+    transforms.addReturnBlocks(ctx.program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), ctx.program)
 
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
-    returnUnifier.visitProgram(ctx.program)
     ctx
   }
 
@@ -503,42 +501,40 @@ object IRTransform {
                   ): Unit = {
     
     // iterate over all commands - if call is to pthread_create, look up?
-    for (p <- program.procedures) {
-      for (b <- p.blocks) {
-        b.jump match {
-          case d: DirectCall if d.target.name == "pthread_create" =>
+    program.foreach(c =>
+      c match {
+        case d: DirectCall if d.target.name == "pthread_create" =>
 
-            // R2 should hold the function pointer of the function that begins the thread
-            // look up R2 value using points to results
-            val R2 = Register("R2", 64)
-            val b = reachingDefs(d)
-            val R2Wrapper = RegisterVariableWrapper(R2, getDefinition(R2, d, reachingDefs))
-            val threadTargets = pointsTo(R2Wrapper)
+          // R2 should hold the function pointer of the function that begins the thread
+          // look up R2 value using points to results
+          val R2 = Register("R2", 64)
+          val b = reachingDefs(d)
+          val R2Wrapper = RegisterVariableWrapper(R2, getDefinition(R2, d, reachingDefs))
+          val threadTargets = pointsTo(R2Wrapper)
 
-            if (threadTargets.size > 1) {
-              // currently can't handle case where the thread created is ambiguous
-              throw Exception("can't handle thread creation with more than one possible target")
+          if (threadTargets.size > 1) {
+            // currently can't handle case where the thread created is ambiguous
+            throw Exception("can't handle thread creation with more than one possible target")
+          }
+
+          if (threadTargets.size == 1) {
+
+            // not trying to untangle the very messy region resolution at present, just dealing with simplest case
+            threadTargets.head match {
+              case data: DataRegion =>
+                val threadEntrance = program.procedures.find(_.name == data.regionIdentifier) match {
+                  case Some(proc) => proc
+                  case None => throw Exception("could not find procedure with name " + data.regionIdentifier)
+                }
+                val thread = ProgramThread(threadEntrance, mutable.LinkedHashSet(threadEntrance), Some(d))
+                program.threads.addOne(thread)
+              case _ =>
+                throw Exception("unexpected non-data region " + threadTargets.head + " as PointsTo result for R2 at " + d)
             }
-
-            if (threadTargets.size == 1) {
-
-              // not trying to untangle the very messy region resolution at present, just dealing with simplest case
-              threadTargets.head match {
-                case data: DataRegion =>
-                  val threadEntrance = program.procedures.find(_.name == data.regionIdentifier) match {
-                    case Some(proc) => proc
-                    case None => throw Exception("could not find procedure with name " + data.regionIdentifier)
-                  }
-                  val thread = ProgramThread(threadEntrance, mutable.LinkedHashSet(threadEntrance), Some(d))
-                  program.threads.addOne(thread)
-                case _ =>
-                  throw Exception("unexpected non-data region " + threadTargets.head + " as PointsTo result for R2 at " + d)
-              }
-            }
-          case _ =>
-        }
-      }
-    }
+          }
+        case _ =>
+      })
+  
 
     if (program.threads.nonEmpty) {
       val mainThread = ProgramThread(program.mainProcedure, mutable.LinkedHashSet(program.mainProcedure), None)
