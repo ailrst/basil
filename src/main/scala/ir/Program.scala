@@ -141,7 +141,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
 
       stack.pushAll(n match {
         case p: Procedure => p.blocks
-        case b: Block => Seq() ++ b.statements ++ Seq(b.jump) ++ b.fallthrough.toSet
+        case b: Block => Seq() ++ b.statements ++ Seq(b.jump)
         case s: Command => Seq()
       })
       n
@@ -380,7 +380,6 @@ class Block private (
  val statements: IntrusiveList[Statement],
  private var _jump: Jump,
  private val _incomingJumps: mutable.HashSet[GoTo],
- var _fallthrough: Option[GoTo],
 ) extends HasParent[Procedure] {
   _jump.setParent(this)
   statements.foreach(_.setParent(this))
@@ -389,22 +388,10 @@ class Block private (
   statements.onRemove = x => x.deParent()
 
   def this(label: String, address: Option[Int] = None, statements: IterableOnce[Statement] = Set.empty, jump: Jump = GoTo(Set.empty)) = {
-    this(label, address, IntrusiveList().addAll(statements), jump, mutable.HashSet.empty, None)
+    this(label, address, IntrusiveList().addAll(statements), jump, mutable.HashSet.empty)
   }
 
   def jump: Jump = _jump
-
-  def fallthrough: Option[GoTo] = _fallthrough
-
-  def fallthrough_=(g: Option[GoTo]): Unit = {
-    /*
-     * Fallthrough is only set if Jump is a call, this is maintained maintained at the 
-     * linkParent implementation on FallThrough of Call.
-     */
-    _fallthrough.foreach(_.deParent())
-    g.foreach(x => x.parent = this)
-    _fallthrough = g
-  }
 
   private def jump_=(j: Jump): Unit = {
     require(!j.hasParent)
@@ -434,7 +421,9 @@ class Block private (
     assert(!incomingJumps.contains(g))
   }
 
-  def calls: Set[Procedure] = _jump.calls
+  def calls: Set[Procedure] = statements.toSet.collect {
+    case d: DirectCall => d.target
+  }
 
   def modifies: Set[Global] = statements.flatMap(_.modifies).toSet
   //def locals: Set[Variable] = statements.flatMap(_.locals).toSet ++ jumps.flatMap(_.locals).toSet
@@ -454,10 +443,7 @@ class Block private (
   def nextBlocks: Iterable[Block] = {
     jump match {
       case c: GoTo => c.targets
-      case c: Call => fallthrough match {
-        case Some(x) => x.targets
-        case _ => Seq()
-      }
+      case _ => Seq()
     }
   }
 
@@ -504,7 +490,7 @@ class Block private (
 
 object Block {
   def procedureReturn(from: Procedure): Block = {
-    Block(from.name + "_basil_return", None, List(), IndirectCall(Register("R30", 64)))
+    Block(from.name + "_basil_return", None, List(), Return())
   }
 }
 

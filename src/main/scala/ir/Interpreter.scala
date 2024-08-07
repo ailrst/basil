@@ -11,8 +11,8 @@ class Interpreter() {
   private val SP: BitVecLiteral = BitVecLiteral(4096 - 16, 64)
   private val FP: BitVecLiteral = BitVecLiteral(4096 - 16, 64)
   private val LR: BitVecLiteral = BitVecLiteral(BigInt("FF", 16), 64)
-  private var nextBlock: Option[Block] = None
-  private val returnBlock: mutable.Stack[Block] = mutable.Stack()
+  private var nextCmd: Option[Command] = None
+  private val returnCmd: mutable.Stack[Command] = mutable.Stack()
 
   def eval(exp: Expr, env: mutable.Map[Variable, BitVecLiteral]): BitVecLiteral = {
     exp match {
@@ -220,23 +220,15 @@ class Interpreter() {
 
     // Procedure.Block
     p.entryBlock match {
-      case Some(block) => nextBlock = Some(block)
-      case None        => nextBlock = Some(returnBlock.pop())
+      case Some(block) => nextCmd = Some(block.statements.headOption.getOrElse(block.jump))
+      case None        => nextCmd = Some(returnCmd.pop())
     }
   }
 
-  private def interpretBlock(b: Block): Unit = {
-    Logger.debug(s"Block:${b.label} ${b.address}")
-    // Block.Statement
-    for ((statement, index) <- b.statements.zipWithIndex) {
-      Logger.debug(s"statement[$index]:")
-      interpretStatement(statement)
-    }
-
-    // Block.Jump
+  private def interpretJump(j: Jump) : Unit = {
+    Logger.debug(s"jump:")
     breakable {
-      Logger.debug(s"jump:")
-      b.jump match {
+      j match {
         case gt: GoTo =>
           Logger.debug(s"$gt")
           for (g <- gt.targets) {
@@ -244,30 +236,35 @@ class Interpreter() {
             condition match {
               case Some(e) => evalBool(e, regs) match {
                 case TrueLiteral =>
-                  nextBlock = Some(g)
+                  nextCmd = Some(g.statements.headOption.getOrElse(g.jump))
                   break
                 case _ =>
               }
               case None =>
-                nextBlock = Some(g)
+                nextCmd = Some(g.statements.headOption.getOrElse(g.jump))
                 break
             }
           }
         case dc: DirectCall =>
           Logger.debug(s"$dc")
-          if (dc.returnTarget.isDefined) {
-            returnBlock.push(dc.returnTarget.get)
-          }
+          returnCmd.push(dc.successor)
           interpretProcedure(dc.target)
           break
+        case r: Return => {
+          nextCmd = Some(returnCmd.pop())
+        }
+        case h: Halt => {
+          Logger.debug("Halt")
+          nextCmd = None
+        }
         case ic: IndirectCall =>
           Logger.debug(s"$ic")
-          if (ic.target == Register("R30", 64) && ic.returnTarget.isEmpty) {
-            if (returnBlock.nonEmpty) {
-              nextBlock = Some(returnBlock.pop())
+          if (ic.target == Register("R30", 64)) {
+            if (returnCmd.nonEmpty) {
+              nextCmd = Some(returnCmd.pop())
             } else {
               //Exit Interpreter
-              nextBlock = None
+              nextCmd = None
             }
             break
           } else {
@@ -278,6 +275,7 @@ class Interpreter() {
   }
 
   private def interpretStatement(s: Statement): Unit = {
+    Logger.debug(s"statement[$s]:")
     s match {
       case assign: Assign =>
         Logger.debug(s"LocalAssign ${assign.lhs} = ${assign.rhs}")
@@ -334,8 +332,11 @@ class Interpreter() {
 
     // Program.Procedure
     interpretProcedure(IRProgram.mainProcedure)
-    while (nextBlock.isDefined) {
-      interpretBlock(nextBlock.get)
+    while (nextCmd.isDefined) {
+      nextCmd.get match  {
+        case c: Statement => interpretStatement(c) 
+        case c: Jump => interpretJump(c)
+      }
     }
 
     regs

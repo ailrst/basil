@@ -131,7 +131,6 @@ class CILVisitorImpl(val v: CILVisitor) {
         }
       })
       b.replaceJump(visit_jump(b.jump))
-      b.fallthrough = visit_fallthrough(b.fallthrough)
       b
     }
 

@@ -274,8 +274,8 @@ object IRTransform {
                   modified = true
 
                   // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
-                  val newCall = DirectCall(targets.head, indirectCall.returnTarget, indirectCall.label)
-                  block.replaceJump(newCall)
+                  val newCall = DirectCall(targets.head, indirectCall.label)
+                  block.statements.replace(indirectCall, newCall) 
                 } else if (targets.size > 1) {
                   modified = true
                   val procedure = c.parent.data
@@ -283,10 +283,14 @@ object IRTransform {
                   for (t <- targets) {
                     val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(t.address.get, 64)))
                     val newLabel: String = block.label + t.name
-                    val directCall = DirectCall(t, indirectCall.returnTarget)
+                    val directCall = DirectCall(t)
                     directCall.parent = indirectCall.parent
 
-                    newBlocks.append(Block(newLabel, None, ArrayBuffer(assume), directCall))
+                    // assume indircall is the last statement in block
+                    assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
+                    val fallthrough = indirectCall.parent.jump
+
+                    newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))
                   }
                   procedure.addBlocks(newBlocks)
                   val newCall = GoTo(newBlocks, indirectCall.label)
@@ -429,8 +433,8 @@ object IRTransform {
               modified = true
 
               // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
-              val newCall = DirectCall(targets.head, indirectCall.returnTarget, indirectCall.label)
-              block.replaceJump(newCall)
+              val newCall = DirectCall(targets.head, indirectCall.label)
+              block.statements.replace(indirectCall, newCall)
             } else if (targets.size > 1) {
               modified = true
               val procedure = c.parent.data
@@ -444,10 +448,12 @@ object IRTransform {
                 }
                 val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(address, 64)))
                 val newLabel: String = block.label + t.name
-                val directCall = DirectCall(t, indirectCall.returnTarget)
+                val directCall = DirectCall(t)
                 directCall.parent = indirectCall.parent
 
-                newBlocks.append(Block(newLabel, None, ArrayBuffer(assume), directCall))
+                assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
+                val fallthrough = indirectCall.parent.jump
+                newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))
               }
               procedure.addBlocks(newBlocks)
               val newCall = GoTo(newBlocks, indirectCall.label)

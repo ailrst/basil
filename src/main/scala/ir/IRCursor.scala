@@ -55,7 +55,8 @@ object IRWalk:
 extension (p: Jump)
   def isAfterCall : Boolean = {
     p match {
-      case g: GoTo => g.parent.fallthrough.contains(g)
+      case g: GoTo => g.parent.statements.lastOption.map(_.isInstanceOf[Call]).getOrElse(false)
+      case g: Statement => g.parent.statements.prevOption(g).map(_.isInstanceOf[Call]).getOrElse(false)
       case _ => false
     }
   }
@@ -82,9 +83,8 @@ trait IntraProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
     pos match {
       case proc: Procedure => proc.entryBlock.toSet
       case b: Block        => Set(b.statements.headOption.getOrElse(b.jump))
-      case s: Statement    =>  Set(s.succ().getOrElse(s.parent.jump))
+      case s: Statement    =>  Set(s.successor)
       case n: GoTo         => n.targets.asInstanceOf[Set[CFGPosition]]
-      case c: Call         => c.parent.fallthrough.toSet
     }
   }
 
@@ -143,18 +143,15 @@ trait InterProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
   IntraProcIRCursor.succ(pos) ++
     (pos match
       case c: DirectCall if c.target.blocks.nonEmpty  => Set(c.target)
-      case c: IndirectCall if c.parent.isProcReturn => c.parent.parent.incomingCalls().flatMap(_.parent.fallthrough.toSet).toSet
+      case c: IndirectCall if c.parent.isProcReturn => c.parent.parent.incomingCalls().map(_.successor).toSet
       case _ =>  Set.empty)
   }
 
   final def pred(pos: CFGPosition): Set[CFGPosition] = {
     IntraProcIRCursor.pred(pos) ++
     (pos match
+      case d: DirectCall if d.target.blocks.nonEmpty => d.target.returnBlock.toSet
       case c: Procedure       => c.incomingCalls().toSet.asInstanceOf[Set[CFGPosition]]
-      case b: GoTo if b.isAfterCall => b.parent.jump match {
-        case DirectCall(t,_, _) if t.blocks.nonEmpty => t.returnBlock.toSet
-        case _ => Set(b)
-      }
       case _ => Set.empty)
   }
 }
