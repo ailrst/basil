@@ -31,7 +31,7 @@ class InvariantTest extends AnyFunSuite {
     assert(invariant.singleCallBlockEnd(program))
   }
 
-  test("unsat singleCallBlockEnd case 1") {
+  test("unsat singleCallBlockEnd 1 (two calls)") {
     var program: Program = prog(
       proc("main",
         block("first_call",
@@ -43,7 +43,6 @@ class InvariantTest extends AnyFunSuite {
         ),
         block("second_call",
           Assign(R0, bv64(10)),
-          directCall("callee2"),
           ret
         ),
         block("returnBlock",
@@ -54,10 +53,10 @@ class InvariantTest extends AnyFunSuite {
       proc("callee2", block("bye2", ret)),
     )
 
-    assert(invariant.singleCallBlockEnd(program))
+    assert(!invariant.singleCallBlockEnd(program))
   }
 
-  test("unsat singleCallBlockEnd case 2") {
+  test("unsat singleCallBlockEnd 2 (not at end)") {
     var program: Program = prog(
       proc("main",
         block("first_call",
@@ -78,7 +77,7 @@ class InvariantTest extends AnyFunSuite {
       proc("callee2", block("bye2", ret)),
     )
 
-    assert(invariant.singleCallBlockEnd(program))
+    assert(!invariant.singleCallBlockEnd(program))
   }
 
 }

@@ -14,6 +14,17 @@ import scala.annotation.tailrec
  */
 type CFGPosition = Procedure | Block | Command
 
+def isAfterCall(c: Command) = {
+  val prev = c match {
+    case s: Statement =>  c.parent.statements.prevOption(s)
+    case j: Jump => c.parent.statements.lastOption
+  }
+  prev match {
+      case Some(c : Call) => true 
+      case _ => false
+  }
+}
+
 extension (p: CFGPosition)
   def toShortString: String =
     p match
@@ -52,19 +63,10 @@ object IRWalk:
     }
   }
 
-extension (p: Command)
-  def isAfterCall : Boolean = {
-    p match {
-      case g: Jump => g.parent.statements.lastOption.map(_.isInstanceOf[Call]).getOrElse(false)
-      case g: Statement => g.parent.statements.prevOption(g).map(_.isInstanceOf[Call]).getOrElse(false)
-    }
-  }
 
 extension (p: Block) 
   def isProcEntry : Boolean =  p.parent.entryBlock.contains(p)
   def isProcReturn : Boolean = p.parent.returnBlock.contains(p)
-  // TODO: this method doesn't require aftercall blocks only have 1 incoming jump 
-  def isAfterCall : Boolean = p.incomingJumps.nonEmpty && p.incomingJumps.forall(_.isAfterCall)
 
   def begin: CFGPosition = p
   def end: CFGPosition = p.jump
@@ -92,7 +94,7 @@ trait IntraProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
   def pred(pos: CFGPosition): Set[CFGPosition] = {
     pos match {
       case s: Statement => Set(s.pred().getOrElse(s.parent))
-      case j: GoTo if j.isAfterCall  => Set(j.parent.jump)
+      case j: GoTo if isAfterCall(j)  => Set(j.parent.jump)
       case j: Jump => Set(j.parent.statements.lastOption.getOrElse(j.parent))
       case b: Block if b.isProcEntry => Set(b.parent)
       case b: Block => b.incomingJumps.asInstanceOf[Set[CFGPosition]]

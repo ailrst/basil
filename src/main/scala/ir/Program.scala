@@ -5,6 +5,7 @@ import scala.collection.{IterableOnceExtensionMethods, View, immutable, mutable}
 import boogie.*
 import analysis.BitVectorEval
 import util.intrusive_list.*
+import translating.serialiseIL
 
 class Program(var procedures: ArrayBuffer[Procedure],
               var mainProcedure: Procedure,
@@ -12,6 +13,10 @@ class Program(var procedures: ArrayBuffer[Procedure],
               var readOnlyMemory: ArrayBuffer[MemorySection]) extends Iterable[CFGPosition] {
 
   val threads: ArrayBuffer[ProgramThread] = ArrayBuffer()
+
+  override def toString(): String = {
+    serialiseIL(this)
+  }
 
   // This shouldn't be run before indirect calls are resolved
   def stripUnreachableFunctions(depth: Int = Int.MaxValue): Unit = {
@@ -141,7 +146,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
 
       stack.pushAll(n match {
         case p: Procedure => p.blocks
-        case b: Block => Seq() ++ b.statements ++ Seq(b.jump)
+        case b: Block => Seq() ++ b.statements.toSeq ++ Seq(b.jump)
         case s: Command => Seq()
       })
       n
