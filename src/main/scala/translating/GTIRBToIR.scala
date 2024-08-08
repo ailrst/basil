@@ -364,6 +364,8 @@ class GTIRBToIR(mods: Seq[Module], parserMap: immutable.Map[String, Array[Array[
       // need to copy jump as it can't have multiple parents
       val jumpCopy = currentBlock.jump match {
         case GoTo(targets, label) => GoTo(targets, label)
+        case h: Halt => Halt()
+        case r: Return => Return() 
         case _ => throw Exception("this shouldn't be reachable")
       }
       trueBlock.replaceJump(currentBlock.jump)
