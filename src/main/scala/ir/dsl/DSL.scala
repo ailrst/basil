@@ -14,7 +14,7 @@ val R7: Register = Register("R7", 64)
 val R29: Register = Register("R29", 64)
 val R30: Register = Register("R30", 64)
 val R31: Register = Register("R31", 64)
-val ret: EventuallyIndirectCall = EventuallyIndirectCall(Register("R30", 64), None)
+
 
 
 def bv32(i: Int): BitVecLiteral = BitVecLiteral(i, 32)
@@ -47,13 +47,13 @@ trait EventuallyJump {
   def resolve(p: Program): Jump
 }
 
-case class EventuallyIndirectCall(target: Variable, fallthrough: Option[DelayNameResolve]) extends EventuallyStatement {
+case class EventuallyIndirectCall(target: Variable) extends EventuallyStatement {
   override def resolve(p: Program): IndirectCall = {
     IndirectCall(target)
   }
 }
 
-case class EventuallyCall(target: DelayNameResolve, fallthrough: Option[DelayNameResolve]) extends EventuallyStatement {
+case class EventuallyCall(target: DelayNameResolve) extends EventuallyStatement {
   override def resolve(p: Program): DirectCall = {
     val t = target.resolveProc(p) match {
       case Some(x) => x
@@ -63,11 +63,18 @@ case class EventuallyCall(target: DelayNameResolve, fallthrough: Option[DelayNam
   }
 }
 
+
 case class EventuallyGoto(targets: List[DelayNameResolve]) extends EventuallyJump {
   override def resolve(p: Program): GoTo = {
     val tgs = targets.flatMap(tn => tn.resolveBlock(p))
     GoTo(tgs)
   }
+}
+case class EventuallyReturn() extends EventuallyJump {
+  override def resolve(p: Program) = Return()
+}
+case class EventuallyHalt() extends EventuallyJump  {
+  override def resolve(p: Program) = Halt()
 }
 
 def goto(): EventuallyGoto = EventuallyGoto(List.empty)
@@ -76,13 +83,16 @@ def goto(targets: String*): EventuallyGoto = {
   EventuallyGoto(targets.map(p => DelayNameResolve(p)).toList)
 }
 
+def ret: EventuallyReturn = EventuallyReturn()
+def halt: EventuallyHalt= EventuallyHalt()
+
 def goto(targets: List[String]): EventuallyGoto = {
   EventuallyGoto(targets.map(p => DelayNameResolve(p)))
 }
 
-def directCall(tgt: String, fallthrough: Option[String]): EventuallyCall = EventuallyCall(DelayNameResolve(tgt), fallthrough.map(x => DelayNameResolve(x)))
+def directCall(tgt: String): EventuallyCall = EventuallyCall(DelayNameResolve(tgt))
 
-def indirectCall(tgt: Variable, fallthrough: Option[String]): EventuallyIndirectCall = EventuallyIndirectCall(tgt, fallthrough.map(x => DelayNameResolve(x)))
+def indirectCall(tgt: Variable): EventuallyIndirectCall = EventuallyIndirectCall(tgt)
 // def directcall(tgt: String) = EventuallyCall(DelayNameResolve(tgt), None)
 
 

@@ -227,6 +227,7 @@ object IRTransform {
 
     val specModifies = ctx.specification.subroutines.map(s => s.name -> s.modifies).toMap
     ctx.program.setModifies(specModifies)
+    assert(invariant.singleCallBlockEnd(ctx.program))
   }
 
 
@@ -590,6 +591,7 @@ object RunUtils {
       val boogieTranslator = IRToBoogie(ctx.program, ctx.specification, None, q.outputPrefix)
       ArrayBuffer(boogieTranslator.translate(q.boogieTranslation))
     }
+    assert(invariant.singleCallBlockEnd(ctx.program))
 
     BASILResult(ctx, analysis, boogiePrograms)
   }
@@ -628,6 +630,7 @@ object RunUtils {
       writeToFile(newCFG.toDot(x => x.toString, Output.dotIder), s"${s}_resolvedCFG.dot")
     }
 
+    assert(invariant.singleCallBlockEnd(ctx.program))
     Logger.info(s"[!] Finished indirect call resolution after $iteration iterations")
     analysisResult.last
   }

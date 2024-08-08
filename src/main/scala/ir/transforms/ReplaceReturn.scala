@@ -32,7 +32,7 @@ def addReturnBlocks(p: Program) = {
   p.procedures.foreach(p => {
     val containsReturn = p.blocks.map(_.jump).find(_.isInstanceOf[Return]).isDefined
     if (containsReturn) {
-      p.returnBlock = p.addBlocks(Block(label=p.name + "_return",jump=Return()))
+      p.returnBlock = p.addBlocks(Block(label=p.name + "_basil_return",jump=Return()))
     }
   })
 }
