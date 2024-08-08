@@ -59,31 +59,6 @@ class IRTest extends AnyFunSuite {
 
   }
 
-  // test("removeblockinline") {
-
-  //   val p = prog(
-  //     proc("main",
-  //       block("lmain",
-  //         goto("lmain1")
-  //       ),
-  //       block("lmain1",
-  //         goto("lmain2")),
-  //       block("lmain2",
-  //         ret)
-  //     )
-  //   )
-
-  //   val blocks = p.collect {
-  //     case b: Block => b.label -> b
-  //   }.toMap
-
-  //   p.procedures.head.removeBlocksInline(blocks("lmain1"))
-
-  //   blocks("lmain").singleSuccessor.contains(blocks("lmain2"))
-  //   blocks("lmain2").singlePredecessor.contains(blocks("lmain"))
-
-  // }
-
   test("simple replace jump") {
 
     val p = prog(
@@ -365,8 +340,6 @@ class IRTest extends AnyFunSuite {
 
     assert(isAfterCall(prevB))
     assert(InterProcIRCursor.pred(prevB).size == 1)
-    // assert(InterProcIRCursor.pred(prevB).head == p.blocks("l_main").fallthrough.get)
-    // assert(InterProcBlockIRCursor.pred(prevB).head == p.blocks("l_main"), p.procs("p1").returnBlock.get)
 
   }
 

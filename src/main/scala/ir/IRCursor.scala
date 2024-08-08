@@ -158,30 +158,6 @@ trait InterProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
   }
 }
 
-// less meaningful with call statements 
-
-// trait InterProcBlockIRCursor extends IRWalk[CFGPosition, Block] {
-// 
-//   final def succ(pos: CFGPosition): Set[Block] = {
-//     IntraProcBlockIRCursor.succ(pos) ++
-//     (pos match {
-//       case s: DirectCall if s.target.blocks.nonEmpty  => s.target.entryBlock.toSet
-//       case b: Block if b.isProcReturn => b.parent.incomingCalls().map(_.parent).toSet
-//       case _               => Set.empty 
-//     })
-//   }
-// 
-//   final def pred(pos: CFGPosition): Set[Block] = {
-//     IntraProcBlockIRCursor.pred(pos) ++
-//     (pos match {
-//       case b: Block if b.isAfterCall => b.incomingJumps.collect {_.parent.jump match 
-//           case d: DirectCall => d.target }.flatMap(_.returnBlock).toSet
-//       case b: Block if b.isProcEntry => b.parent.incomingCalls().map(_.parent).toSet
-//       case _ => Set.empty 
-//     })
-//   }
-// }
-
 object InterProcIRCursor extends InterProcIRCursor
 
 trait CallGraph extends IRWalk[Procedure, Procedure] {

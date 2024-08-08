@@ -294,28 +294,6 @@ class Procedure private (
     block
   }
 
-// unused
-//   /**
-//    * Remove blocks with the semantics of replacing them with a noop. The incoming jumps to this are replaced
-//    * with a jump(s) to this blocks jump target(s). If this block ends in a call then only its statements are removed.
-//    * @param blocks the block/blocks to remove
-//    */
-//   def removeBlocksInline(blocks: Iterable[Block]): Unit = {
-//     for (elem <- blocks) {
-//       elem.jump match {
-//         case g: GoTo =>
-//           // rewrite all the jumps to include our jump targets
-//           elem.incomingJumps.foreach(_.removeTarget(elem))
-//           elem.incomingJumps.foreach(_.addAllTargets(g.targets))
-//           removeBlocks(elem)
-//       }
-//     }
-//   }
-// 
-// 
-//   def removeBlocksInline(blocks: Block*): Unit = {
-//     removeBlocksInline(blocks.toSeq)
-//   }
 
   /**
    * Remove block(s) and all jumps that target it
