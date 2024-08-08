@@ -40,7 +40,7 @@ trait EventuallyStatement {
 }
 
 case class ResolvableStatement(s: Statement) extends EventuallyStatement {
-  override def resolve(p: Program) = s
+  override def resolve(p: Program) : Statement = s
 }
 
 trait EventuallyJump {
@@ -48,13 +48,13 @@ trait EventuallyJump {
 }
 
 case class EventuallyIndirectCall(target: Variable) extends EventuallyStatement {
-  override def resolve(p: Program): IndirectCall = {
+  override def resolve(p: Program): Statement = {
     IndirectCall(target)
   }
 }
 
 case class EventuallyCall(target: DelayNameResolve) extends EventuallyStatement {
-  override def resolve(p: Program): DirectCall = {
+  override def resolve(p: Program): Statement = {
     val t = target.resolveProc(p) match {
       case Some(x) => x
       case None => throw Exception("can't resolve proc " + p)
@@ -100,16 +100,20 @@ case class EventuallyBlock(label: String, sl: Seq[EventuallyStatement], j: Event
   val tempBlock: Block = Block(label, None, List(), GoTo(List.empty))
 
   def resolve(prog: Program): Block = {
-    tempBlock.statements.addAll(sl.map(_.resolve(prog)))
+    val resolved = sl.map(_.resolve(prog))
+    tempBlock.statements.addAll(resolved)
     tempBlock.replaceJump(j.resolve(prog))
     tempBlock
   }
 }
 
 def block(label: String, sl: (Statement | EventuallyStatement | EventuallyJump)*): EventuallyBlock = {
-  val statements : Seq[EventuallyStatement] = sl.collect {
-    case s: Statement => ResolvableStatement(s)
-    case o: EventuallyStatement => o
+  val statements : Seq[EventuallyStatement] = sl.flatMap {
+    case s: Statement => Some(ResolvableStatement(s))
+    case o: EventuallyStatement => Some(o)
+    case o: EventuallyCall => Some(o)
+    case o: EventuallyIndirectCall => Some(o)
+    case g: EventuallyJump => None
   }
   val jump = sl.collectFirst {
     case j: EventuallyJump => j
@@ -123,6 +127,7 @@ case class EventuallyProcedure(label: String, blocks: Seq[EventuallyBlock]) {
   val jumps: Map[Block, EventuallyJump] = blocks.map(b => b.tempBlock -> b.j).toMap
 
   def resolve(prog: Program): Procedure = {
+    blocks.foreach(b => b.resolve(prog))
     jumps.map((b, j) => b.replaceJump(j.resolve(prog)))
     tempProc
   }
