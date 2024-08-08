@@ -348,7 +348,7 @@ class IndirectCallsTests extends AnyFunSuite with OneInstancePerTest with Before
         dumpIL = Some(tempPath + testName),
       ),
       outputPrefix = tempPath + testName,
-      staticAnalysis = Some(StaticAnalysisConfig(None, None, None)),
+      staticAnalysis = Some(StaticAnalysisConfig(Some("functionpointer"), None, None)),
     )
     val result = loadAndTranslate(basilConfig)
       /* in this example we must find:
@@ -363,6 +363,7 @@ class IndirectCallsTests extends AnyFunSuite with OneInstancePerTest with Before
         "l000004f3set_seven" -> ("set_seven", "R0")
       )
 
+    println("prev " + result.ir.program)
       // Traverse the statements in the main function
     result.ir.program.mainProcedure.blocks.foreach {
         block =>
@@ -440,6 +441,16 @@ class IndirectCallsTests extends AnyFunSuite with OneInstancePerTest with Before
         "l0000044dset_two" -> ("set_two", "R0"),
         "l0000044dset_seven" -> ("set_seven", "R0")
       )
+      result.ir.program.mainProcedure.blocks.foreach {
+          block =>
+            block.statements.lastOption match {
+              case Some(directCall: DirectCall) if expectedCallTransform.contains(block.label) =>
+                val callTransform = expectedCallTransform(block.label)
+                assert(callTransform._1 == directCall.target.name)
+                expectedCallTransform.remove(block.label)
+              case _ =>
+            }
+        }
 
       // Traverse the statements in the main function
       println(result.ir.program)

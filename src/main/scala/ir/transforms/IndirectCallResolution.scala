@@ -17,7 +17,8 @@ import cilvisitor._
 
 
 /** Resolve indirect calls to an address-conditional choice between direct calls using the Value Set Analysis results.
-  */
+ *  Dead code, and currently broken by statement calls 
+ *
 def resolveIndirectCalls(
     cfg: ProgramCfg,
     valueSets: Map[CfgNode, LiftedElement[Map[Variable | MemoryRegion, Set[Value]]]],
@@ -150,6 +151,8 @@ def resolveIndirectCalls(
   modified
 }
 
+  */
+
 def resolveIndirectCallsUsingPointsTo(
    cfg: ProgramCfg,
    pointsTos: Map[RegisterVariableWrapper, Set[RegisterVariableWrapper | MemoryRegion]],
@@ -228,17 +231,24 @@ def resolveIndirectCallsUsingPointsTo(
       c.data match
         // don't try to resolve returns
         case indirectCall: IndirectCall if indirectCall.target != Register("R30", 64) =>
-          if (block.jump != indirectCall) {
+          if (!indirectCall.hasParent) {
             // We only replace the calls with DirectCalls in the IR, and don't replace the CommandNode.data
             // Hence if we have already processed this CFG node there will be no corresponding IndirectCall in the IR
             // to replace.
             // We want to replace all possible indirect calls based on this CFG, before regenerating it from the IR
             return
           }
+          assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
+
           val targetNames = resolveAddresses(indirectCall.target, indirectCall)
           Logger.debug(s"Points-To approximated call ${indirectCall.target} with $targetNames")
           Logger.debug(IRProgram.procedures)
           val targets: mutable.Set[Procedure] = targetNames.map(name => IRProgram.procedures.find(_.name == name).getOrElse(addFakeProcedure(name)))
+
+          if (targets.size > 1) {
+            Logger.info(s"Resolved indirect call $indirectCall")
+          }
+
 
           if (targets.size == 1) {
             modified = true
@@ -247,6 +257,9 @@ def resolveIndirectCallsUsingPointsTo(
             val newCall = DirectCall(targets.head, indirectCall.label)
             block.statements.replace(indirectCall, newCall)
           } else if (targets.size > 1) {
+
+            val oft = indirectCall.parent.jump
+
             modified = true
             val procedure = c.parent.data
             val newBlocks = ArrayBuffer[Block]()
@@ -260,12 +273,16 @@ def resolveIndirectCallsUsingPointsTo(
               val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(address, 64)))
               val newLabel: String = block.label + t.name
               val directCall = DirectCall(t)
-              directCall.parent = indirectCall.parent
 
-              assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
-              val fallthrough = indirectCall.parent.jump
+              /* copy the goto node resulting */
+              val fallthrough = oft match {
+                case g: GoTo => GoTo(g.targets, g.label)
+                case h: Halt => Halt()
+                case r: Return => Return()
+              }
               newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))
             }
+            block.statements.remove(indirectCall)
             procedure.addBlocks(newBlocks)
             val newCall = GoTo(newBlocks, indirectCall.label)
             block.replaceJump(newCall)

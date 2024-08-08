@@ -84,7 +84,7 @@ trait IntraProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
     pos match {
       case proc: Procedure => proc.entryBlock.toSet
       case b: Block        => Set(b.statements.headOption.getOrElse(b.jump))
-      case s: Statement    =>  Set(s.successor)
+      case s: Statement    => Set(s.successor)
       case n: GoTo         => n.targets.asInstanceOf[Set[CFGPosition]]
       case h: Halt         => Set()
       case h: Return       => Set()
@@ -94,7 +94,6 @@ trait IntraProcIRCursor extends IRWalk[CFGPosition, CFGPosition] {
   def pred(pos: CFGPosition): Set[CFGPosition] = {
     pos match {
       case s: Statement => Set(s.pred().getOrElse(s.parent))
-      case j: GoTo if isAfterCall(j)  => Set(j.parent.jump)
       case j: Jump => Set(j.parent.statements.lastOption.getOrElse(j.parent))
       case b: Block if b.isProcEntry => Set(b.parent)
       case b: Block => b.incomingJumps.asInstanceOf[Set[CFGPosition]]
