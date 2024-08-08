@@ -1,6 +1,6 @@
 import analysis.{InterLiveVarsAnalysis, TwoElementTop}
 import ir.dsl.*
-import ir.{BitVecLiteral, BitVecType, ConvertToSingleProcedureReturn, dsl, Assign, LocalVar, Program, Register, Statement, Variable}
+import ir.{BitVecLiteral, BitVecType, dsl, Assign, LocalVar, Program, Register, Statement, Variable, transforms, cilvisitor}
 import org.scalatest.funsuite.AnyFunSuite
 import test_util.TestUtil
 import util.BASILResult
@@ -31,10 +31,12 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
         block("first_call",
           r0ConstantAssign,
           r1ConstantAssign,
-          directCall("callee1", Some("second_call"))
+          directCall("callee1"),
+          goto("second_call")
         ),
         block("second_call",
-          directCall("callee2", Some("returnBlock"))
+          directCall("callee2"),
+          goto("returnBlock")
         ),
         block("returnBlock",
           ret
@@ -44,8 +46,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       createSimpleProc("callee2", Seq(r2r1Assign))
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
 
@@ -69,10 +72,10 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
         block("first_call",
           r0ConstantAssign,
           r1ConstantAssign,
-          directCall("callee1", Some("second_call"))
+          directCall("callee1"), goto("second_call")
         ),
         block("second_call",
-          directCall("callee2", Some("returnBlock"))
+          directCall("callee2"), goto("returnBlock")
         ),
         block("returnBlock",
           ret
@@ -82,8 +85,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       createSimpleProc("callee2", Seq(r2r1Assign))
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
 
@@ -104,10 +108,10 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
     var program = prog(
       proc("main",
         block("main_first_call",
-          directCall("wrapper1", Some("main_second_call"))
+          directCall("wrapper1"), goto("main_second_call")
         ),
         block("main_second_call",
-          directCall("wrapper2", Some("main_return"))
+          directCall("wrapper2"), goto("main_return")
         ),
         block("main_return", ret)
       ),
@@ -117,25 +121,26 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       proc("wrapper1",
         block("wrapper1_first_call",
           Assign(R1, constant1),
-          directCall("callee", Some("wrapper1_second_call"))
+          directCall("callee"), goto("wrapper1_second_call")
         ),
         block("wrapper1_second_call",
-          directCall("callee2", Some("wrapper1_return"))),
+          directCall("callee2"), goto("wrapper1_return")),
         block("wrapper1_return", ret)
       ),
       proc("wrapper2",
         block("wrapper2_first_call",
           Assign(R2, constant1),
-          directCall("callee", Some("wrapper2_second_call"))
+          directCall("callee"), goto("wrapper2_second_call")
         ),
         block("wrapper2_second_call",
-          directCall("callee3", Some("wrapper2_return"))),
+          directCall("callee3"), goto("wrapper2_return")),
         block("wrapper2_return", ret)
       )
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
     val blocks = program.blocks
@@ -148,7 +153,7 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
     var program = prog(
       proc("main",
         block("lmain",
-          directCall("killer", Some("aftercall"))
+          directCall("killer"), goto("aftercall")
         ),
         block("aftercall",
           Assign(R0, R1),
@@ -158,8 +163,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       createSimpleProc("killer", Seq(Assign(R1, bv64(1))))
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
     val blocks = program.blocks
@@ -193,8 +199,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       )
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val blocks = program.blocks
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
@@ -212,7 +219,7 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
         block(
           "lmain",
           Assign(R0, R1),
-          directCall("main", Some("return"))
+          directCall("main"), goto("return")
         ),
         block("return",
           Assign(R0, R2),
@@ -221,8 +228,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       )
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
     val blocks = program.blocks
@@ -240,7 +248,7 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
         ),
         block(
           "recursion",
-          directCall("main", Some("assign"))
+          directCall("main"), goto("assign")
         ),
         block("assign",
           Assign(R0, R2),
@@ -256,8 +264,9 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       )
     )
 
-    val returnUnifier = ConvertToSingleProcedureReturn()
-    program = returnUnifier.visitProgram(program)
+    cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
+    transforms.addReturnBlocks(program)
+    cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
     val blocks = program.blocks
