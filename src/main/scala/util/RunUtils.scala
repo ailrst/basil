@@ -366,10 +366,8 @@ object StaticAnalysis {
     mmm.logRegions(memoryRegionContents)
 
     // turn fake procedures into diamonds
-    transforms.addReturnBlocks(ctx.program, true) // add return to all blocks because IDE solver expects it
     Logger.info("[!] Running VSA")
-    val vsaSolver =
-      ValueSetAnalysisSolver(IRProgram, globalAddresses, externalAddresses, globalOffsets, subroutines, mmm, constPropResult)
+    val vsaSolver = ValueSetAnalysisSolver(IRProgram, globalAddresses, externalAddresses, globalOffsets, subroutines, mmm, constPropResult)
     val vsaResult: Map[CFGPosition, LiftedElement[Map[Variable | MemoryRegion, Set[Value]]]] = vsaSolver.analyze()
 
     Logger.info("[!] Running Interprocedural Live Variables Analysis")

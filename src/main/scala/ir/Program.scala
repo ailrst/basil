@@ -195,7 +195,6 @@ class Procedure private (
   }
 
   def addBlocks(block: Block): Block = {
-    block.parent = this
     if (!_blocks.contains(block)) {
       block.parent = this
       _blocks.add(block)
@@ -284,7 +283,8 @@ class Procedure private (
 
   def clearBlocks(): Unit = {
     // O(n) because we are careful to unlink the parents etc.
-    removeBlocksDisconnect(_blocks)
+    // .toList to avoid modifying our own iterator
+    removeBlocksDisconnect(_blocks.toList)
   }
 
   def callers(): Iterable[Procedure] = _callers.map(_.parent.parent).toSet[Procedure]

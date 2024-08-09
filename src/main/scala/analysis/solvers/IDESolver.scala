@@ -264,9 +264,14 @@ abstract class BackwardIDESolver[D, T, L <: Lattice[T]](program: Program)
 
   protected def isCall(call: CFGPosition): Boolean =
     call match
-      case c : Command => isAfterCall(c) 
-          && c.parent.parent.returnBlock.isDefined 
-          && IRWalk.prevCommandInBlock(c).map(c => (!IRWalk.nextCommandInBlock(c).get.isInstanceOf[Halt]) && c.isInstanceOf[DirectCall]).getOrElse(false)
+      case c: Halt => false /* don't process non-returning calls */
+      case c : Command if isAfterCall(c) => {
+        val call = IRWalk.prevCommandInBlock(c)
+        call match {
+          case Some(d: DirectCall) if d.target.returnBlock.isDefined => true
+          case _ => false
+        }
+      } 
       case _ => false
 
   protected def isExit(exit: CFGPosition): Boolean =
