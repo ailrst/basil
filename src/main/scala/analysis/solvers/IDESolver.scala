@@ -264,12 +264,14 @@ abstract class BackwardIDESolver[D, T, L <: Lattice[T]](program: Program)
 
   protected def isCall(call: CFGPosition): Boolean =
     call match
-      case c : Command => isAfterCall(c) && IRWalk.prevCommandInBlock(c).map(_.isInstanceOf[DirectCall]).getOrElse(false)
+      case c : Command => isAfterCall(c) 
+          && c.parent.parent.returnBlock.isDefined 
+          && IRWalk.prevCommandInBlock(c).map(c => (!IRWalk.nextCommandInBlock(c).get.isInstanceOf[Halt]) && c.isInstanceOf[DirectCall]).getOrElse(false)
       case _ => false
 
   protected def isExit(exit: CFGPosition): Boolean =
     exit match
-      case procedure: Procedure => true
+      case procedure: Procedure => procedure.blocks.nonEmpty
       case _ => false
 
   protected def getAfterCalls(exit: Procedure): Set[DirectCall] = exit.incomingCalls().toSet

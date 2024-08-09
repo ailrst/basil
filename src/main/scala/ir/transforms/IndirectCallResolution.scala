@@ -11,7 +11,6 @@ import ir.*
 import translating.*
 import util.Logger
 import util.intrusive_list.IntrusiveList
-import analysis.CfgCommandNode
 import scala.collection.mutable
 import cilvisitor._
 
@@ -154,22 +153,23 @@ def resolveIndirectCalls(
   */
 
 def resolveIndirectCallsUsingPointsTo(
-   cfg: ProgramCfg,
    pointsTos: Map[RegisterVariableWrapper, Set[RegisterVariableWrapper | MemoryRegion]],
    regionContents: Map[MemoryRegion, Set[BitVecLiteral | MemoryRegion]],
    reachingDefs: Map[CFGPosition, (Map[Variable, Set[Assign]], Map[Variable, Set[Assign]])],
    IRProgram: Program
  ): Boolean = {
   var modified: Boolean = false
-  val worklist = ListBuffer[CfgNode]()
-  cfg.startNode.succIntra.union(cfg.startNode.succInter).foreach(node => worklist.addOne(node))
+  val worklist = ListBuffer[CFGPosition]()
 
-  val visited = mutable.Set[CfgNode]()
+  worklist.addAll(IRProgram)
+
+  val visited = mutable.Set[CFGPosition]()
   while (worklist.nonEmpty) {
     val node = worklist.remove(0)
     if (!visited.contains(node)) {
+      // add to worklist before we delete the node and can no longer find its successors
+      InterProcIRCursor.succ(node).foreach(node => worklist.addOne(node))
       process(node)
-      node.succIntra.union(node.succInter).foreach(node => worklist.addOne(node))
       visited.add(node)
     }
   }
@@ -225,69 +225,65 @@ def resolveIndirectCallsUsingPointsTo(
     }
   }
 
-  def process(n: CfgNode): Unit = n match {
-    case c: CfgJumpNode =>
-      val block = c.block
-      c.data match
-        // don't try to resolve returns
-        case indirectCall: IndirectCall if indirectCall.target != Register("R30", 64) =>
-          if (!indirectCall.hasParent) {
-            // We only replace the calls with DirectCalls in the IR, and don't replace the CommandNode.data
-            // Hence if we have already processed this CFG node there will be no corresponding IndirectCall in the IR
-            // to replace.
-            // We want to replace all possible indirect calls based on this CFG, before regenerating it from the IR
-            return
+  def process(n: CFGPosition): Unit = n match {
+    case indirectCall: IndirectCall if indirectCall.target != Register("R30", 64) =>
+      if (!indirectCall.hasParent) {
+        // We only replace the calls with DirectCalls in the IR, and don't replace the CommandNode.data
+        // Hence if we have already processed this CFG node there will be no corresponding IndirectCall in the IR
+        // to replace.
+        // We want to replace all possible indirect calls based on this CFG, before regenerating it from the IR
+        return
+      }
+      assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
+
+      val block = indirectCall.parent
+      val procedure = block.parent
+
+      val targetNames = resolveAddresses(indirectCall.target, indirectCall)
+      Logger.debug(s"Points-To approximated call ${indirectCall.target} with $targetNames")
+      Logger.debug(IRProgram.procedures)
+      val targets: mutable.Set[Procedure] = targetNames.map(name => IRProgram.procedures.find(_.name == name).getOrElse(addFakeProcedure(name)))
+
+      if (targets.size > 1) {
+        Logger.info(s"Resolved indirect call $indirectCall")
+      }
+
+      if (targets.size == 1) {
+        modified = true
+
+        // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
+        val newCall = DirectCall(targets.head, indirectCall.label)
+        block.statements.replace(indirectCall, newCall)
+      } else if (targets.size > 1) {
+
+        val oft = indirectCall.parent.jump
+
+        modified = true
+        val newBlocks = ArrayBuffer[Block]()
+        // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
+        for (t <- targets) {
+          Logger.debug(targets)
+          val address = t.address.match {
+            case Some(a) => a
+            case None => throw Exception(s"resolved indirect call $indirectCall to procedure which does not have address: $t")
           }
-          assert(indirectCall.parent.statements.lastOption.contains(indirectCall))
+          val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(address, 64)))
+          val newLabel: String = block.label + t.name
+          val directCall = DirectCall(t)
 
-          val targetNames = resolveAddresses(indirectCall.target, indirectCall)
-          Logger.debug(s"Points-To approximated call ${indirectCall.target} with $targetNames")
-          Logger.debug(IRProgram.procedures)
-          val targets: mutable.Set[Procedure] = targetNames.map(name => IRProgram.procedures.find(_.name == name).getOrElse(addFakeProcedure(name)))
-
-          if (targets.size > 1) {
-            Logger.info(s"Resolved indirect call $indirectCall")
+          /* copy the goto node resulting */
+          val fallthrough = oft match {
+            case g: GoTo => GoTo(g.targets, g.label)
+            case h: Halt => Halt()
+            case r: Return => Return()
           }
-
-
-          if (targets.size == 1) {
-            modified = true
-
-            // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
-            val newCall = DirectCall(targets.head, indirectCall.label)
-            block.statements.replace(indirectCall, newCall)
-          } else if (targets.size > 1) {
-
-            val oft = indirectCall.parent.jump
-
-            modified = true
-            val procedure = c.parent.data
-            val newBlocks = ArrayBuffer[Block]()
-            // indirectCall.parent.parent.removeBlocks(indirectCall.returnTarget)
-            for (t <- targets) {
-              Logger.debug(targets)
-              val address = t.address.match {
-                case Some(a) => a
-                case None => throw Exception(s"resolved indirect call $indirectCall to procedure which does not have address: $t")
-              }
-              val assume = Assume(BinaryExpr(BVEQ, indirectCall.target, BitVecLiteral(address, 64)))
-              val newLabel: String = block.label + t.name
-              val directCall = DirectCall(t)
-
-              /* copy the goto node resulting */
-              val fallthrough = oft match {
-                case g: GoTo => GoTo(g.targets, g.label)
-                case h: Halt => Halt()
-                case r: Return => Return()
-              }
-              newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))
-            }
-            block.statements.remove(indirectCall)
-            procedure.addBlocks(newBlocks)
-            val newCall = GoTo(newBlocks, indirectCall.label)
-            block.replaceJump(newCall)
-          }
-        case _ =>
+          newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))
+        }
+        block.statements.remove(indirectCall)
+        procedure.addBlocks(newBlocks)
+        val newCall = GoTo(newBlocks, indirectCall.label)
+        block.replaceJump(newCall)
+      }
     case _ =>
   }
 

@@ -115,10 +115,12 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
     var program = prog(
       proc("main",
         block("main_first_call",
-          directCall("wrapper1"), goto("main_second_call")
+          directCall("wrapper1"), 
+          goto("main_second_call")
         ),
         block("main_second_call",
-          directCall("wrapper2"), goto("main_return")
+          directCall("wrapper2"), 
+          goto("main_return")
         ),
         block("main_return", ret)
       ),
@@ -128,10 +130,12 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
       proc("wrapper1",
         block("wrapper1_first_call",
           Assign(R1, constant1),
-          directCall("callee"), goto("wrapper1_second_call")
+          directCall("callee"), 
+          goto("wrapper1_second_call")
         ),
         block("wrapper1_second_call",
-          directCall("callee2"), goto("wrapper1_return")),
+          directCall("callee2"), 
+          goto("wrapper1_return")),
         block("wrapper1_return", ret)
       ),
       proc("wrapper2",
@@ -144,10 +148,12 @@ class LiveVarsAnalysisTests extends AnyFunSuite, TestUtil {
         block("wrapper2_return", ret)
       )
     )
+    println("before " + program)
 
     cilvisitor.visit_prog(transforms.ReplaceReturns(), program)
     transforms.addReturnBlocks(program)
     cilvisitor.visit_prog(transforms.ConvertSingleReturn(), program)
+    println("After " + program)
 
     val liveVarAnalysisResults = InterLiveVarsAnalysis(program).analyze()
     val blocks = program.blocks
