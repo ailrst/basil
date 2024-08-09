@@ -214,7 +214,7 @@ class Procedure private (
 
   def returnBlock_=(value: Block): Unit = {
     if (!returnBlock.contains(value)) {
-      removeBlocks(_returnBlock)
+      _returnBlock.foreach(removeBlocks(_))
       _returnBlock = Some(addBlocks(value))
     }
   }
@@ -223,7 +223,7 @@ class Procedure private (
 
   def entryBlock_=(value: Block): Unit = {
     if (!entryBlock.contains(value)) {
-      removeBlocks(_entryBlock)
+      _entryBlock.foreach(removeBlocks(_))
       _entryBlock = Some(addBlocks(value))
     }
   }
@@ -233,9 +233,6 @@ class Procedure private (
     if (!_blocks.contains(block)) {
       block.parent = this
       _blocks.add(block)
-      if (entryBlock.isEmpty) {
-        entryBlock = block
-      }
     }
     block
   }
@@ -371,6 +368,8 @@ class Block private (
   def this(label: String, address: Option[Int] = None, statements: IterableOnce[Statement] = Set.empty, jump: Jump = GoTo(Set.empty)) = {
     this(label, address, IntrusiveList().addAll(statements), jump, mutable.HashSet.empty)
   }
+
+  def isEntry: Boolean = parent.entryBlock.contains(this)
 
   def jump: Jump = _jump
 

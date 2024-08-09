@@ -200,7 +200,7 @@ object IRTransform {
     val renamer = Renamer(boogieReserved)
 
     cilvisitor.visit_prog(transforms.ReplaceReturns(), ctx.program)
-    transforms.addReturnBlocks(ctx.program)
+    transforms.addReturnBlocks(ctx.program, true) // add return to all blocks because IDE solver expects it
     cilvisitor.visit_prog(transforms.ConvertSingleReturn(), ctx.program)
 
     externalRemover.visitProgram(ctx.program)
@@ -365,18 +365,20 @@ object StaticAnalysis {
     val memoryRegionContents = steensgaardSolver.getMemoryRegionContents
     mmm.logRegions(memoryRegionContents)
 
+    // turn fake procedures into diamonds
+    transforms.addReturnBlocks(ctx.program, true) // add return to all blocks because IDE solver expects it
     Logger.info("[!] Running VSA")
     val vsaSolver =
       ValueSetAnalysisSolver(IRProgram, globalAddresses, externalAddresses, globalOffsets, subroutines, mmm, constPropResult)
     val vsaResult: Map[CFGPosition, LiftedElement[Map[Variable | MemoryRegion, Set[Value]]]] = vsaSolver.analyze()
 
     Logger.info("[!] Running Interprocedural Live Variables Analysis")
-    //val interLiveVarsResults = InterLiveVarsAnalysis(IRProgram).analyze()
-    val interLiveVarsResults = Map[CFGPosition, Map[Variable, TwoElement]]()
+    val interLiveVarsResults = InterLiveVarsAnalysis(IRProgram).analyze()
+    // val interLiveVarsResults = Map[CFGPosition, Map[Variable, TwoElement]]()
 
     Logger.info("[!] Running Parameter Analysis")
-    //val paramResults = ParamAnalysis(IRProgram).analyze()
-    val paramResults = Map[Procedure, Set[Variable]]()
+    val paramResults = ParamAnalysis(IRProgram).analyze()
+    // val paramResults = Map[Procedure, Set[Variable]]()
 
     StaticAnalysisContext(
       cfg = cfg,
