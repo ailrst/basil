@@ -111,8 +111,6 @@ def block(label: String, sl: (Statement | EventuallyStatement | EventuallyJump)*
   val statements : Seq[EventuallyStatement] = sl.flatMap {
     case s: Statement => Some(ResolvableStatement(s))
     case o: EventuallyStatement => Some(o)
-    case o: EventuallyCall => Some(o)
-    case o: EventuallyIndirectCall => Some(o)
     case g: EventuallyJump => None
   }
   val jump = sl.collectFirst {
