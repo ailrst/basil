@@ -1,7 +1,7 @@
 package analysis.solvers
 
 import analysis.{BackwardIDEAnalysis, Dependencies, EdgeFunction, EdgeFunctionLattice, ForwardIDEAnalysis, IDEAnalysis, IRInterproceduralBackwardDependencies, IRInterproceduralForwardDependencies, Lambda, Lattice, MapLattice}
-import ir.{CFGPosition, Command, DirectCall, GoTo, IRWalk, IndirectCall, Return, InterProcIRCursor, Procedure, Program, isAfterCall, Halt, Statement, Jump}
+import ir.{CFGPosition, Command, DirectCall, GoTo, IRWalk, IndirectCall, Return, InterProcIRCursor, Procedure, Program, isAfterCall, Unreachable, Statement, Jump}
 import util.Logger
 
 import scala.collection.immutable.Map
@@ -225,7 +225,7 @@ abstract class ForwardIDESolver[D, T, L <: Lattice[T]](program: Program)
 
   protected def isCall(call: CFGPosition): Boolean =
     call match
-      case directCall: DirectCall if (!directCall.successor.isInstanceOf[Halt]) => true
+      case directCall: DirectCall if (!directCall.successor.isInstanceOf[Unreachable]) => true
       case _ => false
 
   protected def isExit(exit: CFGPosition): Boolean =
@@ -264,7 +264,7 @@ abstract class BackwardIDESolver[D, T, L <: Lattice[T]](program: Program)
 
   protected def isCall(call: CFGPosition): Boolean =
     call match
-      case c: Halt => false /* don't process non-returning calls */
+      case c: Unreachable => false /* don't process non-returning calls */
       case c : Command if isAfterCall(c) => {
         val call = IRWalk.prevCommandInBlock(c)
         call match {

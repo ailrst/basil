@@ -63,7 +63,7 @@ private class ILSerialiser extends ReadOnlyVisitor {
   override def visitJump(node: Jump): Jump = {
     node match {
       case j: GoTo => program ++= s"goTo(${j.targets.map(_.label).mkString(", ")})" 
-      case h: Halt => program ++= "halt"
+      case h: Unreachable => program ++= "halt"
       case h: Return => program ++= "return"
     }
 

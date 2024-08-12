@@ -274,7 +274,7 @@ def resolveIndirectCallsUsingPointsTo(
           /* copy the goto node resulting */
           val fallthrough = oft match {
             case g: GoTo => GoTo(g.targets, g.label)
-            case h: Halt => Halt()
+            case h: Unreachable => Unreachable()
             case r: Return => Return()
           }
           newBlocks.append(Block(newLabel, None, ArrayBuffer(assume, directCall), fallthrough))

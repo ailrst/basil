@@ -13,7 +13,7 @@ class ReplaceReturns extends CILVisitor {
     j match {
       case IndirectCall(Register("R30", _), _) => {
         assert(j.parent.statements.lastOption.contains(j))
-        if (j.parent.jump.isInstanceOf[Halt | Return]) {
+        if (j.parent.jump.isInstanceOf[Unreachable | Return]) {
           j.parent.replaceJump(Return())
           ChangeTo(List())
         } else {

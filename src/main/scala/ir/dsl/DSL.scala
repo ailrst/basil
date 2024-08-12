@@ -73,8 +73,8 @@ case class EventuallyGoto(targets: List[DelayNameResolve]) extends EventuallyJum
 case class EventuallyReturn() extends EventuallyJump {
   override def resolve(p: Program) = Return()
 }
-case class EventuallyHalt() extends EventuallyJump  {
-  override def resolve(p: Program) = Halt()
+case class EventuallyUnreachable() extends EventuallyJump  {
+  override def resolve(p: Program) = Unreachable()
 }
 
 def goto(): EventuallyGoto = EventuallyGoto(List.empty)
@@ -84,7 +84,7 @@ def goto(targets: String*): EventuallyGoto = {
 }
 
 def ret: EventuallyReturn = EventuallyReturn()
-def halt: EventuallyHalt= EventuallyHalt()
+def halt: EventuallyUnreachable= EventuallyUnreachable()
 
 def goto(targets: List[String]): EventuallyGoto = {
   EventuallyGoto(targets.map(p => DelayNameResolve(p)))
