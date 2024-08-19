@@ -56,20 +56,7 @@ case class Relation(val body: Expr, relationName: Option[String] = None) {
   def toAssumption(bindNew: Statement): (Procedure, specification.ProcSpec) = {
     val jump = bindNew.parent.jump
 
-    val target = bindNew.parent
-
-    val afterStatements = bindNew.parent.statements.splitOn(bindNew) 
-
-    val n = Regex(s"_${name}_[0-9]+$$")
-    val suffix = s"_${name}_"
-    val endBlock = Block(n.replaceAllIn(bindNew.parent.label, "") + suffix  + transforms.OldCounter.nextInt(), None, afterStatements, jump)
-
-    val callBlock = Block(n.replaceAllIn(bindNew.parent.label, "") +  suffix + transforms.OldCounter.nextInt(), None, List(DirectCall(assumptionProc)), (GoTo(Seq(endBlock))))
-
-    target.parent.addBlocks(callBlock)
-    target.parent.addBlocks(endBlock)
-
-    bindNew.parent.replaceJump(GoTo(callBlock))
+    val afterStatements = bindNew.parent.statements.insertBefore(bindNew, DirectCall(assumptionProc))
 
     (assumptionProc, assumptionSpec)
   }

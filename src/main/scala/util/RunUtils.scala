@@ -243,7 +243,7 @@ object IRTransform {
     transforms.addReturnBlocks(ctx.program, true) // add return to all blocks because IDE solver expects it
     cilvisitor.visit_prog(transforms.ConvertSingleReturn(), ctx.program)
 
-    cilvisitor.visit_prog(transforms.ReplaceReturns(), ctx.program)
+
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
     ctx
@@ -529,22 +529,36 @@ object RunUtils {
     IRTransform.prepareForTranslation(q.loading, ctx)
 
     Logger.info("[!] Translating to Boogie")
+    
+    val forwardDeclaredL: Map[Memory, Expr => FApply] = ctx.program.collect {
+      case m : MemoryAssign => m.mem
+    }.toSet.map(rgn => rgn -> ((addr: Expr) => FApply("L$" + rgn.name, Seq(rgn, addr), BoolType, false))).toMap
 
-    val boogiePrograms = if (q.boogieTranslation.threadSplit && ctx.program.threads.nonEmpty) {
-      val outPrograms = ArrayBuffer[BProgram]()
-      for (thread <- ctx.program.threads) {
-        val fileName = q.outputPrefix.stripSuffix(".bpl") + "_" + thread.entry.name + ".bpl"
-        val boogieTranslator = IRToBoogie(ctx.program, ctx.specification, Some(thread), fileName)
-        outPrograms.addOne(boogieTranslator.translate(q.boogieTranslation))
-      }
-      outPrograms
-    } else {
-      val boogieTranslator = IRToBoogie(ctx.program, ctx.specification, None, q.outputPrefix)
-      ArrayBuffer(boogieTranslator.translate(q.boogieTranslation))
-    }
+
     assert(invariant.singleCallBlockEnd(ctx.program))
+    // invariant no longer holds after this
+    cilvisitor.visit_prog(transforms.AddGammas(forwardDeclaredL), ctx.program)
+    val spec = ctx.IRSpecification(ctx.program)
+    transforms.replaceRelyGuarantee(ctx.program, spec)
+    cilvisitor.visit_prog(transforms.SecureUpdate(spec), ctx.program)
 
-    BASILResult(ctx, analysis, boogiePrograms)
+
+    val otherBoogieProgram = translating.BoogieTranslator.translateProg(ctx.program, ctx.IRSpecification(ctx.program))
+
+    // val boogiePrograms = if (q.boogieTranslation.threadSplit && ctx.program.threads.nonEmpty) {
+    //   val outPrograms = ArrayBuffer[BProgram]()
+    //   for (thread <- ctx.program.threads) {
+    //     val fileName = q.outputPrefix.stripSuffix(".bpl") + "_" + thread.entry.name + ".bpl"
+    //     val boogieTranslator = IRToBoogie(ctx.program, ctx.specification, Some(thread), fileName)
+    //     outPrograms.addOne(boogieTranslator.translate(q.boogieTranslation))
+    //   }
+    //   outPrograms
+    // } else {
+    //   val boogieTranslator = IRToBoogie(ctx.program, ctx.specification, None, q.outputPrefix)
+    //   ArrayBuffer(boogieTranslator.translate(q.boogieTranslation))
+    // }
+
+    BASILResult(ctx, analysis, mutable.ArrayBuffer(otherBoogieProgram))
   }
 
   /** Use static analysis to resolve indirect calls and replace them in the IR until fixed point.

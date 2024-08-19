@@ -107,6 +107,8 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
 
   def translateStatement(s: Statement): BCmd = s match {
     case m: NOP => BAssume(TrueBLiteral, Some("NOP"))
+    case c: DirectCall => BProcedureCall(c.target.name)
+    case f: IndirectCall => BAssert(FalseBLiteral, Some("IndirectCall" + f.target.toString))
     case m: MemoryAssign =>
       val lhs = translateMem(m.mem)
       val rhs = BMemoryStore(translateMem(m.mem), translateExpr(m.index), translateExpr(m.value), m.endian, m.size)
@@ -126,10 +128,9 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
 
   def translateJump(j: Jump): BCmd = {
     j match {
-      case d: DirectCall   => BProcedureCall(d.target.name)
       case g: GoTo         => GoToCmd(g.targets.map(_.label).toSeq)
-      case f: IndirectCall => BAssert(FalseBLiteral, Some("IndirectCall" + f.target.toString))
       case r: Return       => ReturnCmd
+      case r: Unreachable => BAssume(FalseBLiteral)
     }
 
   }
@@ -209,6 +210,6 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
     }
 
     val decls: List[BDeclaration] = statevars.toList ++ variables ++ nfunDefs ++ specFuncs ++ axioms ++ procs
-    BProgram(decls, "why do we need filename")
+    BProgram(decls, "plainboogie")
   }
 }
