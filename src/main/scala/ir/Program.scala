@@ -1,10 +1,12 @@
 package ir
 
+import util.Logger
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{IterableOnceExtensionMethods, View, immutable, mutable}
 import boogie.*
 import analysis.BitVectorEval
 import util.intrusive_list.*
+import translating.serialiseIL
 
 class Program(var procedures: ArrayBuffer[Procedure],
               var mainProcedure: Procedure,
@@ -13,40 +15,10 @@ class Program(var procedures: ArrayBuffer[Procedure],
 
   val threads: ArrayBuffer[ProgramThread] = ArrayBuffer()
 
-  // This shouldn't be run before indirect calls are resolved
-  def stripUnreachableFunctions(depth: Int = Int.MaxValue): Unit = {
-    val procedureCalleeNames = procedures.map(f => f.name -> f.calls.map(_.name)).toMap
-
-    val toVisit: mutable.LinkedHashSet[(Int, String)] = mutable.LinkedHashSet((0, mainProcedure.name))
-    var reachableFound = true
-    val reachableNames = mutable.HashMap[String, Int]()
-    while (toVisit.nonEmpty) {
-      val next = toVisit.head
-      toVisit.remove(next)
-
-      if (next._1 <= depth) {
-
-        def addName(depth: Int, name: String): Unit = {
-          val oldDepth = reachableNames.getOrElse(name, Integer.MAX_VALUE)
-          reachableNames.put(next._2, if depth < oldDepth then depth else oldDepth)
-        }
-        addName(next._1, next._2)
-
-        val callees = procedureCalleeNames(next._2)
-
-        toVisit.addAll(callees.diff(reachableNames.keySet).map(c => (next._1 + 1, c)))
-        callees.foreach(c => addName(next._1 + 1, c))
-      }
-    }
-    procedures = procedures.filter(f => reachableNames.keySet.contains(f.name))
-
-    for (elem <- procedures.filter(c => c.calls.exists(s => !procedures.contains(s)))) {
-      // last layer is analysed only as specifications so we remove the body for anything that calls
-      // a function we have removed
-
-      elem.clearBlocks()
-    }
+  override def toString(): String = {
+    serialiseIL(this)
   }
+
 
   def setModifies(specModifies: Map[String, List[String]]): Unit = {
     val procToCalls: mutable.Map[Procedure, Set[Procedure]] = mutable.Map()
@@ -67,7 +39,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
       hasChanged = false
       for (p <- procedures) {
         val children = procToCalls(p)
-        val childrenModifies: mutable.Set[Global] = mutable.Set()
+        val childrenModifies: mutable.Set[Variable] = mutable.Set()
         for (c <- children) {
           childrenModifies.addAll(c.modifies)
         }
@@ -80,7 +52,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
   }
 
   // this is very crude but the simplest thing for now until we have a more sophisticated specification system that can relate to the IR instead of the Boogie
-  def nameToGlobal(name: String): Global = {
+  def nameToGlobal(name: String): Variable = {
     if ((name.startsWith("R") || name.startsWith("V")) && (name.length == 2 || name.length == 3)
       && name.substring(1).forall(_.isDigit)) {
       if (name.startsWith("R")) {
@@ -141,7 +113,7 @@ class Program(var procedures: ArrayBuffer[Procedure],
 
       stack.pushAll(n match {
         case p: Procedure => p.blocks
-        case b: Block => Seq() ++ b.statements ++ Seq(b.jump) ++ b.fallthrough.toSet
+        case b: Block => Seq() ++ b.statements.toSeq ++ Seq(b.jump)
         case s: Command => Seq()
       })
       n
@@ -166,14 +138,49 @@ class ProgramThread(val entry: Procedure,
 
 }
 
+object Procedure {
+  def stub(name: String) = Procedure(name, None, None, None, Seq(), Seq(), Map.empty, Map.empty)
+}
+
+
+sealed trait PureFunction {
+  def name: String
+  def formalParams: List[(String, IRType)] 
+  def returnType: IRType
+
+  def call(actualParams: List[Expr]) = {
+    val typecomparison = actualParams.map(_.getType).zip(formalParams.map(_._2))
+    if (!typecomparison.foldLeft(true)((c,r) => c && (r._1 == r._2))) {
+      throw Exception(s"Type mismatch on function call.$typecomparison $actualParams")
+    }
+    FApply(name, actualParams, returnType)
+  }
+}
+
+case class UninterpretedFun(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), None)
+}
+
+case class BoogieFunction(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType, body: BExpr) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), Some(body))
+}
+
+case class IRFunction(override val name: String, override val formalParams: List[(String, IRType)], override val returnType: IRType, body: Expr) extends PureFunction {
+  def toBoogie = BFunction(name, formalParams.map((n, t) => BParam(n, t.toBoogie)), BParam(returnType.toBoogie), Some(body.toBoogie))
+}
+
+
 class Procedure private (
                   var name: String,
                   var address: Option[Int],
                   private var _entryBlock: Option[Block],
                   private var _returnBlock: Option[Block],
                   private val _blocks: mutable.LinkedHashSet[Block],
-                  var in: ArrayBuffer[Parameter],
-                  var out: ArrayBuffer[Parameter],
+                  var formalParameters: ArrayBuffer[LocalVar],
+                  /* defines a (potentially partial) set of parameter bindings that are invariant under call-site */
+                  var bindingsIn: mutable.Map[LocalVar, Expr],  // invariant: keys(invariantParameterBindings) <= formalParameters 
+                  /* defines a (potentially partial) set of out-parameter bindings that are invariant under call-site (an atomic set of stores) */
+                  var bindingsOut: mutable.Map[Variable, Expr],
                 ) {
   private val _callers = mutable.HashSet[DirectCall]()
   _blocks.foreach(_.parent = this)
@@ -181,12 +188,13 @@ class Procedure private (
   require(_returnBlock.forall(b => _blocks.contains(b)) && _entryBlock.forall(b => _blocks.contains(b)))
   require(_blocks.isEmpty == _entryBlock.isEmpty) // blocks.nonEmpty <==> entryBlock.isDefined
 
-  def this(name: String, address: Option[Int] = None, entryBlock: Option[Block] = None, returnBlock: Option[Block] = None, blocks: Iterable[Block] = ArrayBuffer(), in: IterableOnce[Parameter] = ArrayBuffer(), out: IterableOnce[Parameter] = ArrayBuffer()) = {
-    this(name, address, entryBlock, returnBlock, mutable.LinkedHashSet.from(blocks), ArrayBuffer.from(in), ArrayBuffer.from(out))
+  def this(name: String, address: Option[Int] = None, entryBlock: Option[Block] = None, returnBlock: Option[Block] = None, 
+    blocks: Iterable[Block] = ArrayBuffer(), formalParameters: IterableOnce[LocalVar] = ArrayBuffer(), bindingsIn: Map[LocalVar, Expr] = Map.empty, bindingsOut: Map[Variable, Expr] = Map.empty) = {
+    this(name, address, entryBlock, returnBlock, mutable.LinkedHashSet.from(blocks), ArrayBuffer.from(formalParameters), mutable.Map.from(bindingsIn), mutable.Map.from(bindingsOut))
   }
 
   override def toString: String = {
-    s"Procedure $name at ${address.getOrElse("None")} with ${blocks.size} blocks and ${in.size} in and ${out.size} out parameters"
+    s"Procedure $name at ${address.getOrElse("None")} with ${blocks.size} blocks and ${formalParameters.size} in and ${bindingsOut.size} out parameters"
   }
 
   def calls: Set[Procedure] = blocks.iterator.flatMap(_.calls).toSet
@@ -209,7 +217,7 @@ class Procedure private (
 
   def returnBlock_=(value: Block): Unit = {
     if (!returnBlock.contains(value)) {
-      removeBlocks(_returnBlock)
+      _returnBlock.foreach(removeBlocks(_))
       _returnBlock = Some(addBlocks(value))
     }
   }
@@ -218,19 +226,15 @@ class Procedure private (
 
   def entryBlock_=(value: Block): Unit = {
     if (!entryBlock.contains(value)) {
-      removeBlocks(_entryBlock)
+      _entryBlock.foreach(removeBlocks(_))
       _entryBlock = Some(addBlocks(value))
     }
   }
 
   def addBlocks(block: Block): Block = {
-    block.parent = this
     if (!_blocks.contains(block)) {
       block.parent = this
       _blocks.add(block)
-      if (entryBlock.isEmpty) {
-        entryBlock = block
-      }
     }
     block
   }
@@ -289,30 +293,6 @@ class Procedure private (
     block
   }
 
-  /**
-   * Remove blocks with the semantics of replacing them with a noop. The incoming jumps to this are replaced
-   * with a jump(s) to this blocks jump target(s). If this block ends in a call then only its statements are removed.
-   * @param blocks the block/blocks to remove
-   */
-  def removeBlocksInline(blocks: Iterable[Block]): Unit = {
-    for (elem <- blocks) {
-      elem.jump match {
-        case g: GoTo =>
-          // rewrite all the jumps to include our jump targets
-          elem.incomingJumps.foreach(_.removeTarget(elem))
-          elem.incomingJumps.foreach(_.addAllTargets(g.targets))
-          removeBlocks(elem)
-        case c: Call =>
-          // just remove statements, keep call
-          elem.statements.clear()
-      }
-    }
-  }
-
-
-  def removeBlocksInline(blocks: Block*): Unit = {
-    removeBlocksInline(blocks.toSeq)
-  }
 
   /**
    * Remove block(s) and all jumps that target it
@@ -340,13 +320,14 @@ class Procedure private (
 
   def clearBlocks(): Unit = {
     // O(n) because we are careful to unlink the parents etc.
-    removeBlocks(_blocks)
+    // .toList to avoid modifying our own iterator
+    removeBlocksDisconnect(_blocks.toList)
   }
 
   def callers(): Iterable[Procedure] = _callers.map(_.parent.parent).toSet[Procedure]
   def incomingCalls(): Iterator[DirectCall] = _callers.iterator
 
-  var modifies: mutable.Set[Global] = mutable.Set()
+  var modifies: mutable.Set[Variable] = mutable.Set()
 
   def reachableFrom: Set[Procedure] = {
     val reachable = mutable.Set[Procedure](this)
@@ -367,20 +348,12 @@ class Procedure private (
   }
 }
 
-class Parameter(var name: String, var size: Int, var value: Register) {
-  def toBoogie: BVariable = BParam(name, BitVecBType(size))
-  def toGamma: BVariable = BParam(s"Gamma_$name", BoolBType)
-}
-
-
-
 class Block private (
  val label: String,
  val address: Option[Int],
  val statements: IntrusiveList[Statement],
  private var _jump: Jump,
  private val _incomingJumps: mutable.HashSet[GoTo],
- var _fallthrough: Option[GoTo],
 ) extends HasParent[Procedure] {
   _jump.setParent(this)
   statements.foreach(_.setParent(this))
@@ -389,22 +362,13 @@ class Block private (
   statements.onRemove = x => x.deParent()
 
   def this(label: String, address: Option[Int] = None, statements: IterableOnce[Statement] = Set.empty, jump: Jump = GoTo(Set.empty)) = {
-    this(label, address, IntrusiveList().addAll(statements), jump, mutable.HashSet.empty, None)
+    this(label, address, IntrusiveList().addAll(statements), jump, mutable.HashSet.empty)
   }
+
+  def isReturn: Boolean = parent.returnBlock.contains(this)
+  def isEntry: Boolean = parent.entryBlock.contains(this)
 
   def jump: Jump = _jump
-
-  def fallthrough: Option[GoTo] = _fallthrough
-
-  def fallthrough_=(g: Option[GoTo]): Unit = {
-    /*
-     * Fallthrough is only set if Jump is a call, this is maintained maintained at the 
-     * linkParent implementation on FallThrough of Call.
-     */
-    _fallthrough.foreach(_.deParent())
-    g.foreach(x => x.parent = this)
-    _fallthrough = g
-  }
 
   private def jump_=(j: Jump): Unit = {
     require(!j.hasParent)
@@ -434,9 +398,11 @@ class Block private (
     assert(!incomingJumps.contains(g))
   }
 
-  def calls: Set[Procedure] = _jump.calls
+  def calls: Set[Procedure] = statements.toSet.collect {
+    case d: DirectCall => d.target
+  }
 
-  def modifies: Set[Global] = statements.flatMap(_.modifies).toSet
+  def modifies: Set[Variable] = statements.flatMap(_.modifies).toSet
   //def locals: Set[Variable] = statements.flatMap(_.locals).toSet ++ jumps.flatMap(_.locals).toSet
 
   def calledBy: Set[Block] = {
@@ -454,10 +420,7 @@ class Block private (
   def nextBlocks: Iterable[Block] = {
     jump match {
       case c: GoTo => c.targets
-      case c: Call => fallthrough match {
-        case Some(x) => x.targets
-        case _ => Seq()
-      }
+      case _ => Seq()
     }
   }
 
@@ -504,7 +467,7 @@ class Block private (
 
 object Block {
   def procedureReturn(from: Procedure): Block = {
-    Block(from.name + "_basil_return", None, List(), IndirectCall(Register("R30", 64)))
+    Block(from.name + "_basil_return", None, List(), Return())
   }
 }
 

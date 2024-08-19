@@ -90,22 +90,27 @@ case class BVRepeat(repeats: Int, body: BExpr) extends BExpr {
 
   private def bodySize: Int = body.getType match {
     case bv: BitVecBType => bv.size
-    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of extract: " + this)
+    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of repeat" )
   }
-  private def fnName: String = s"repeat${repeats}_$bodySize"
 
-  override def toString: String = s"$fnName($body)"
+  def thisFunOp = RepeatBits(repeats, bodySize, BParam(BitVecBType(bodySize)), BParam(getType))
+
+  private def fnName: String = thisFunOp.name
+
+
+  override def toString: String = {
+    s"${fnName}($body)"
+  }
 
   override def serialiseBoogie(w: Writer): Unit = {
-    w.append(fnName)
-    w.append("(")
+    w.write(fnName) 
+    w.write("(")
     body.serialiseBoogie(w)
-    w.append(")")
+    w.write(")")
   }
 
   override def functionOps: Set[FunctionOp] = {
-    val thisFn = BVFunctionOp(fnName, s"repeat $repeats", List(BParam(BitVecBType(bodySize))), BParam(getType))
-    body.functionOps + thisFn
+    body.functionOps + thisFunOp
   }
   override def locals: Set[BVar] = body.locals
   override def globals: Set[BVar] = body.globals
@@ -270,6 +275,8 @@ case class BFunctionCall(name: String, args: List[BExpr], outType: BType, uninte
 
 case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
   override def getType: BType = (op, arg.getType) match {
+    case (BoolToBV1, _)               => BitVecBType(1)
+    case (BV1ToBool, _)                => BoolBType
     case (_: BoolUnOp, BoolBType)     => BoolBType
     case (_: BVUnOp, bv: BitVecBType) => bv
     case (_: IntUnOp, IntBType)       => IntBType
@@ -282,6 +289,8 @@ case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
   }
 
   override def toString: String = op match {
+    case BoolToBV1 => s"${BoolToBV1}($arg)"
+    case BV1ToBool => s"${BV1ToBool}($arg)"
     case uOp: BoolUnOp => s"($uOp$arg)"
     case uOp: BVUnOp   => s"bv$uOp$inSize($arg)"
     case uOp: IntUnOp  => s"($uOp$arg)"
@@ -289,6 +298,8 @@ case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
 
   override def functionOps: Set[FunctionOp] = {
     val thisFn = op match {
+      case BoolToBV1 => Set(BoolToBV(BParam(arg.getType), BParam(getType)))
+      case BV1ToBool => Set(BVToBool(BParam(arg.getType), BParam(getType)))
       case b: BVUnOp =>
         Set(BVFunctionOp(s"bv$b$inSize", s"bv$b", List(BParam(arg.getType)), BParam(getType)))
       case _ => Set()
@@ -526,7 +537,7 @@ case class IfThenElse(guard: BExpr, thenExpr: BExpr, elseExpr: BExpr) extends BE
   override def loads: Set[BExpr] = guard.loads ++ thenExpr.loads ++ elseExpr.loads
 }
 
-trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends BExpr {
+trait QuantifierBExpr(sort: QuantifierSort, bound: List[BVar], body: BExpr) extends BExpr {
   override def toString: String = {
     val boundString = bound.map(_.withType).mkString(", ")
     s"($sort $boundString :: ($body))"
@@ -540,17 +551,11 @@ trait QuantifierExpr(sort: Quantifier, bound: List[BVar], body: BExpr) extends B
   override def loads: Set[BExpr] = body.loads
 }
 
-enum Quantifier {
-  case forall
-  case exists
-  case lambda
-}
+case class ForAll(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.forall, bound, body)
 
-case class ForAll(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.forall, bound, body)
+case class Exists(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.exists, bound, body)
 
-case class Exists(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.exists, bound, body)
-
-case class Lambda(bound: List[BVar], body: BExpr) extends QuantifierExpr(Quantifier.lambda, bound, body)
+case class Lambda(bound: List[BVar], body: BExpr) extends QuantifierBExpr(QuantifierSort.lambda, bound, body)
 
 case class Old(body: BExpr) extends BExpr {
   override def toString: String = s"old($body)"
@@ -588,19 +593,33 @@ case class MapUpdate(map: BExpr, index: BExpr, value: BExpr) extends BExpr {
 
 sealed trait FunctionOp
 
+case class RepeatBits(repeats: Int, argsize: Int, in: BVar, out: BVar) extends FunctionOp {
+  val name = s"repeat_bits_${repeats}_${argsize}"
+}
+
+case class BVToBool(in: BVar, out: BVar) extends FunctionOp {
+  val name = "bv2bool"
+}
+case class BoolToBV(in: BVar, out: BVar) extends FunctionOp {
+  val name = "bool2bv"
+}
+
 case class BVFunctionOp(name: String, bvbuiltin: String, in: List[BVar], out: BVar) extends FunctionOp {
   def attribute: BAttribute = BAttribute("bvbuiltin", Some(s"\"$bvbuiltin\""))
 }
 
 case class MemoryLoadOp(addressSize: Int, valueSize: Int, endian: Endian, bits: Int) extends FunctionOp {
+  require(bits >= valueSize)
   val accesses: Int = bits / valueSize
+  assert(accesses > 0)
 
   val fnName: String = endian match {
-    case Endian.LittleEndian => s"memory_load${bits}_le"
-    case Endian.BigEndian    => s"memory_load${bits}_be"
+    case Endian.LittleEndian => s"memory_load${bits}_${addressSize}_${valueSize}_le"
+    case Endian.BigEndian    => s"memory_load${bits}_${addressSize}_${valueSize}_be"
   }
 }
 case class MemoryStoreOp(addressSize: Int, valueSize: Int, endian: Endian, bits: Int) extends FunctionOp {
+  require(bits >= valueSize)
   val accesses: Int = bits / valueSize
 
   val fnName: String = endian match {
@@ -681,12 +700,11 @@ case class BInBounds(base: BExpr, len: BExpr, endian: Endian, i: BExpr) extends 
 }
 
 case class BMemoryLoad(memory: BMapVar, index: BExpr, endian: Endian, bits: Int) extends BExpr {
-  override def toString: String = s"$fnName($memory, $index)"
 
-  val fnName: String = endian match {
-    case Endian.LittleEndian => s"memory_load${bits}_le"
-    case Endian.BigEndian    => s"memory_load${bits}_be"
-  }
+  //val fnName: String = endian match {
+  //  case Endian.LittleEndian => s"memory_load${bits}_le"
+  //  case Endian.BigEndian    => s"memory_load${bits}_be"
+  //}
 
   val addressSize: Int = memory.getType.param match {
     case b: BitVecBType => b.size
@@ -698,15 +716,19 @@ case class BMemoryLoad(memory: BMapVar, index: BExpr, endian: Endian, bits: Int)
     case _              => throw new Exception(s"MemoryLoad does not have Bitvector type: $this")
   }
 
+  def thisFunOp = MemoryLoadOp(addressSize, valueSize, endian, bits) 
+  override def toString: String = s"${thisFunOp.fnName}($memory, $index)"
+
   override val getType: BType = BitVecBType(bits)
   override def functionOps: Set[FunctionOp] =
-    memory.functionOps ++ index.functionOps + MemoryLoadOp(addressSize, valueSize, endian, bits)
+    memory.functionOps ++ index.functionOps + thisFunOp
   override def locals: Set[BVar] = memory.locals ++ index.locals
   override def globals: Set[BVar] = index.globals ++ memory.globals
   override def loads: Set[BExpr] = Set(this) ++ index.loads
 }
 
 case class BMemoryStore(memory: BMapVar, index: BExpr, value: BExpr, endian: Endian, bits: Int) extends BExpr {
+
   override def toString: String = s"$fnName($memory, $index, $value)"
 
   val fnName: String = endian match {
@@ -723,6 +745,9 @@ case class BMemoryStore(memory: BMapVar, index: BExpr, value: BExpr, endian: End
     case b: BitVecBType => b.size
     case _              => throw new Exception(s"MemoryStore does not have Bitvector type: $this")
   }
+
+
+  assert(bits >= valueSize)
 
   override val getType: BType = memory.getType
   override def functionOps: Set[FunctionOp] =
@@ -765,6 +790,9 @@ case class GammaStore(gammaMap: BMapVar, index: BExpr, value: BExpr, bits: Int, 
     case _              => throw new Exception(s"GammaStore does not have Bitvector type: $this")
   }
 
+  if (accesses == 0) {
+    throw Exception(s"GammaStore $gammaMap $index $value $bits $accesses") 
+  }
   val valueSize: Int = bits / accesses
 
   override val getType: BType = gammaMap.getType

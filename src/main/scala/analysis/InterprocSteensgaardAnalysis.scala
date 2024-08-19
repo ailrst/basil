@@ -39,7 +39,7 @@ case class RegisterWrapperEqualSets(variable: Variable, assigns: Set[Assign]) {
 class InterprocSteensgaardAnalysis(
       program: Program,
       constantProp: Map[CFGPosition, Map[RegisterWrapperEqualSets, Set[BitVecLiteral]]],
-      regionAccesses: Map[CfgNode, Map[RegisterVariableWrapper, FlatElement[Expr]]],
+      regionAccesses: Map[CFGPosition, Map[RegisterVariableWrapper, FlatElement[Expr]]],
       mmm: MemoryModelMap,
       reachingDefs: Map[CFGPosition, (Map[Variable, Set[Assign]], Map[Variable, Set[Assign]])],
       globalOffsets: Map[BigInt, BigInt]) extends Analysis[Any] {
@@ -190,17 +190,9 @@ class InterprocSteensgaardAnalysis(
     expr match { // TODO: Stack detection here should be done in a better way or just merged with data
       case binOp: BinaryExpr if binOp.arg1 == stackPointer =>
         evaluateExpressionWithSSA(binOp.arg2, constantProp(n), n, reachingDefs).foreach { b =>
-          if binOp.arg2.variables.exists { v => v.sharedVariable } then {
-            Logger.debug("Shared stack object: " + b)
-            Logger.debug("Shared in: " + expr)
-            val regions = mmm.findSharedStackObject(b.value)
-            Logger.debug("found: " + regions)
-            res ++= regions
-          } else {
-            val region = mmm.findStackObject(b.value)
-            if (region.isDefined) {
-              res = res + region.get
-            }
+          val region = mmm.findStackObject(b.value)
+          if (region.isDefined) {
+            res = res + region.get
           }
         }
         res

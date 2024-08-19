@@ -1,5 +1,6 @@
 package ir.cilvisitor
 
+import util.Logger
 import ir.*
 import scala.collection.mutable.ArrayBuffer
 
@@ -16,11 +17,10 @@ case class ChangeTo[T](e: T) extends VisitAction[T]
 // changes to e, then visits children of e, then applies f to the result
 case class ChangeDoChildrenPost[T](e: T, f: T => T) extends VisitAction[T]
 
-
 trait CILVisitor:
   def vprog(e: Program): VisitAction[Program] = DoChildren()
   def vproc(e: Procedure): VisitAction[List[Procedure]] = DoChildren()
-  def vparams(e: ArrayBuffer[Parameter]): VisitAction[ArrayBuffer[Parameter]] = DoChildren()
+  def vparams(e: Iterable[LocalVar]): VisitAction[Iterable[LocalVar]] = DoChildren()
   def vblock(e: Block): VisitAction[Block] = DoChildren()
 
   def vstmt(e: Statement): VisitAction[List[Statement]] = DoChildren()
@@ -31,9 +31,8 @@ trait CILVisitor:
   def vvar(e: Variable): VisitAction[Variable] = DoChildren()
   def vmem(e: Memory): VisitAction[Memory] = DoChildren()
 
-  def enter_scope(params: ArrayBuffer[Parameter]): Unit = ()
-  def leave_scope(outparam: ArrayBuffer[Parameter]): Unit = ()
-
+  def enter_scope(params: Iterable[Variable]): Unit = ()
+  def leave_scope(params: Iterable[Variable]): Unit = ()
 
 def doVisitList[T](v: CILVisitor, a: VisitAction[List[T]], n: T, continue: (T) => T): List[T] = {
   a match {
@@ -55,7 +54,7 @@ def doVisit[T](v: CILVisitor, a: VisitAction[T], n: T, continue: (T) => T): T = 
 
 class CILVisitorImpl(val v: CILVisitor) {
 
-  def visit_parameters(p: ArrayBuffer[Parameter]): ArrayBuffer[Parameter] = {
+  def visit_parameters(p: Iterable[LocalVar]): Iterable[LocalVar] = {
     doVisit(v, v.vparams(p), p, (n) => n)
   }
 
@@ -63,11 +62,9 @@ class CILVisitorImpl(val v: CILVisitor) {
     doVisit(v, v.vvar(n), n, (n) => n)
   }
 
-
   def visit_mem(n: Memory): Memory = {
     doVisit(v, v.vmem(n), n, (n) => n)
   }
-
 
   def visit_jump(j: Jump): Jump = {
     doVisit(v, v.vjump(j), j, (j) => j)
@@ -77,24 +74,77 @@ class CILVisitorImpl(val v: CILVisitor) {
     doVisit(v, v.vfallthrough(j), j, (j) => j)
   }
 
+  var depth = 0;
+  val debug = false
+
   def visit_expr(n: Expr): Expr = {
+    if debug then Logger.info( (" " * depth ) + s" visit $n")
     def continue(n: Expr): Expr = n match {
-      case n: Literal                           => n
-      case MemoryLoad(mem, index, endian, size) => MemoryLoad(visit_mem(mem), visit_expr(index), endian, size)
-      case Extract(end, start, arg)             => Extract(end, start, visit_expr(arg))
-      case Repeat(repeats, arg)                 => Repeat(repeats, visit_expr(arg))
-      case ZeroExtend(bits, arg)                => ZeroExtend(bits, visit_expr(arg))
-      case SignExtend(bits, arg)                => SignExtend(bits, visit_expr(arg))
-      case BinaryExpr(op, arg, arg2)            => BinaryExpr(op, visit_expr(arg), visit_expr(arg2))
-      case UnaryExpr(op, arg)                   => UnaryExpr(op, visit_expr(arg))
-      case v: Variable                          => visit_var(v)
-      case UninterpretedFunction(n, params, rt) => UninterpretedFunction(n, params.map(visit_expr), rt)
+      case n: Literal => n
+      case MemoryLoad(mem, index, endian, size) => {
+        val nmem = visit_mem(mem)
+        val nind = visit_expr(index)
+        if ((nmem ne mem) || (nind ne index)) MemoryLoad(visit_mem(mem), visit_expr(index), endian, size) else n
+      }
+      case Extract(end, start, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) Extract(end, start, narg) else n
+      }
+      case Repeat(repeats, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) Repeat(repeats, arg) else n
+      }
+      case ZeroExtend(bits, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) ZeroExtend(bits, narg) else n
+      }
+      case SignExtend(bits, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) SignExtend(bits, narg) else n
+      }
+      case BinaryExpr(op, arg, arg2) => {
+        val narg1 = visit_expr(arg)
+        val narg2 = visit_expr(arg2)
+        if ((narg1 ne arg) || (narg2 ne arg2)) BinaryExpr(op, narg1, narg2) else n
+      }
+      case UnaryExpr(op, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) UnaryExpr(op, narg) else n
+      }
+      case v: Variable => visit_var(v)
+      case FApply(name, params, rt, _) => {
+        val nparams = params.map(visit_expr)
+        val updated = (params.zip(nparams).map((a, b) => a ne b)).contains(true)
+        if (updated) FApply(name, nparams, rt) else n
+      }
+      case o: OldExpr => {
+        val b = visit_expr(o.body)
+        if (b ne o.body) then OldExpr(b) else o
+      }
+      case q: QuantifierExpr => {
+        val nb = visit_parameters(q.binds)
+        val ps = List.from(visit_parameters(q.binds))
+        val paramsUpdated = (ps.zip(q.binds).map((a, b) => a ne b)).contains(true)
+        v.enter_scope(q.binds)
+        val nbody = visit_expr(q.body)
+        val nq = if ((nbody ne q.body) || paramsUpdated) QuantifierExpr(q.kind, ps, q.guard, nbody) else n
+        v.leave_scope(q.binds)
+        nq
+      }
     }
-    doVisit(v, v.vexpr(n), n, continue)
+    depth += 1
+    val r = doVisit(v, v.vexpr(n), n, continue)
+    depth -= 1
+    r
   }
 
   def visit_stmt(s: Statement): List[Statement] = {
     def continue(n: Statement) = n match {
+      case d: DirectCall => d
+      case i: IndirectCall => {
+        i.target = visit_var(i.target)
+        i
+      }
       case m: MemoryAssign => {
         m.mem = visit_mem(m.mem)
         m.index = visit_expr(m.index)
@@ -116,7 +166,8 @@ class CILVisitorImpl(val v: CILVisitor) {
       }
       case n: NOP => n
     }
-    doVisitList(v, v.vstmt(s), s, continue)
+    val r = doVisitList(v, v.vstmt(s), s, continue)
+    r
   }
 
   def visit_block(b: Block): Block = {
@@ -126,12 +177,11 @@ class CILVisitorImpl(val v: CILVisitor) {
         r match {
           case Nil => b.statements.remove(s)
           case n :: tl =>
-            b.statements.replace(s, n)
-            b.statements.insertAllAfter(Some(n), tl)
+            val ns = b.statements.replace(s, n)
+            b.statements.insertAllAfter(Some(ns), tl)
         }
       })
       b.replaceJump(visit_jump(b.jump))
-      b.fallthrough = visit_fallthrough(b.fallthrough)
       b
     }
 
@@ -140,20 +190,21 @@ class CILVisitorImpl(val v: CILVisitor) {
 
   def visit_proc(p: Procedure): List[Procedure] = {
     def continue(p: Procedure) = {
-      p.in = visit_parameters(p.in)
-      v.enter_scope(p.in)
+      p.formalParameters = ArrayBuffer.from(visit_parameters(p.formalParameters))
+      p.bindingsIn = p.bindingsIn.map((k, vl) => visit_parameters(Seq(k)).head -> visit_expr(vl))
+      v.enter_scope(p.formalParameters)
       for (b <- p.blocks) {
         p.replaceBlock(b, visit_block(b))
       }
-      p.out = visit_parameters(p.out)
-      v.leave_scope(p.out)
+      p.bindingsOut = p.bindingsOut.map((k, vl) => visit_var(k) -> visit_expr(vl))
+      v.leave_scope(p.formalParameters)
       p
     }
 
     doVisitList(v, v.vproc(p), p, continue)
   }
 
-  def visit_proc(p: Program): Program = {
+  def visit_prog(p: Program): Program = {
     def continue(p: Program) = {
       p.procedures = p.procedures.flatMap(visit_proc)
       p
@@ -164,6 +215,7 @@ class CILVisitorImpl(val v: CILVisitor) {
 
 def visit_block(v: CILVisitor, b: Block): Block = CILVisitorImpl(v).visit_block(b)
 def visit_proc(v: CILVisitor, b: Procedure): List[Procedure] = CILVisitorImpl(v).visit_proc(b)
+def visit_prog(v: CILVisitor, b: Program): Program = CILVisitorImpl(v).visit_prog(b)
 def visit_stmt(v: CILVisitor, e: Statement): List[Statement] = CILVisitorImpl(v).visit_stmt(e)
 def visit_jump(v: CILVisitor, e: Jump): Jump = CILVisitorImpl(v).visit_jump(e)
 def visit_expr(v: CILVisitor, e: Expr): Expr = CILVisitorImpl(v).visit_expr(e)

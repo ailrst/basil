@@ -46,10 +46,11 @@ case class BAPBlock(label: String, address: Option[Int], statements: List[BAPSta
 }
 
 case class BAPParameter(name: String, size: Int, value: BAPVar) {
-  def toIR: Parameter = {
+  def toIR: (LocalVar, Expr) = {
     val register = value.toIR
     register match {
-      case r: Register => Parameter(name, size, r)
+      case Register(rn, sz) if sz > size => (LocalVar(name, BitVecType(size)), Extract(size, 0, register))
+      case r: Register => (LocalVar(name, BitVecType(size)), register)
       case _           => throw Exception(s"subroutine parameter $this refers to non-register variable $value")
     }
 

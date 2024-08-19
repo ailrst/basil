@@ -19,15 +19,18 @@ sealed trait Command extends HasParent[Block] {
 }
 
 sealed trait Statement extends Command, IntrusiveListElement[Statement] {
-  def modifies: Set[Global] = Set()
+  def modifies: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Statement = throw new Exception(
     "visitor " + visitor + " unimplemented for: " + this
   )
+
+  def successor: Command = parent.statements.nextOption(this).getOrElse(parent.jump)
+
 }
 
 // invariant: rhs contains at most one MemoryLoad
 class Assign(var lhs: Variable, var rhs: Expr, override val label: Option[String] = None) extends Statement {
-  override def modifies: Set[Global] = lhs match {
+  override def modifies: Set[Variable] = lhs match {
     case r: Register => Set(r)
     case _           => Set()
   }
@@ -38,9 +41,20 @@ class Assign(var lhs: Variable, var rhs: Expr, override val label: Option[String
 object Assign:
   def unapply(l: Assign): Option[(Variable, Expr, Option[String])] = Some(l.lhs, l.rhs, l.label)
 
+
+//class Store(var lhs: RefVariable, var rhs: Expr, override val label: Option[String] = None)  extends Statement {
+//  override def modifies: Set[Variable] = Set(lhs)
+//  override def toString: String = s"[$lhs] := $rhs"
+//}
+//
+//class Load(var lhs: ValueVariable, var rhs: RefVariable, override val label: Option[String] = None)  extends Statement {
+//}
+
+
 // invariant: index and value do not contain MemoryLoads
 class MemoryAssign(var mem: Memory, var index: Expr, var value: Expr, var endian: Endian, var size: Int, override val label: Option[String] = None) extends Statement {
-  override def modifies: Set[Global] = Set(mem)
+  require(size >= mem.valueSize)
+  override def modifies: Set[Variable] = Set(mem)
   override def toString: String = s"$labelStr$mem[$index] := MemoryStore($value, $endian, $size)"
   override def acceptVisit(visitor: Visitor): Statement = visitor.visitMemoryAssign(this)
 }
@@ -74,11 +88,20 @@ object Assume:
   def unapply(a: Assume): Option[(Expr, Option[String], Option[String], Boolean)] = Some(a.body, a.comment, a.label, a.checkSecurity)
 
 sealed trait Jump extends Command {
-  def modifies: Set[Global] = Set()
+  def modifies: Set[Variable] = Set()
   //def locals: Set[Variable] = Set()
-  def calls: Set[Procedure] = Set()
   def acceptVisit(visitor: Visitor): Jump = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 }
+
+class Unreachable(override val label: Option[String] = None) extends Jump {
+  /* Terminate / No successors / assume false */
+  override def acceptVisit(visitor: Visitor): Jump = this
+}
+
+class Return(override val label: Option[String] = None) extends Jump {
+  override def acceptVisit(visitor: Visitor): Jump = this
+}
+
 
 class GoTo private (private val _targets: mutable.LinkedHashSet[Block], override val label: Option[String]) extends Jump {
 
@@ -125,30 +148,23 @@ object GoTo:
   def unapply(g: GoTo): Option[(Set[Block], Option[String])] = Some(g.targets, g.label)
 
 
-sealed trait Call extends Jump {
-  val returnTarget: Option[Block]
-
-  // moving a call between blocks
-  override def linkParent(p: Block): Unit = {
-    returnTarget.foreach(t => parent.fallthrough = Some(GoTo(Set(t))))
-  }
-
-  override def unlinkParent(): Unit = {
-    parent.fallthrough = None
+sealed trait Call extends Statement {
+  def returnTarget: Option[Command] = successor match {
+    case h: Unreachable => None
+    case o => Some(o)
   }
 }
 
 class DirectCall(val target: Procedure,
-                 override val returnTarget: Option[Block] = None,
                  override val label: Option[String] = None
                 ) extends Call {
   /* override def locals: Set[Variable] = condition match {
     case Some(c) => c.locals
     case None => Set()
   } */
-  override def calls: Set[Procedure] = Set(target)
-  override def toString: String = s"${labelStr}DirectCall(${target.name}, ${returnTarget.map(_.label)})"
-  override def acceptVisit(visitor: Visitor): Jump = visitor.visitDirectCall(this)
+  def calls: Set[Procedure] = Set(target)
+  override def toString: String = s"${labelStr}DirectCall(${target.name})"
+  override def acceptVisit(visitor: Visitor): Statement = visitor.visitDirectCall(this)
 
   override def linkParent(p: Block): Unit = {
     super.linkParent(p)
@@ -163,19 +179,18 @@ class DirectCall(val target: Procedure,
 }
 
 object DirectCall:
-  def unapply(i: DirectCall): Option[(Procedure, Option[Block], Option[String])] = Some(i.target, i.returnTarget, i.label)
+  def unapply(i: DirectCall): Option[(Procedure, Option[String])] = Some(i.target, i.label)
 
 class IndirectCall(var target: Variable,
-                   override val returnTarget: Option[Block] = None,
                    override val label: Option[String] = None
                   ) extends Call {
   /* override def locals: Set[Variable] = condition match {
     case Some(c) => c.locals + target
     case None => Set(target)
   } */
-  override def toString: String = s"${labelStr}IndirectCall($target, ${returnTarget.map(_.label)})"
-  override def acceptVisit(visitor: Visitor): Jump = visitor.visitIndirectCall(this)
+  override def toString: String = s"${labelStr}IndirectCall($target)"
+  override def acceptVisit(visitor: Visitor): Statement = visitor.visitIndirectCall(this)
 }
 
 object IndirectCall:
-  def unapply(i: IndirectCall): Option[(Variable, Option[Block], Option[String])] = Some(i.target, i.returnTarget, i.label)
+  def unapply(i: IndirectCall): Option[(Variable, Option[String])] = Some(i.target, i.label)

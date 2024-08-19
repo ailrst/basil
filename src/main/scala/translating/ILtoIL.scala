@@ -33,7 +33,7 @@ private class ILSerialiser extends ReadOnlyVisitor {
   override def visitStatement(node: Statement): Statement = node.acceptVisit(this)
 
   override def visitAssign(node: Assign): Statement = {
-    program ++= "LocalAssign("
+    program ++= "Assign("
     visitVariable(node.lhs)
     program ++= " := "
     visitExpr(node.rhs)
@@ -61,7 +61,12 @@ private class ILSerialiser extends ReadOnlyVisitor {
   }
 
   override def visitJump(node: Jump): Jump = {
-    node.acceptVisit(this)
+    node match {
+      case j: GoTo => program ++= s"goTo(${j.targets.map(_.label).mkString(", ")})" 
+      case h: Unreachable => program ++= "halt"
+      case h: Return => program ++= "return"
+    }
+
     node
   }
 
@@ -74,15 +79,14 @@ private class ILSerialiser extends ReadOnlyVisitor {
   }
 
 
-  override def visitDirectCall(node: DirectCall): Jump = {
+  override def visitDirectCall(node: DirectCall): Statement = {
     program ++= "DirectCall("
     program ++= procedureIdentifier(node.target)
-    program ++= ", "
     program ++= ")" // DirectCall
     node
   }
 
-  override def visitIndirectCall(node: IndirectCall): Jump = {
+  override def visitIndirectCall(node: IndirectCall): Statement = {
     program ++= "IndirectCall("
     visitVariable(node.target)
     program ++= ", "
@@ -95,7 +99,10 @@ private class ILSerialiser extends ReadOnlyVisitor {
     program ++= "Block(" + blockIdentifier(node) + ",\n"
     indentLevel += 1
     program ++= getIndent()
-    program ++= "statements(\n"
+    program ++= "statements("
+    if (node.statements.size > 0) {
+      program ++= "\n"
+    }
     indentLevel += 1
 
     for (s <- node.statements) {
@@ -105,8 +112,7 @@ private class ILSerialiser extends ReadOnlyVisitor {
     }
     indentLevel -= 1
     program ++= getIndent() + "),\n"
-    program ++= getIndent() + "jumps(\n"
-    program ++= getIndent()
+    program ++= getIndent() + "jump("
     visitJump(node.jump)
     program ++= ")\n"
     indentLevel -= 1
@@ -120,18 +126,30 @@ private class ILSerialiser extends ReadOnlyVisitor {
     indentLevel += 1
 
     program ++= "in("
-    for (i <- node.in.indices) {
-      visitParameter(node.in(i))
-      if (i != node.in.size - 1) {
+    for (i <- node.formalParameters.indices) {
+      visitLocalVar(node.formalParameters(i))
+
+      node.bindingsIn.get(node.formalParameters(i)) match {
+        case Some(x) => {
+          program ++= " := "
+          visitExpr(x)
+        }
+        case None => ()
+      }
+      if (i != node.formalParameters.size - 1) {
         program ++= ", "
       }
     }
     program ++= "), "
     program ++= "out("
-    for (i <- node.out.indices) {
-      visitParameter(node.out(i))
-      if (i != node.out.size - 1)
+    var i = 0
+    for ((v,vl) <- node.bindingsOut) {
+      visitVariable(v)
+      program ++= " := " 
+      visitExpr(vl)
+      if (i != (node.bindingsOut.size - 1))
         program ++= ", "
+      i += 1
     }
     program ++= "), "
     program ++= "blocks(\n"
@@ -143,9 +161,9 @@ private class ILSerialiser extends ReadOnlyVisitor {
     node
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
+  override def visitParameter(node: LocalVar): LocalVar = {
     program ++= "Parameter("
-    visitRegister(node.value)
+    visitLocalVar(node)
     program ++= ")"
     node
   }
@@ -244,6 +262,11 @@ private class ILSerialiser extends ReadOnlyVisitor {
 
 }
 
+def serialiseIL(p: Procedure): String = {
+  val s = ILSerialiser()
+  s.visitProcedure(p)
+  s.program.toString()
+}
 def serialiseIL(p: Program): String = {
   val s = ILSerialiser()
   s.visitProgram(p)

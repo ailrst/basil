@@ -35,15 +35,20 @@ abstract class Visitor {
 
   def visitJump(node: Jump): Jump = node.acceptVisit(this)
 
+
+  def visitReturn(node: Return): Jump = {
+    node
+  }
+
   def visitGoTo(node: GoTo): Jump = {
     node
   }
 
-  def visitDirectCall(node: DirectCall): Jump = {
+  def visitDirectCall(node: DirectCall): Statement = {
     node
   }
 
-  def visitIndirectCall(node: IndirectCall): Jump = {
+  def visitIndirectCall(node: IndirectCall): Statement = {
     node.target = visitVariable(node.target)
     node
   }
@@ -60,18 +65,27 @@ abstract class Visitor {
     for (b <- node.blocks) {
       node.replaceBlock(b, visitBlock(b))
     }
-    for (i <- node.in.indices) {
-      node.in(i) = visitParameter(node.in(i))
+    for (i <- node.formalParameters.indices) {
+      node.formalParameters(i) = visitParameter(node.formalParameters(i))
     }
-    for (i <- node.out.indices) {
-      node.out(i) = visitParameter(node.out(i))
+
+    for ((i, v) <- node.bindingsIn) {
+      val k = visitParameter(i)
+      if (i != k) {
+        node.bindingsIn.remove(i)
+      }
+      node.bindingsIn(i) = visitExpr(v)
     }
+
+    for ((i, v) <- node.bindingsOut) {
+      node.bindingsOut(i) = visitExpr(v)
+    }
+
     node
   }
 
-  def visitParameter(node: Parameter): Parameter = {
-    node.value = visitRegister(node.value)
-    node
+  def visitParameter(node: LocalVar): LocalVar = {
+    visitLocalVar(node)
   }
 
   def visitProgram(node: Program): Program = {
@@ -122,13 +136,21 @@ abstract class Visitor {
 
   def visitVariable(node: Variable): Variable = node.acceptVisit(this)
 
+  def visitValueVariable(node: ValueVariable): ValueVariable = node.acceptVisit(this)
+
+  def visitRefVariable(node: RefVariable): RefVariable = node.acceptVisit(this)
+
   def visitRegister(node: Register): Register = node
 
   def visitLocalVar(node: LocalVar): LocalVar = node
 
+  def visitGlobalVar(node: GlobalVar): GlobalVar = node
+
+  def visitGlobalConst(node: GlobalConst): GlobalConst = node
+
   def visitLiteral(node: Literal): Literal = node
 
-  def visitUninterpretedFunction(node: UninterpretedFunction): UninterpretedFunction = {
+  def visitFApply(node: FApply): FApply = {
     node.copy(params = node.params.map(visitExpr))
   }
 
@@ -199,12 +221,17 @@ abstract class ReadOnlyVisitor extends Visitor {
     node
   }
 
-  override def visitDirectCall(node: DirectCall): Jump = {
+  override def visitDirectCall(node: DirectCall): Statement = {
     node
   }
 
-  override def visitIndirectCall(node: IndirectCall): Jump = {
+  override def visitIndirectCall(node: IndirectCall): Statement = {
     visitVariable(node.target)
+    node
+  }
+
+
+  override def visitReturn(node: Return): Jump = {
     node
   }
 
@@ -220,18 +247,24 @@ abstract class ReadOnlyVisitor extends Visitor {
     for (i <- node.blocks) {
       visitBlock(i)
     }
-    for (i <- node.in) {
+
+    for (i <- node.formalParameters) {
       visitParameter(i)
     }
-    for (i <- node.out) {
+    for ((i,b) <- node.bindingsIn) {
       visitParameter(i)
+      visitExpr(b)
+    }
+
+    for ((i,b) <- node.bindingsOut) {
+      visitVariable(i)
+      visitExpr(b)
     }
     node
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
-    visitRegister(node.value)
-    node
+  override def visitParameter(node: LocalVar): LocalVar = {
+    visitLocalVar(node)
   }
 
   override def visitProgram(node: Program): Program = {
@@ -241,7 +274,7 @@ abstract class ReadOnlyVisitor extends Visitor {
     node
   }
 
-  override def visitUninterpretedFunction(node: UninterpretedFunction): UninterpretedFunction = {
+  override def visitFApply(node: FApply): FApply = {
     for (i <- node.params) {
       visitExpr(i)
     }
@@ -281,14 +314,16 @@ abstract class IntraproceduralControlFlowVisitor extends Visitor {
     node
   }
 
-  override def visitDirectCall(node: DirectCall): Jump = {
-    node.returnTarget.foreach(visitBlock)
+  override def visitDirectCall(node: DirectCall): Statement = {
     node
   }
 
-  override def visitIndirectCall(node: IndirectCall): Jump = {
+  override def visitIndirectCall(node: IndirectCall): Statement = {
     node.target = visitVariable(node.target)
-    node.returnTarget.foreach(visitBlock)
+    node
+  }
+
+  override def visitReturn(node: Return): Jump = {
     node
   }
 }
@@ -384,11 +419,12 @@ class Renamer(reserved: Set[String]) extends Visitor {
     }
   }
 
-  override def visitParameter(node: Parameter): Parameter = {
-    if (reserved.contains(node.name)) {
-      node.name = s"#${node.name}"
+  override def visitParameter(node: LocalVar): LocalVar = {
+    var n = node
+    if (reserved.contains(n.name)) {
+      n = n.copy(name=s"#${node.name}")
     }
-    super.visitParameter(node)
+    super.visitParameter(n)
   }
 
   override def visitProcedure(node: Procedure): Procedure = {
@@ -426,25 +462,13 @@ class VariablesWithoutStoresLoads extends ReadOnlyVisitor {
     node
   }
 
+  override def visitGlobalVar(node: GlobalVar): GlobalVar = {
+    variables.add(node)
+    node
+  }
+
   override def visitMemoryLoad(node: MemoryLoad): MemoryLoad = {
     node
   }
 
-}
-
-class ConvertToSingleProcedureReturn extends Visitor {
-  override def visitJump(node: Jump): Jump = {
-    node match
-      case c: IndirectCall =>
-        val returnBlock = node.parent.parent.returnBlock match {
-          case Some(b) => b
-          case None =>
-            val b = Block.procedureReturn(node.parent.parent)
-            node.parent.parent.returnBlock = b
-            b
-        }
-        // if we are return outside the return block then replace with a goto to the return block
-        if c.target.name == "R30" && c.returnTarget.isEmpty && !c.parent.isProcReturn then GoTo(Seq(returnBlock)) else node
-      case _ => node
-  }
 }

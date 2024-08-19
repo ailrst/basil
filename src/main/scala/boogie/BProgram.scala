@@ -12,6 +12,7 @@ case class BProgram(declarations: List[BDeclaration], filename: String) {
 trait BDeclaration extends HasAttributes {
   override def attributes: List[BAttribute] = List()
   def toBoogie: List[String] = List(toString)
+  def functionOps: Set[FunctionOp] = Set();
 
   final def writeToString(w: Writer): Unit = {
     for (elem <- toBoogie) {
@@ -75,7 +76,7 @@ case class BProcedure(
     procList ++ implList ++ List("")
   }
   override def toString: String = toBoogie.mkString("\n")
-  def functionOps: Set[FunctionOp] =
+  override def functionOps: Set[FunctionOp] =
     body.flatMap(c => c.functionOps).toSet ++ ensures.flatMap(c => c.functionOps).toSet ++ requires
       .flatMap(c => c.functionOps)
       .toSet ++ freeEnsures.flatMap(c => c.functionOps).toSet ++ freeRequires.flatMap(c => c.functionOps).toSet
@@ -110,7 +111,7 @@ case class BFunction(name: String, in: List[BVar], out: BVar, body: Option[BExpr
     List(s.toString)
   }
   override def toString: String = toBoogie.mkString("\n")
-  def functionOps: Set[FunctionOp] = body match {
+  override def functionOps: Set[FunctionOp] = body match {
     case Some(b) => b.functionOps
     case None    => Set()
   }

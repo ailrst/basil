@@ -2,9 +2,52 @@ package ir
 
 import boogie._
 import scala.collection.mutable
+import ir.cilvisitor._
+
+
+enum QuantifierSort:
+  case exists
+  case lambda
+  case forall
+
+
+enum QuantifierGuard:
+  // Structured quantifier guard for finite quantifiers we may want to expand into a disjunction, or domains
+  // we otherwise might want to handle in a special way.
+  case IntRange(v: LocalVar, begin: Int, lastExclusive: Int)
+  case BVRange(v: LocalVar, bvsize: Int, begin: Int, lastExclusive: Int) // all vars must have same bvsize 
+
+object QuantifierGuard:
+  def toCond(g: QuantifierGuard) = {
+    g match {
+      case IntRange(v, b, e) => BinaryExpr(BoolAND, BinaryExpr(IntGE, IntLiteral(b), v), BinaryExpr(IntLT, v, IntLiteral(e)))
+      case BVRange(v, sz, b, e) => BinaryExpr(BoolAND, BinaryExpr(BVUGE, BitVecLiteral(sz, b), v), BinaryExpr(BVULT, v, BitVecLiteral(sz, e)))
+    }
+  }
+
+case class QuantifierExpr(kind: QuantifierSort, binds: List[LocalVar], guard: List[QuantifierGuard], body: Expr) extends Expr {
+  override def getType: IRType = BoolType
+  def toBoogie : BExpr = {
+    val b = binds.map(_.toBoogie)
+    val g = guard.map(QuantifierGuard.toCond)
+      .foldLeft(TrueLiteral: Expr)((l,r) => BinaryExpr(BoolAND, l, r))
+      val bdy = if (guard.isEmpty) {
+        body
+      } else {
+        BinaryExpr(BoolIMPLIES, g, body) 
+      }
+    kind match {
+      case QuantifierSort.forall => ForAll(b, bdy.toBoogie)
+      case QuantifierSort.lambda => Lambda(b, bdy.toBoogie)
+      case QuantifierSort.exists => Exists(b, bdy.toBoogie)
+      }
+  }
+  override def gammas: Set[Expr] = Set()
+  override def variables: Set[Variable] = body.variables.toSet.diff(binds.toSet)
+}
 
 sealed trait Expr {
-  def toBoogie: BExpr
+  def toBoogie: BExpr 
   def toGamma: BExpr = {
     val gammaVars: Set[BExpr] = gammas.map(_.toGamma)
     if (gammaVars.isEmpty) {
@@ -22,6 +65,13 @@ sealed trait Expr {
   def gammas: Set[Expr] = Set()
   def variables: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Expr = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+}
+
+case class OldExpr(body: Expr) extends Expr {
+  override def acceptVisit(visitor: Visitor): Expr = body.acceptVisit(visitor)
+  override def toString = s"old($body)"
+  def getType = body.getType
+  def toBoogie = Old(body.toBoogie)
 }
 
 sealed trait Literal extends Expr {
@@ -73,11 +123,12 @@ case class Repeat(repeats: Int, body: Expr) extends Expr {
   override def toBoogie: BExpr = BVRepeat(repeats, body.toBoogie)
   override def gammas: Set[Expr] = body.gammas
   override def variables: Set[Variable] = body.variables
-  override def getType: BitVecType = BitVecType(bodySize * repeats)
   private def bodySize: Int = body.getType match {
     case bv: BitVecType => bv.size
-    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of repeat: " + this)
+    case _ => throw new Exception("type mismatch, non bv expression: " + body + " in body of repeat: ")
   }
+
+  override def getType: BitVecType = BitVecType(bodySize * repeats)
   override def toString: String = s"Repeat($repeats, $body)"
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitRepeat(this)
   override def loads: Set[MemoryLoad] = body.loads
@@ -117,6 +168,8 @@ case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
   override def variables: Set[Variable] = arg.variables
   override def loads: Set[MemoryLoad] = arg.loads
   override def getType: IRType = (op, arg.getType) match {
+    case (BoolToBV1, _)              => BitVecType(1)
+    case (BV1ToBool, _)              => BoolType
     case (_: BoolUnOp, BoolType)     => BoolType
     case (_: BVUnOp, bv: BitVecType) => bv
     case (_: IntUnOp, IntType)       => IntType
@@ -144,6 +197,7 @@ sealed trait BoolUnOp(op: String) extends UnOp {
 }
 
 case object BoolNOT extends BoolUnOp("!")
+case object BoolToBV1 extends BoolUnOp("bool2bv")
 
 sealed trait IntUnOp(op: String) extends UnOp {
   override def toString: String = op
@@ -152,11 +206,11 @@ sealed trait IntUnOp(op: String) extends UnOp {
 
 case object IntNEG extends IntUnOp("-")
 
-
 sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
 }
 
+case object BV1ToBool extends BVUnOp("bv2bool")
 case object BVNOT extends BVUnOp("not")
 case object BVNEG extends BVUnOp("neg")
 
@@ -305,6 +359,7 @@ enum Endian {
 }
 
 case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) extends Expr {
+  require(size >= mem.valueSize)
   override def toBoogie: BMemoryLoad = BMemoryLoad(mem.toBoogie, index.toBoogie, endian, size)
   override def toGamma: BExpr = mem match {
     case m: StackMemory =>
@@ -320,75 +375,133 @@ case class MemoryLoad(mem: Memory, index: Expr, endian: Endian, size: Int) exten
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitMemoryLoad(this)
 }
 
-case class UninterpretedFunction(name: String, params: Seq[Expr], returnType: IRType) extends Expr {
+
+case class FApply(val name: String, val params: Seq[Expr], val returnType: IRType, val uninterpreted: Boolean = false) extends Expr {
   override def getType: IRType = returnType
-  override def toBoogie: BFunctionCall = BFunctionCall(name, params.map(_.toBoogie).toList, returnType.toBoogie, true)
-  override def acceptVisit(visitor: Visitor): Expr = visitor.visitUninterpretedFunction(this)
+  override def toBoogie: BFunctionCall = BFunctionCall(name, params.map(_.toBoogie).toList, returnType.toBoogie, uninterpreted)
+  override def acceptVisit(visitor: Visitor): Expr = visitor.visitFApply(this)
   override def gammas: Set[Expr] = params.flatMap(_.gammas).toSet
   override def variables: Set[Variable] = params.flatMap(_.variables).toSet
 }
 
-// Means something has a global scope from the perspective of the IR and Boogie
-// Not the same as global in the sense of shared memory between threads
-sealed trait Global
-
-// A variable that is accessible without a memory load/store
+/**
+ * Generic mutable variable storing a value at each program state.
+ */
 sealed trait Variable extends Expr {
   val name: String
-  val irType: IRType
-  var sharedVariable: Boolean = false
+  val scope: Scope
 
-  override def getType: IRType = irType
   override def variables: Set[Variable] = Set(this)
+
+  override def toString: String = s"Variable($name)"
+
+  override def acceptVisit(visitor: Visitor): Variable = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+}
+
+/**
+ * A variable with value semantics
+ */
+sealed trait ValueVariable extends Variable {
+  val name: String
+
   override def gammas: Set[Expr] = Set(this)
-  override def toBoogie: BVar
-  // placeholder definition not actually used
-  override def toGamma: BVar = BVariable(s"$name", irType.toBoogie, Scope.Global)
 
-  override def toString: String = s"Variable($name, $irType)"
 
-  override def acceptVisit(visitor: Visitor): Variable =
-    throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+  override def acceptVisit(visitor: Visitor): ValueVariable = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+
+  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, scope)
+  override def toBoogie: BVar = BVariable(s"$name", getType.toBoogie, scope)
 }
 
 // Variable with global scope (in a 'accessible from any procedure' sense), not related to the concurrent shared memory sense
 // These are all hardware registers
-case class Register(override val name: String, size: Int) extends Variable with Global {
+// Updates are visible to all procedures in the thread. 
+case class Register(override val name: String, size: Int) extends ValueVariable {
+  override val scope: Scope = Scope.Global
+  override def toString: String = s"Register(${name}, $getType)"
+  override def getType: BitVecType = BitVecType(size)
+  override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitRegister(this)
+}
+
+// value-type variable with scope local to the procedure, typically a temporary variable created in the lifting process
+case class LocalVar(override val name: String, val irType: IRType) extends ValueVariable {
+  override def getType = irType
+  override val scope : Scope = Scope.Local
+  override def toString: String = s"LocalVar(${name}, $irType)"
+  override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitLocalVar(this)
+}
+
+// value-type variable with program-secope, state is shared with all procedures.
+case class GlobalVar(override val name: String, val irType: IRType) extends ValueVariable {
+  override def getType = irType
+  override val scope : Scope = Scope.Global
   override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Global)
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Global)
-  override def toString: String = s"Register(${name}, $irType)"
-  override def acceptVisit(visitor: Visitor): Variable = visitor.visitRegister(this)
-  override val irType: BitVecType = BitVecType(size)
+  override def toString: String = s"GlobalVar(${name}, $irType)"
+  override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitGlobalVar(this)
 }
 
-// Variable with scope local to the procedure, typically a temporary variable created in the lifting process
-case class LocalVar(override val name: String, override val irType: IRType) extends Variable {
-  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
-  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
-  override def toString: String = s"LocalVar(${name}_$sharedVariable, $irType)"
-  override def acceptVisit(visitor: Visitor): Variable = visitor.visitLocalVar(this)
+case class GlobalConst(override val name: String, val irType: IRType) extends ValueVariable {
+  override def getType = irType
+  override val scope : Scope = Scope.Const
+  override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Const)
+  override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Const)
+  override def toString: String = s"GlobalConst(${name}, $irType)"
+  override def acceptVisit(visitor: Visitor): ValueVariable = visitor.visitGlobalConst(this)
 }
 
-// A memory section
-sealed trait Memory extends Global {
-  val name: String
-  val addressSize: Int
-  val valueSize: Int
-  def toBoogie: BMapVar = BMapVar(name, MapBType(BitVecBType(addressSize), BitVecBType(valueSize)), Scope.Global)
-  def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
-  val getType: IRType = MapType(BitVecType(addressSize), BitVecType(valueSize))
-  override def toString: String = s"Memory($name, $addressSize, $valueSize)"
 
-  def acceptVisit(visitor: Visitor): Memory =
+/*
+ * A variable that is accessible only through loads and stores.
+ * This is not related to addressing and offsets, arithmetic on 
+ * references is not defined: this represents a memory object
+ * whose access is a side-effect (that is potentially observable
+ * by other threads).
+ *
+ * Everything with BASIL reference type should extend this.
+ */
+sealed trait RefVariable extends Variable {
+  override val name: String
+  override val scope: Scope
+  val shared: AccessType
+  val valueType: IRType
+  override def getType = RefType(valueType, shared)
+
+  override def acceptVisit(visitor: Visitor): RefVariable =
     throw new Exception("visitor " + visitor + " unimplemented for: " + this)
 }
 
-// A stack section of memory, which is local to a thread
-case class StackMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+sealed trait Memory(override val name: String, override val shared: AccessType) extends RefVariable {
+  val valueSize: Int
+  val addressSize: Int
+  override val valueType: IRType  = MapType(BitVecType(64), BitVecType(8))
+
+  override def toBoogie: BMapVar = BMapVar(name, MapBType(BitVecBType(addressSize), BitVecBType(valueSize)), Scope.Global)
+  override val scope = Scope.Global
+  override def toGamma: BMapVar = BMapVar(s"Gamma_$name", MapBType(BitVecBType(addressSize), BoolBType), Scope.Global)
+  override def toString: String = s"Memory($name, $addressSize, $valueSize)"
+
+  override def acceptVisit(visitor: Visitor): Memory =
+    throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+}
+
+
+
+// A stack memory section: updates are only observable by the owning thread.
+case class StackMemory(override val name: String, val addressSize: Int, val valueSize: Int) 
+  extends Memory(name, AccessType.Unshared) {
+  override def toString: String = s"StackMemory($name, $addressSize, $valueSize)"
+
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitStackMemory(this)
 }
 
+
+
 // A non-stack region of memory, which is shared between threads
-case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
+  extends Memory(name, AccessType.Shared) {
+
+  override def toString: String = s"SharedMemory($name, $addressSize, $valueSize)"
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitSharedMemory(this)
 }
+
