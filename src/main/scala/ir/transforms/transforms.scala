@@ -164,20 +164,6 @@ def sharedAccesses(e: Expr): (List[RefVariable], List[MemoryLoad]) = {
 }
 
 
-/* ---------------------------------------------------------------------------------------------------- */
-
-/** Locally resolve return statements from indirect call R30 */
-
-class ReplaceReturns extends CILVisitor {
-
-  override def vjump(j: Jump): VisitAction[Jump] = {
-    j match {
-      case IndirectCall(Register("R30", _), _, _) => ChangeTo(Return())
-      case _                                      => DoChildren()
-    }
-  }
-}
-
 
 /* ---------------------------------------------------------------------------------------------------- */
 

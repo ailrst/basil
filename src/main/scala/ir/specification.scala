@@ -64,7 +64,7 @@ case class Relation(val body: Expr, relationName: Option[String] = None) {
     val suffix = s"_${name}_"
     val endBlock = Block(n.replaceAllIn(bindNew.parent.label, "") + suffix  + transforms.OldCounter.nextInt(), None, afterStatements, jump)
 
-    val callBlock = Block(n.replaceAllIn(bindNew.parent.label, "") +  suffix + transforms.OldCounter.nextInt(), None, List(), DirectCall(assumptionProc, Some(endBlock)))
+    val callBlock = Block(n.replaceAllIn(bindNew.parent.label, "") +  suffix + transforms.OldCounter.nextInt(), None, List(DirectCall(assumptionProc)), (GoTo(Seq(endBlock))))
 
     target.parent.addBlocks(callBlock)
     target.parent.addBlocks(endBlock)

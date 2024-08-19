@@ -138,7 +138,7 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
   def translateBlock(b: Block): BBlock = {
     val bl = BBlock(
       b.label,
-      slToBoogie(b.statements.toList) ++ List(translateJump(b.jump)) ++ b.fallthrough.map(translateJump).toList
+      slToBoogie(b.statements.toList) ++ List(translateJump(b.jump))
     )
     bl
   }
@@ -209,6 +209,6 @@ object BoogieTranslator extends Translator[BType, BExpr, BProcedure, BBlock, BCm
     }
 
     val decls: List[BDeclaration] = statevars.toList ++ variables ++ nfunDefs ++ specFuncs ++ axioms ++ procs
-    BProgram(decls)
+    BProgram(decls, "why do we need filename")
   }
 }
