@@ -436,6 +436,10 @@ object StaticAnalysis {
       Logger.warn(s"Disabling IDE solver tests due to external main procedure: ${IRProgram.mainProcedure.name}")
     }
 
+    config.analysisResultsPath.foreach(s =>
+        writeToFile("name,location,time(ms)\n" + timer.checkPoints().map(c => s"${c._1},${c._2},${c._3}").mkString("\n"), s"${s}-analysis-runtime.csv")
+    )
+
     StaticAnalysisContext(
       constPropResult = constPropResult,
       IRconstPropResult = newCPResult,
