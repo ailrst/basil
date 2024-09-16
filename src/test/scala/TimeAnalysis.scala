@@ -186,8 +186,6 @@ class TimeStaticAnalysis extends AnyFunSuite, TestUtil {
     val gp = plotfile + "\n" + pl
     println(gp)
     log(outputPathPrefix + "/plot.gp", gp)
-    Seq("gnuplot", outputPathPrefix + "/plot.gp").!!
-
 
     val csv = r.map(c => c.toList.mkString(",")).mkString("\n")
     info(csv)
@@ -197,5 +195,6 @@ class TimeStaticAnalysis extends AnyFunSuite, TestUtil {
     val path = "analysis-times.csv"
     log(outputPathPrefix + "/analysis-times.csv", text)
 
+    // Seq("gnuplot", outputPathPrefix + "/plot.gp").!!
   }
 }
