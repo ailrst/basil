@@ -222,6 +222,13 @@ object IRTransform {
     Logger.debug(
       s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
     )
+    val dupProcNames = (ctx.program.procedures.groupBy(_.name).filter((n,p) => p.size > 1)).toList.flatMap(_._2)
+
+    var dupCounter = 0 
+    for (p <- dupProcNames) {
+      dupCounter += 1
+      p.name = p.name + "$" + p.address.map(_.toString).getOrElse(dupCounter.toString)
+    }
 
     val stackIdentification = StackSubstituter()
     stackIdentification.visitProgram(ctx.program)
@@ -344,6 +351,7 @@ object StaticAnalysis {
     val reachingDefinitionsAnalysisSolver = ReachingDefinitionsAnalysisSolver(IRProgram)
     val reachingDefinitionsAnalysisResults = reachingDefinitionsAnalysisSolver.analyze()
 
+
     config.analysisDotPath.foreach(s => {
       writeToFile(
         toDot(IRProgram, IRProgram.filter(_.isInstanceOf[Command]).map(b => b -> reachingDefinitionsAnalysisResults(b).toString).toMap),
@@ -365,9 +373,20 @@ object StaticAnalysis {
       )
     })
 
-    Logger.debug("[!] Running Constant Propagation with SSA")
+    if (config.simplify) {
+      transforms.SSARename.concretiseSSA(ctx.program, reachingDefinitionsAnalysisResults)
+
+      val rds2 = ReachingDefinitionsAnalysisSolver(IRProgram)
+      val rdr2 = rds2.analyze()
+
+      transforms.doCopyPropTransform(ctx.program, rdr2)
+      writeToFile(serialiseIL(IRProgram), s"il-after-copyprop.il")
+    }
+
+    Logger.info("[!] Running Constant Propagation with SSA")
     val constPropSolverWithSSA = ConstantPropagationSolverWithSSA(IRProgram, reachingDefinitionsAnalysisResults)
     val constPropResultWithSSA = constPropSolverWithSSA.analyze()
+
 
     Logger.debug("[!] Running MRA")
     val mraSolver = MemoryRegionAnalysisSolver(IRProgram, globalAddresses, globalOffsets, mergedSubroutines, constPropResult, ANRResult, RNAResult, regionAccessesAnalysisResults, reachingDefinitionsAnalysisResults)
@@ -505,7 +524,7 @@ object RunUtils {
 
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))
-    q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-after-analysis.il"))
+    q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-after-all-analysis.il"))
 
     if (q.runInterpret) {
       val fs = eval.interpretTrace(ctx)
