@@ -120,7 +120,7 @@ def doCopyPropTransform(
 
   var runs = 0
   var rerun = true
-  while (runs < 5) {
+  while (runs < 8) {
     val rds2 = ReachingDefinitionsAnalysisSolver(p)
     val reachingDefs = rds2.analyze()
     val d = ConstCopyProp()
@@ -141,7 +141,7 @@ def doCopyPropTransform(
   // cleanup
   // visit_prog(CleanupAssignments(), p)
   val toremove = p.collect {
-    case b:Block if b.statements.size == 0 && b.prevBlocks.size == 1 && b.nextBlocks.size == 1 => b
+    case b: Block if b.statements.size == 0 && b.prevBlocks.size == 1 && b.nextBlocks.size == 1 => b
   }
   for (b <- toremove) {
     val p = b.prevBlocks.head
@@ -282,7 +282,8 @@ class ConstCopyProp() extends AbstractDomain[CCP] {
 
         p = evaled match {
           case lit: Literal => p.copy(constants = p.constants.updated(l, lit))
-          case e: Expr => p.copy(constants = p.constants.removed(l), exprs = p.exprs.updated(l, CopyProp(e, e.variables)))
+          case e: Expr =>
+            p.copy(constants = p.constants.removed(l), exprs = p.exprs.updated(l, CopyProp(e, e.variables)))
         }
 
         if (r.loads.nonEmpty) {
@@ -298,7 +299,8 @@ class ConstCopyProp() extends AbstractDomain[CCP] {
       }
       case x: DirectCall => {
         val lhs = x.outParams.map(_._2)
-        lhs.foldLeft(c)((c, l) => c.copy(constants = c.constants.removed(l), exprs = c.exprs.filterNot((k, v) => v.deps.contains(l)))
+        lhs.foldLeft(c)((c, l) =>
+          c.copy(constants = c.constants.removed(l), exprs = c.exprs.filterNot((k, v) => v.deps.contains(l)))
         )
       }
       case x: IndirectCall => {
@@ -312,7 +314,6 @@ class ConstCopyProp() extends AbstractDomain[CCP] {
   }
 }
 
-
 def exprSimp(e: Expr): Expr = {
 
   val assocOps: Set[BinOp] =
@@ -321,8 +322,10 @@ def exprSimp(e: Expr): Expr = {
   def simpOne(e: Expr): Expr = {
     e match {
       // normalise
-      case BinaryExpr(op, x: Literal, y: Expr) if !y.isInstanceOf[Literal] && assocOps.contains(op) => BinaryExpr(op, y, x)
-      case BinaryExpr(BVADD, x: Expr, y: BitVecLiteral) if ir.eval.BitVectorEval.isNegative(y) => BinaryExpr(BVSUB, x, ir.eval.BitVectorEval.smt_bvneg(y))
+      case BinaryExpr(op, x: Literal, y: Expr) if !y.isInstanceOf[Literal] && assocOps.contains(op) =>
+        BinaryExpr(op, y, x)
+      case BinaryExpr(BVADD, x: Expr, y: BitVecLiteral) if ir.eval.BitVectorEval.isNegative(y) =>
+        BinaryExpr(BVSUB, x, ir.eval.BitVectorEval.smt_bvneg(y))
 
       // identities
       case Extract(ed, 0, body) if (body.getType == BitVecType(ed))                        => exprSimp(body)
@@ -357,6 +360,10 @@ def exprSimp(e: Expr): Expr = {
 
       // constant folding
       // const + (e + const) -> (const + const) + e
+      case BinaryExpr(BVADD, BinaryExpr(BVSUB, body, l: BitVecLiteral), r: BitVecLiteral) =>
+        BinaryExpr(BVADD, BinaryExpr(BVSUB, r, l), exprSimp(body))
+      case BinaryExpr(BVSUB, BinaryExpr(BVADD, body, l: BitVecLiteral), r: BitVecLiteral) =>
+        BinaryExpr(BVADD, BinaryExpr(BVSUB, r, l), exprSimp(body))
       case BinaryExpr(BVADD, BinaryExpr(BVADD, body, l: BitVecLiteral), r: BitVecLiteral) =>
         BinaryExpr(BVADD, BinaryExpr(BVADD, l, r), exprSimp(body))
       case BinaryExpr(BVMUL, BinaryExpr(BVMUL, body, l: BitVecLiteral), r: BitVecLiteral) =>
@@ -490,7 +497,6 @@ object SSARename:
     def njoin(
         st: Map[Block, DSARes],
         blocks: Iterable[Block],
-        assignsAdd: mutable.Map[Block, Map[Int, Int]],
         count: mutable.Map[Variable, Int],
         lhss: Map[Command, Map[Variable, Int]],
         rhss: Map[Command, Map[Variable, Int]]
@@ -501,7 +507,7 @@ object SSARename:
       require(blocks.size >= 2)
       val rs = blocks.map(st(_))
       val all = rs.flatMap(_.renames.keySet)
-      val renames = all.collect {
+      val renames = all.map {
         case v if rs.forall(rl => rs.foldLeft(true)((b, rr) => b && (rl.renames(v) == rr.renames(v)))) => {
           // all renames equal for this variable v
           v -> rs.head.renames(v)
@@ -511,27 +517,34 @@ object SSARename:
           // on the branches with smaller indexes, so we add a copy to these branches renaming to the largest index
           val maxrename = rs.map(_.renames(v)).foldLeft(-1)(Integer.max)
           for (b <- blocks) {
-            if (st(b).renames(v) != maxrename && st(b).renames(v) != -1 && maxrename != -1) {
+            if (st(b).renames(v) != maxrename && maxrename != -1) {
               // if there is a call on this block assigning the variable, update its outparam's ssa index
               // otherwise add an assignment to the block at the end or immediately before the call, and
               // update the ssa index of the in-parameters to the call
-              b.statements.lastOption match {
-                case Some(d: DirectCall) if d.outParams.toSet.map(_._2).contains(v) => {
-                  rhs = rhs + (d -> (rhs.get(d).getOrElse(Map()) + (v -> st(b).renames(v))))
-                }
-                case c => {
-                  val assign = assignsappended(b).get(v).getOrElse(Assign(v, v))
-                  assignsappended = assignsappended + (b -> (assignsappended(b) + (v -> assign)))
-                  lhs = lhs + (assign -> (lhs.get(assign).getOrElse(Map()) + (v -> maxrename)))
-                  rhs = rhs + (assign -> (rhs.get(assign).getOrElse(Map()) + (v -> st(b).renames(v))))
-                  c match {
-                    case Some(call) => {
-                      rhs = rhs + (call -> (rhs.get(call).getOrElse(Map()) + (v -> maxrename)))
-                    }
-                    case _ => ()
-                  }
-                }
-              }
+              //b.statements.lastOption match {
+              //  case Some(d: DirectCall) if d.outParams.toSet.map(_._2).contains(v) => {
+              //    lhs = lhs + (d -> (lhs.get(d).getOrElse(Map()) + (v -> st(b).renames(v))))
+              //  }
+              //  case c => {
+              //    val _assign = assignsappended(b).get(v)
+              //    val assign = _assign match {
+              //      case Some(a) => a
+              //      case None => {
+              //        val a = Assign(v, v)
+              //        assignsappended = assignsappended + (b -> (assignsappended(b) + (v -> a)))
+              //        a
+              //      }
+              //    }
+              //    lhs = lhs + (assign -> (lhs.get(assign).getOrElse(Map()) + (v -> maxrename)))
+              //    rhs = rhs + (assign -> (rhs.get(assign).getOrElse(Map()) + (v -> st(b).renames(v))))
+              //    c match {
+              //      case Some(call: Call) => {
+              //        rhs = rhs + (call -> (rhs.get(call).getOrElse(Map()) + (v -> maxrename)))
+              //      }
+              //      case _ => ()
+              //    }
+              //  }
+              //}
             }
           }
           v -> maxrename
@@ -541,28 +554,52 @@ object SSARename:
       (DSARes(renames.withDefaultValue(-1)), lhs, rhs, assignsappended)
     }
 
-    def join(
+    def fixJoins(
         st: Map[Block, DSARes],
-        a: Block,
-        b: Block,
-        assignsAdd: mutable.Map[Block, Map[Int, Int]],
-        count: mutable.Map[Variable, Int]
-    ) = {
-      val l = st(a)
-      val r = st(b)
+        p: Procedure,
+        lhss: Map[Command, Map[Variable, Int]],
+        rhss: Map[Command, Map[Variable, Int]]
+    ): (Map[Command, Map[Variable, Int]], Map[Command, Map[Variable, Int]]) = {
+      var lhs = lhss
+      var rhs = rhss
+      var assignsappended: Map[Block, Map[Variable, Assign]] = Map().withDefaultValue(Map())
+      for (b <- p.blocks) {
+        val incoming = b.prevBlocks
+        val all = incoming.flatMap(st(_).renames.keySet)
+        val outgoing = rhss(IRWalk.firstInBlock(b))
 
-      val all = l.renames.keySet ++ r.renames.keySet
-      val renames = all.collect {
-        case v if (l.renames(v) != r.renames(v)) => {
-          assignsAdd(a) = assignsAdd(a) + (l.renames(v) -> (count(v) + 1))
-          assignsAdd(b) = assignsAdd(b) + (r.renames(v) -> (count(v) + 1))
-          count(v) += 1
-          v -> count(v)
+        // fix when all incoming block renames rhs don't match the expected rename rhs
+        // by adding the appropriate copy
+        for (v <- all) {
+          val outgoingRename = outgoing(v)
+          for (b <- incoming) {
+            if (st(b).renames(v) != outgoingRename && outgoingRename != -1) {
+              // if there is a call on this block assigning the variable, update its outparam's ssa index
+              // otherwise add an assignment to the block at the end or immediately before the call, and
+              // update the ssa index of the in-parameters to the call
+              b.statements.lastOption match {
+                case Some(d: DirectCall) if d.outParams.toSet.map(_._2).contains(v) => {
+                  lhs = lhs + (d -> (lhs.get(d).getOrElse(Map()) + (v -> st(b).renames(v))))
+                }
+                case c => {
+                  val assign = Assign(v, v)
+                  appendAssign(b, assign)
+
+                  lhs = lhs + (assign -> (lhs.get(assign).getOrElse(Map()) + (v -> outgoingRename)))
+                  rhs = rhs + (assign -> (rhs.get(assign).getOrElse(Map()) + (v -> st(b).renames(v))))
+                  c match {
+                    case Some(call: Call) => {
+                      rhs = rhs + (call -> (rhs.get(call).getOrElse(Map()) + (v -> outgoingRename)))
+                    }
+                    case _ => ()
+                  }
+                }
+              }
+            }
+          }
         }
-        case v /* if (l.renames(v) == r.renames(v)) */ => v -> l.renames(v)
-      }.toMap
-
-      DSARes(renames)
+      }
+      (lhs, rhs)
     }
 
     def processCollect(
@@ -579,28 +616,36 @@ object SSARename:
       for (s <- b.statements) {
         rh = rh.updated(s, rh(s) ++ r.renames)
         val renames: Map[Variable, Int] = s match {
-          case a: Assign if (lh.get(a).flatMap(_.get(a.lhs))).map(_ == -1).getOrElse(true) => {
-            count(a.lhs) = count(a.lhs) + 1
-            Map(a.lhs -> count(a.lhs))
+          case a: Assign => {
+            if ((lh.get(a).flatMap(_.get(a.lhs))).map(_ == -1).getOrElse(true)) {
+              count(a.lhs) = (count(a.lhs) + 1)
+              Map(a.lhs -> count(a.lhs))
+            } else {
+              Map(a.lhs -> lh(a)(a.lhs))
+            }
           }
           case a: DirectCall => {
-            var nnr = mutable.Map[Variable, Int]()
-            for (l <- a.outParams.map(_._2)) {
-              if (lh.get(s).flatMap(_.get(l)).map(_ == -1).getOrElse(true)) {
-                count(l) = count(l) + 1
-                nnr += (l -> count(l))
-              }
-            }
-            nnr.toMap
+            (a.outParams
+              .map(_._2))
+              .map(l => {
+                if (lh.get(s).flatMap(_.get(l)).map(_ == -1).getOrElse(true)) {
+                  count(l) = (count(l) + 1)
+                  (l -> count(l))
+                } else {
+                  (l -> lh(s)(l))
+                }
+              })
+              .toMap
           }
           case _ => Map()
         }
         lh = lh.updated(s, lh(s) ++ renames)
-        r = r.copy(renames = r.renames ++ rh(s) ++ lh(s) ++ renames)
+        r = r.copy(renames = r.renames ++ renames)
       }
+      rh = rh.updated(b.jump, rh(b.jump) ++ r.renames)
       r = r.copy(renames = r.renames ++ rh(b.jump))
 
-      (r, lh, rh + (b.jump -> r.renames))
+      (r, lh, rh)
     }
 
     def renameAll(b: Block, lhs: Map[Command, Map[Variable, Int]], rhs: Map[Command, Map[Variable, Int]]) = {
@@ -610,6 +655,7 @@ object SSARename:
           case d: DirectCall => {
             //println(s"$s --- ${lhs.get(s)} ${rhs.get(s)}")
           }
+
           case _ => ()
         }
         visit_stmt(StmtRenamer(lhs.get(s).getOrElse(Map()), rhs.get(s).getOrElse(Map())), s)
@@ -658,7 +704,6 @@ object SSARename:
       val worklist = mutable.Stack[Block]()
       worklist.pushAll(p.entryBlock)
       var seen = Set[Block]()
-      val assignsAdd = mutable.Map[Block, Map[Int, Int]]()
       val count = mutable.Map[Variable, Int]().withDefaultValue(0)
       var lhs = Map[Command, Map[Variable, Int]]().withDefaultValue(Map().withDefaultValue(-1))
       var rhs = Map[Command, Map[Variable, Int]]().withDefaultValue(Map().withDefaultValue(-1))
@@ -679,7 +724,7 @@ object SSARename:
           worklist.push(b)
         } else {
           val prev = if (b.incomingJumps.size > 1 && b.prevBlocks.forall(b => st.contains(b))) {
-            val (n, llhs, rrhs, assigns) = njoin(st, b.prevBlocks, assignsAdd, count, lhs, rhs)
+            val (n, llhs, rrhs, assigns) = njoin(st, b.prevBlocks, count, lhs, rhs)
             assignsappended = assignsappended ++ assigns
             lhs = llhs
             rhs = rrhs
@@ -702,11 +747,9 @@ object SSARename:
         //println(worklist.size)
         seen += b
       }
-      for (b <- assignsappended) {
-        for (v <- b._2) {
-          appendAssign(b._1, v._2)
-        }
-      }
+      val (lhss, rhss) = fixJoins(st, p, lhs, rhs)
+      lhs = lhss
+      rhs = rhss
 
       for (b <- p.blocks) {
         renameAll(b, lhs, rhs)
@@ -808,7 +851,6 @@ class Simplify(
 ) extends CILVisitor {
 
   var madeAnyChange = false
-  var statement: Statement = null
 
   def simp(pe: Expr)(ne: Expr) = {
     val simped = eval.partialEvalExpr(exprSimp(ne), x => None)
@@ -840,23 +882,22 @@ class Simplify(
     }
   }
 
-  override def vstmt(s: Statement) = {
-    statement = s
+  //override def vstmt(s: Statement) = {
 
-    s match {
-      case a @ Assign(l, r, lb) => {
-        val state = res
-        val nr = eval.partialEvalExpr(
-          r,
-          v => state.constants.get(v)
-        )
-        if (nr != r) {
-          madeAnyChange = true
-        }
-        a.rhs = nr
-        DoChildren()
-      }
-      case _ => DoChildren()
-    }
-  }
+  //  s match {
+  //    case a @ Assign(l, r, lb) => {
+  //      val state = res
+  //      val nr = eval.partialEvalExpr(
+  //        r,
+  //        v => state.constants.get(v)
+  //      )
+  //      if (nr != r) {
+  //        madeAnyChange = true
+  //      }
+  //      a.rhs = nr
+  //      DoChildren()
+  //    }
+  //    case _ => DoChildren()
+  //  }
+  //}
 }
