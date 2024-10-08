@@ -313,7 +313,7 @@ object StaticAnalysis {
 
       Logger.info("DSA X")
       // transforms.SSARename.concretiseSSA(ctx.program, rd)
-      transforms.SSARename.concretiseDSASinglePass(ctx.program)
+      transforms.DynamicSingleAssignment.applyTransform(ctx.program)
       writeToFile(serialiseIL(IRProgram), s"il-after-ssa.il")
 
       Logger.info("reaching defs ")
