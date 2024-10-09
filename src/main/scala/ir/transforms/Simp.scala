@@ -64,7 +64,8 @@ def cyclicVariables(p: Procedure) : Set[Variable] = {
 
 def getRedundantAssignments(procedure: Procedure): Set[Assign] = {
 
-  /** Get all assign statements which define a variable never used, assuming ssa form.
+  /** Get all assign statements which define a variable never used, assuming ssa form and proc parameters
+   *  so that interprocedural check is not required.
     */
 
   enum VS:
@@ -145,15 +146,15 @@ def getRedundantAssignments(procedure: Procedure): Set[Assign] = {
   r
 }
 
-class CleanupAssignments(readSets: Map[Procedure, Set[Variable]]) extends CILVisitor {
-  var readSetProc = Set[Variable]()
+class CleanupAssignments() extends CILVisitor {
+  var redundantAssignments = Set[Assign]()
 
   def isRedundant(a: Assign) = {
-    readSetProc.nonEmpty && !readSetProc.contains(a.lhs)
+    redundantAssignments.contains(a)
   }
 
   override def vproc(p: Procedure) = {
-    readSetProc = readSets(p)
+    redundantAssignments = getRedundantAssignments(p)
     DoChildren()
   }
 
@@ -164,11 +165,7 @@ class CleanupAssignments(readSets: Map[Procedure, Set[Variable]]) extends CILVis
 
 }
 
-def doCopyPropTransform(
-    p: Program,
-    reachingDefs: Map[CFGPosition, (Map[Variable, Set[Assign]], Map[Variable, Set[Assign]])]
-) = {
-
+def doCopyPropTransform(p: Program) = {
   var runs = 0
   var rerun = true
   while (runs < 4) {
@@ -188,11 +185,7 @@ def doCopyPropTransform(
   }
 
   // cleanup
-  val readsets = ReadWriteAnalysis.readWriteSets(p).collect {
-    case (p, Some(rwset)) => p -> rwset.reads
-  }.toMap.withDefaultValue(Set())
-
-  visit_prog(CleanupAssignments(readsets), p)
+  visit_prog(CleanupAssignments(), p)
   val toremove = p.collect {
     case b: Block if b.statements.size == 0 && b.prevBlocks.size == 1 && b.nextBlocks.size == 1 => b
   }
@@ -333,12 +326,10 @@ class ConstCopyProp(cyclicVariables: Map[Procedure, Set[Variable]]) extends Abst
       }
       case Assign(l, r, lb) => {
         var p = c
-        val evaled = exprSimp(
-          eval.partialEvalExpr(
-            exprSimp(r),
+        val evaled = eval.partialEvalExpr(
+            eval.simplifyExprFixpoint(r),
             v => p.constants.get(v)
           )
-        )
         val rhsDeps = evaled.variables
 
         p = evaled match {
@@ -353,8 +344,6 @@ class ConstCopyProp(cyclicVariables: Map[Procedure, Set[Variable]]) extends Abst
           p = p.copy(exprs = p.exprs.filter((k, v) => v.expr.loads.isEmpty))
         }
         // remove candidates whose value changes due to this update
-        // without an SSA form in the output, we can't propagate assignments such that R0_1 := f(R0_0)
-        //  or; only replace such that all uses are copyproped, the dead definition is removed
         p = p.copy(exprs = p.exprs.filterNot((k, v) => v.deps.exists(c => c.name == l.name)))
 
         p
@@ -376,76 +365,6 @@ class ConstCopyProp(cyclicVariables: Map[Procedure, Set[Variable]]) extends Abst
   }
 }
 
-def exprSimp(e: Expr): Expr = {
-
-  val assocOps: Set[BinOp] =
-    Set(BVADD, BVMUL, BVOR, BVAND, BVEQ, BoolAND, BoolEQ, BoolOR, BoolEQUIV, BoolEQ, IntADD, IntMUL, IntEQ)
-
-  def simpOne(e: Expr): Expr = {
-    e match {
-      // normalise
-      case BinaryExpr(op, x: Literal, y: Expr) if !y.isInstanceOf[Literal] && assocOps.contains(op) =>
-        BinaryExpr(op, y, x)
-      case BinaryExpr(BVADD, x: Expr, y: BitVecLiteral) if ir.eval.BitVectorEval.isNegative(y) =>
-        BinaryExpr(BVSUB, x, ir.eval.BitVectorEval.smt_bvneg(y))
-
-      // identities
-      case Extract(ed, 0, body) if (body.getType == BitVecType(ed))                        => exprSimp(body)
-      case ZeroExtend(0, body)                                                             => exprSimp(body)
-      case SignExtend(0, body)                                                             => exprSimp(body)
-      case BinaryExpr(BVADD, body, BitVecLiteral(0, _))                                    => exprSimp(body)
-      case BinaryExpr(BVMUL, body, BitVecLiteral(1, _))                                    => exprSimp(body)
-      case Repeat(1, body)                                                                 => exprSimp(body)
-      case Extract(ed, 0, ZeroExtend(extension, body)) if (body.getType == BitVecType(ed)) => exprSimp(body)
-      case Extract(ed, 0, SignExtend(extension, body)) if (body.getType == BitVecType(ed)) => exprSimp(body)
-      case BinaryExpr(BVXOR, l, r) if l == r =>
-        e.getType match {
-          case BitVecType(sz) => BitVecLiteral(0, sz)
-        }
-      // double negation
-      case UnaryExpr(BVNOT, UnaryExpr(BVNOT, body))     => exprSimp(body)
-      case UnaryExpr(BVNEG, UnaryExpr(BVNEG, body))     => exprSimp(body)
-      case UnaryExpr(BoolNOT, UnaryExpr(BoolNOT, body)) => exprSimp(body)
-
-      // compose slices
-      case Extract(ed1, be1, Extract(ed2, be2, body)) => Extract(ed1 - be2, be1 + be2, exprSimp(body))
-
-      // (comp (comp x y) 1) = (comp x y)
-      case BinaryExpr(BVCOMP, body @ BinaryExpr(BVCOMP, _, _), BitVecLiteral(1, 1)) => exprSimp(body)
-      case BinaryExpr(BVCOMP, body @ BinaryExpr(BVCOMP, _, _), BitVecLiteral(0, 1)) => UnaryExpr(BVNOT, exprSimp(body))
-      case BinaryExpr(
-            BVEQ,
-            BinaryExpr(BVCOMP, body @ BinaryExpr(BVCOMP, _, _), BitVecLiteral(0, 1)),
-            BitVecLiteral(1, 1)
-          ) =>
-        BinaryExpr(BVEQ, exprSimp(body), BitVecLiteral(0, 1))
-
-      // constant folding
-      // const + (expr + const) -> expr + (const + const)
-      case BinaryExpr(BVADD, BinaryExpr(BVSUB, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVADD, BinaryExpr(BVSUB, r, l), exprSimp(body))
-      case BinaryExpr(BVSUB, BinaryExpr(BVADD, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVADD, BinaryExpr(BVSUB, r, l), exprSimp(body))
-      case BinaryExpr(BVADD, BinaryExpr(BVADD, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVADD, BinaryExpr(BVADD, l, r), exprSimp(body))
-      case BinaryExpr(BVMUL, BinaryExpr(BVMUL, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVMUL, BinaryExpr(BVMUL, l, r), exprSimp(body))
-      case BinaryExpr(BVOR, BinaryExpr(BVOR, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVOR, BinaryExpr(BVOR, l, r), exprSimp(body))
-      case BinaryExpr(BVAND, BinaryExpr(BVAND, body, l: BitVecLiteral), r: BitVecLiteral) =>
-        BinaryExpr(BVAND, BinaryExpr(BVAND, l, r), exprSimp(body))
-      case r => r
-    }
-  }
-
-  var pe = e
-  var ne = simpOne(pe)
-  while (ne != pe) {
-    pe = ne
-    ne = simpOne(pe)
-  }
-  ne
-}
 
 class Simplify(
     val res: Map[Block, CCP],
@@ -456,7 +375,7 @@ class Simplify(
   var block : Block =  initialBlock
 
   def simp(pe: Expr)(ne: Expr) = {
-    val simped = eval.partialEvalExpr(exprSimp(ne), x => None)
+    val simped = eval.partialEvalExpr(ir.eval.simplifyExprFixpoint(ne), x => None)
     if (pe != simped) {
       madeAnyChange = true
     }
@@ -489,5 +408,4 @@ class Simplify(
     block = b
     DoChildren()
   }
-
 }

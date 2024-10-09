@@ -210,7 +210,7 @@ class NoSimplifySystemTests extends SystemTests {
   runTests("correct", TestConfig(staticAnalysisConfig = Some(StaticAnalysisConfig(simplify=false)), useBAPFrontend = false, expectVerify = true, logResults = true))
   runTests("incorrect", TestConfig(staticAnalysisConfig = Some(StaticAnalysisConfig(simplify=false)), useBAPFrontend = false, expectVerify = false, logResults = true))
   test("summary-nosimplify") {
-    summary("summary-nosimplify")
+    summary("nosimplify")
   }
 }
 class SimplifySystemTests extends SystemTests {
@@ -219,7 +219,7 @@ class SimplifySystemTests extends SystemTests {
   runTests("correct", TestConfig(staticAnalysisConfig = Some(StaticAnalysisConfig(simplify=true)), useBAPFrontend = false, expectVerify = true, logResults = true))
   runTests("incorrect", TestConfig(staticAnalysisConfig = Some(StaticAnalysisConfig(simplify=true)), useBAPFrontend = false, expectVerify = false, logResults = true))
   test("summary-simplify") {
-    summary("summary-simplify")
+    summary("simplify")
   }
 }
 
