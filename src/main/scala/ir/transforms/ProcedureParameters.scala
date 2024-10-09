@@ -188,7 +188,7 @@ object ReadWriteAnalysis {
             .map(addReads(s.rhs.variables))
         }
         case s: Return => {
-          ir.map(addWrites(s.outParams.flatMap(_._2.variables)))
+          ir.map(addReads(s.outParams.flatMap(_._2.variables)))
         }
         case s: MemoryAssign => {
           ir.map(addReads(s.index.variables ++ s.value.variables))

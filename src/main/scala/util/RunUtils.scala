@@ -311,7 +311,7 @@ object StaticAnalysis {
         writeToFile(printAnalysisResults(IRProgram, rd), s"${s}-reachingdefs-result$iteration.txt")
       )
 
-      Logger.info("DSA X")
+      Logger.info("DynamicSingleAssignment")
       // transforms.SSARename.concretiseSSA(ctx.program, rd)
       transforms.DynamicSingleAssignment.applyTransform(ctx.program)
       writeToFile(serialiseIL(IRProgram), s"il-after-ssa.il")

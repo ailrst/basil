@@ -95,7 +95,7 @@ object DynamicSingleAssignment {
                 case c => {
                   // otherwise add an assignment to the block at the end or immediately before the call, and
                   // update the ssa index of the in-parameters to the call
-                  val assign = Assign(v, v)
+                  val assign = Assign(v, v, Some("appended"))
                   appendAssign(b, assign)
 
                   lhs = lhs + (assign -> (lhs.get(assign).getOrElse(Map()) + (v -> outgoingRename)))
