@@ -517,24 +517,21 @@ object RunUtils {
   }
 
   def doSimplify(ctx: IRContext, config: Option[StaticAnalysisConfig]) : Unit = {
-    if (!config.simplify) {
-      return;
-    }
     Logger.info("[!] Running simplification")
     Logger.info("[!] DynamicSingleAssignment")
     transforms.DynamicSingleAssignment.applyTransform(ctx.program)
 
-    config.analysisDotPath.foreach { s =>
+    config.foreach(_.analysisDotPath.foreach { s =>
       writeToFile(dotBlockGraph(ctx.program, ctx.program.mainProcedure.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"${s}_blockgraph-after-dsa.dot")
-    }
+    })
 
     Logger.info("[!] CopyProp")
     transforms.doCopyPropTransform(ctx.program)
     writeToFile(serialiseIL(ctx.program), s"il-after-copyprop.il")
 
-    config.analysisDotPath.foreach { s =>
+    config.foreach(_.analysisDotPath.foreach { s =>
       writeToFile(dotBlockGraph(ctx.program, ctx.program.mainProcedure.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"${s}_blockgraph-after-simp.dot")
-    }
+    })
   }
 
   def loadAndTranslate(conf: BASILConfig): BASILResult = {
@@ -553,7 +550,9 @@ object RunUtils {
     }
     assert(invariant.correctCalls(ctx.program))
 
-    doSimplify(ctx, conf.staticAnalysis)
+    if (conf.simplify) {
+      doSimplify(ctx, conf.staticAnalysis)
+    }
 
     assert(invariant.correctCalls(ctx.program))
 
