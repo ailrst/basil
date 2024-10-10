@@ -87,7 +87,7 @@ object LoopDetector {
   }
 
 
-  def processEdgeNonRecCase(istate: State, edge: LoopEdge, b0: Block, DFSPpos: Int): State = {
+  private def processEdgeNonRecCase(istate: State, edge: LoopEdge, b0: Block, DFSPpos: Int): State = {
     var st = istate
     val from = edge.from
     val b = edge.to
@@ -183,26 +183,6 @@ object LoopDetector {
     st
 }
 
-def processEdge(edge: LoopEdge, istate: State, b0: Block, DFSPpos: Int) : State = {
-  var st = istate.copy(edgeStack = edge::istate.edgeStack)
-  val from = edge.from
-  val b = edge.to
-
-  if (!st.visitedNodes.contains(b)) {
-    // Case (a)
-    val (x,nh) = traverse_loops_dfs(st, b, DFSPpos + 1)
-    st = x
-    st = nh.foldLeft(st)((st, b) => tag_lhead(st, b0, b))
-    // Here the most recent edge will be originating from `b0`
-    st = st.copy(edgeStack = st.edgeStack match {
-      case h :: tl => tl
-      case Nil => Nil
-    }) 
-  } else {
-    st = processEdgeNonRecCase(st,edge, b0, DFSPpos)
-  }
-  st
-}
 
   /*
    * This algorithm performs a DFS on the CFG, starting from the node `h0` (the initial one passed)
