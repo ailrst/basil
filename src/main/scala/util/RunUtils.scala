@@ -227,12 +227,7 @@ object IRTransform {
       s"[!] Removed ${before - ctx.program.procedures.size} functions (${ctx.program.procedures.size} remaining)"
     )
     val dupProcNames = (ctx.program.procedures.groupBy(_.name).filter((n,p) => p.size > 1)).toList.flatMap(_._2)
-
-    var dupCounter = 0 
-    for (p <- dupProcNames) {
-      dupCounter += 1
-      p.name = p.name + "$" + p.address.map(_.toString).getOrElse(dupCounter.toString)
-    }
+    assert(dupProcNames.isEmpty)
 
     val stackIdentification = StackSubstituter()
     stackIdentification.visitProgram(ctx.program)
@@ -363,7 +358,7 @@ object StaticAnalysis {
     )
 
     config.analysisDotPath.foreach(f => {
-      val dumpdomain = computeDomain[CFGPosition, CFGPosition](InterProcIRCursor, IRProgram.procedures)
+      val dumpdomain = computeDomain[CFGPosition, CFGPosition](InterProcIRCursor, IRProgram.procedures).toSet
       writeToFile(toDot(dumpdomain, InterProcIRCursor, Map.empty), s"${f}_new_ir_intercfg$iteration.dot")
     })
 
@@ -539,7 +534,8 @@ object RunUtils {
     transforms.removeEmptyBlocks(ctx.program)
     transforms.coalesceBlocks(ctx.program)
     transforms.removeEmptyBlocks(ctx.program)
-    if write then writeToFile(dotBlockGraph(ctx.program, ctx.program.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"blockgraph-before-dsa.dot")
+
+    if write then writeToFile(dotBlockGraph(ctx.program.mainProcedure), s"blockgraph-before-dsa.dot")
     
     Logger.info(s"RPO ${timer.checkPoint("RPO")} ms ")
     Logger.info("[!] Simplify :: DynamicSingleAssignment")
@@ -548,7 +544,11 @@ object RunUtils {
     // transforms.DynamicSingleAssignment.applyTransform(ctx.program, liveVars)
     transforms.OnePassDSA().applyTransform(ctx.program)
     Logger.info(s"DSA ${timer.checkPoint("DSA ")} ms ")
-    if write then writeToFile(dotBlockGraph(ctx.program, ctx.program.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"blockgraph-after-dsa.dot")
+
+    if write then writeToFile(dotBlockGraph(ctx.program, (ctx.program.collect {
+      case b : Block => b -> translating.BasilIRPrettyPrinter()(b)
+    }).toMap), s"blockgraph-after-dsa.dot")
+
     if (ir.eval.SimplifyValidation.validate) {
       // Logger.info("Live vars difftest")
       // val tipLiveVars : Map[CFGPosition, Set[Variable]] = analysis.IntraLiveVarsAnalysis(ctx.program).analyze()
@@ -568,7 +568,8 @@ object RunUtils {
     // brute force run the analysis twice because it cleans up more stuff
     //assert(ctx.program.procedures.forall(transforms.rdDSAProperty))
     transforms.doCopyPropTransform(ctx.program)
-    if write then writeToFile(dotBlockGraph(ctx.program, ctx.program.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"blockgraph-after-simp.dot")
+    if write then writeToFile(dotBlockGraph(ctx.program.mainProcedure), s"blockgraph-after-simp.dot")
+
     // assert(ctx.program.procedures.forall(transforms.rdDSAProperty))
 
     assert(invariant.blockUniqueLabels(ctx.program))
@@ -589,12 +590,12 @@ object RunUtils {
     // which go away in high level conss
     if write then writeToFile(serialiseIL(ctx.program), s"il-after-slices.il")
 
-    if write then writeToFile(dotBlockGraph(ctx.program, ctx.program.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"blockgraph-after-simp.dot")
-
     // re-apply dsa
     // transforms.OnePassDSA().applyTransform(ctx.program)
-    if write then writeToFile(dotBlockGraph(ctx.program, ctx.program.filter(_.isInstanceOf[Block]).map(b => b -> b.toString).toMap), s"blockgraph-after-second-dsa.dot")
 
+    Logger.info("writing")
+
+    if write then writeToFile(translating.BasilIRPrettyPrinter()(ctx.program), "prettyprinted.il")
 
     if (ir.eval.SimplifyValidation.validate) {
       Logger.info("[!] Simplify :: Writing simplification validation")

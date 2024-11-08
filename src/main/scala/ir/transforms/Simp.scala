@@ -3,6 +3,8 @@ import translating.serialiseIL
 
 import util.Logger
 import ir.eval.AlgebraicSimplifications
+import ir.eval.AssumeConditionSimplifications
+import ir.eval.simplifyExprFixpoint
 import ir.cilvisitor.*
 import ir.*
 import scala.collection.mutable
@@ -12,23 +14,7 @@ import scala.concurrent.duration.*
 import scala.util.{Failure, Success}
 import ExecutionContext.Implicits.global
 
-trait AbstractDomain[L] {
-  def join(a: L, b: L, pos: Block): L
-  def widen(a: L, b: L, pos: Block): L = join(a, b, pos)
-  def narrow(a: L, b: L): L = a
-  def transfer(a: L, b: Command): L
-  def transferBlockFwd(a: L, b: Block): L = {
-    transfer(b.statements.foldLeft(a)(transfer), b.jump)
-  }
-  def transferBlockBwd(a: L, b: Block): L = {
-    b.statements.toList.reverse.foldLeft(transfer(a, b.jump))(transfer)
-  }
-
-  def top: L
-  def bot: L
-}
-
-def getLiveVars(p: Procedure) : (Map[Block, Set[Variable]], Map[Block, Set[Variable]]) = {
+def getLiveVars(p: Procedure): (Map[Block, Set[Variable]], Map[Block, Set[Variable]]) = {
   val liveVarsDom = IntraLiveVarsDomain()
   val liveVarsSolver = worklistSolver(liveVarsDom)
   liveVarsSolver.solveProc(p, backwards = true)
@@ -107,41 +93,6 @@ class DefUseDomain(liveBefore: Map[Block, Set[Variable]])
 
 }
 
-class CollectingDomain[T, D <: AbstractDomain[T]](d: D) extends AbstractDomain[(T, Map[Command, T])] {
-  def bot = (d.bot, Map())
-  def top = ???
-
-  def join(l: (T, Map[Command, T]), r: (T, Map[Command, T]), pos: Block): (T, Map[Command, T]) = {
-    val nr = d.join(l._1, r._1, pos)
-    (
-      nr,
-      (l._2.keySet ++ r._2.keySet)
-        .map((s: Command) => {
-          ((l._2.get(s), r._2.get(s)) match {
-            case (Some(l), Some(r)) if l == r => Seq(s -> l)
-            case (Some(l), Some(r)) if l != r => Seq()
-            case (Some(l), None)              => Seq(s -> l)
-            case (None, Some(l))              => Seq(s -> l)
-            case _                            => ???
-          })
-        })
-        .flatten
-        .toMap
-    )
-  }
-
-  override def transfer(s: (T, Map[Command, T]), c: Command) = {
-    val u = d.transfer(s._1, c)
-    (u, s._2.updated(c, u))
-  }
-}
-
-trait PowerSetDomain[T] extends AbstractDomain[Set[T]] {
-  def bot = Set()
-  def top = ???
-  def join(a: Set[T], b: Set[T], pos: Block) = a.union(b)
-}
-
 class IntraLiveVarsDomain extends PowerSetDomain[Variable] {
   // expected backwards
 
@@ -164,8 +115,8 @@ def removeSlices(p: Program): Unit = {
   p.procedures.foreach(removeSlices)
 }
 
-
 def removeSlices(p: Procedure): Unit = {
+
   /** if for each variable v there is some i:int such that (i) all its assignments have a ZeroExtend(i, x) and (ii) all
     * its uses have Extract(size(v) - i, 0, v) Then we replace v by a variable of bitvector size (size(v) - i)
     *
@@ -285,7 +236,6 @@ def removeSlices(p: Procedure): Unit = {
   visit_proc(ReplaceAlwaysSlicedVars(toSmallen), p)
 }
 
-
 def getRedundantAssignments(procedure: Procedure): Set[Assign] = {
 
   /** Get all assign statements which define a variable never used, assuming ssa form and proc parameters so that
@@ -364,37 +314,6 @@ def getRedundantAssignments(procedure: Procedure): Set[Assign] = {
   var toRemove = assignedNotRead
   var removeOld = toRemove
 
-  // def remove(a: Assign): Boolean = {
-  //   var removed : Boolean = false
-  //   toRemove = toRemove.map((v, s) =>
-  //     v -> {
-  //       s match {
-  //         case VS.Read(defs, uses) if uses.size == 1 && uses.contains(a) => {
-  //           removed = true
-  //           VS.Assigned(defs)
-  //         }
-  //         case VS.Read(defs, uses) if uses.contains(a)                   => {
-  //           removed = true
-  //           VS.Read(defs, uses - a)
-  //         }
-  //         case o                                                         => o
-  //       }
-  //     }
-  //   )
-  //   removed
-  // }
-
-  // while ({
-  //   removeOld = toRemove
-  //   val removed = removeOld.map((v, s) => {
-  //     s match {
-  //       case VS.Assigned(definition) => definition.map(remove).foldLeft(false)((x,y) => x || y)
-  //       case _                       => false
-  //     }
-  //   })
-  //   removed.exists(x => x)
-  // }) {}
-
   val r = toRemove
     .collect { case (v, VS.Assigned(d)) =>
       d
@@ -450,18 +369,17 @@ def copypropTransform(p: Procedure) = {
   t.checkPoint("redundant assignments")
   // Logger.info(s"    ${p.name} after dead var cleanup expr complexity ${ExprComplexity()(p)}")
 
-  visit_proc(AlgebraicSimplifications, p)
-  visit_proc(AlgebraicSimplifications, p)
-  visit_proc(AlgebraicSimplifications, p)
-  visit_proc(AlgebraicSimplifications, p)
-  ir.eval.cleanupSimplify(p)
-  ir.eval.cleanupSimplify(p)
+  AlgebraicSimplifications(p)
+  AssumeConditionSimplifications(p)
+
+  AlgebraicSimplifications(p)
   // Logger.info(s"    ${p.name}  after simp expr complexity ${ExprComplexity()(p)}")
   val sipm = t.checkPoint("algebraic simp")
 
   // Logger.info("[!] Simplify :: RemoveSlices")
   removeSlices(p)
-  visit_proc(AlgebraicSimplifications, p)
+  ir.eval.cleanupSimplify(p)
+  AlgebraicSimplifications(p)
 
 }
 
@@ -534,7 +452,6 @@ def doCopyPropTransform(p: Program) = {
 
   applyRPO(p)
 
-
   Logger.info("[!] Simplify :: Expr/Copy-prop Transform")
   val work = p.procedures
     .filter(_.blocks.size > 0)
@@ -576,8 +493,20 @@ def doCopyPropTransform(p: Program) = {
 
 }
 
-def reversePostOrder(startBlock: Block): Unit = {
-  var count = 0
+
+def reversePostOrder(p: Procedure) : Unit = {
+  /* Procedures may contain disconnected sets of blocks so we arbitrarily order these with respect to eachother. */
+  for (b <- p.blocks) {
+    b.rpoOrder = -1
+  }
+  var left = p.entryBlock.map(reversePostOrder(_)).getOrElse(0) + 1
+  for (b <- p.blocks.filter(_.rpoOrder == -1)) {
+     left = reversePostOrder(b, true, left) + 1
+  }
+}
+
+def reversePostOrder(startBlock: Block, fixup: Boolean = false, begin : Int = 0): Int = {
+  var count = begin
   val seen = mutable.HashSet[Block]()
   val vcs = mutable.HashMap[Block, Int]()
 
@@ -588,130 +517,19 @@ def reversePostOrder(startBlock: Block): Unit = {
         walk(s)
       }
     }
-    b.rpoOrder = count
+    if (!fixup || b.rpoOrder < count) {
+      b.rpoOrder = count
+    }
     count += 1
   }
 
   walk(startBlock)
+  count
 }
 
 def applyRPO(p: Program) = {
   for (proc <- p.procedures) {
-    proc.entryBlock.map(eb => reversePostOrder(eb))
-  }
-}
-
-class worklistSolver[L, A <: AbstractDomain[L]](domain: A) {
-
-  def solveProc(p: Procedure, backwards: Boolean = false) = {
-    solve(p.blocks, Set(), Set(), backwards)
-  }
-
-  def solveProg(
-      p: Program,
-      widenpoints: Set[Block], // set of loop heads
-      narrowpoints: Set[Block] // set of conditions
-  ): Map[Procedure, Map[Block, L]] = {
-    val initDom = p.procedures.map(p => (p, p.blocks))
-
-    val work = initDom.map(d => {
-      (
-        d._1,
-        Future {
-          val t = util.PerformanceTimer(s"solve ${d._1.name}")
-          Logger.info(s"begin ${t.timerName}")
-          val r = solve(d._2, Set(), Set())
-          t.checkPoint("finished")
-          r
-        }
-      )
-    })
-    work
-      .map((prog, x) =>
-        try {
-          (prog, Await.result(x, 10000.millis)._2)
-        } catch {
-          case t: Exception => {
-            Logger.error(s"${prog.name} : $t")
-            (prog, Map())
-          }
-        }
-      )
-      .toMap
-    // Await.result(Future.sequence(work), Duration.Inf).toMap
-  }
-
-  def solve(
-      initial: IterableOnce[Block],
-      widenpoints: Set[Block], // set of loop heads
-      narrowpoints: Set[Block], // set of conditions
-      backwards: Boolean = false
-  ): (Map[Block, L], Map[Block, L]) = {
-    val savedAfter: mutable.HashMap[Block, L] = mutable.HashMap()
-    val savedBefore: mutable.HashMap[Block, L] = mutable.HashMap()
-    val saveCount: mutable.HashMap[Block, Int] = mutable.HashMap()
-    val worklist = {
-      if (backwards) {
-        mutable.PriorityQueue[Block]()(Ordering.by(b => -b.rpoOrder))
-      } else {
-        mutable.PriorityQueue[Block]()(Ordering.by(b => b.rpoOrder))
-      }
-    }
-    worklist.addAll(initial)
-
-    def successors(b: Block) = if backwards then b.prevBlocks else b.nextBlocks
-    def predecessors(b: Block) = if backwards then b.nextBlocks else b.prevBlocks
-
-    while (worklist.nonEmpty) {
-      val b = worklist.dequeue
-
-      while (
-        worklist.nonEmpty && (if backwards then (worklist.head.rpoOrder <= b.rpoOrder)
-                              else (worklist.head.rpoOrder >= b.rpoOrder))
-      ) do {
-        // drop rest of blocks with same priority
-        val m = worklist.dequeue()
-        assert(
-          m == b,
-          s"Different nodes with same priority ${m.rpoOrder} ${b.rpoOrder}, violates PriorityQueueWorklist assumption: $b and $m"
-        )
-      }
-
-      val prev = savedAfter.get(b)
-      val x = {
-        predecessors(b).toList.flatMap(b => savedAfter.get(b).toList) match {
-          case Nil      => domain.bot
-          case h :: Nil => h
-          case h :: tl  => tl.foldLeft(h)((acc, nb) => domain.join(acc, nb, b))
-        }
-      }
-      savedBefore(b) = x
-      val todo = List(b)
-
-      val lastBlock = b // todo.last
-      var nx = todo.foldLeft(x)((x, b) => {
-        savedBefore(b) = x
-        if (backwards) {
-          val ojmp = domain.transfer(x, b.jump)
-          savedAfter(b) = b.statements.toList.reverse.foldLeft(ojmp)(domain.transfer)
-        } else {
-          val stmts = b.statements.foldLeft(x)(domain.transfer)
-          savedAfter(b) = domain.transfer(stmts, b.jump)
-        }
-        savedAfter(b)
-      })
-      savedAfter(lastBlock) = nx
-      saveCount(lastBlock) = saveCount.get(lastBlock).getOrElse(0) + 1
-      if (!prev.contains(nx)) then {
-        if (saveCount(lastBlock) >= 50) {
-          Logger.warn(s"Large join count on block ${lastBlock.label}, no fix point? (-v for mor info)")
-          Logger.debug(lastBlock.label + "    ==> " + x)
-          Logger.debug(lastBlock.label + "    <== " + nx)
-        }
-        worklist.addAll(successors(lastBlock))
-      }
-    }
-    if backwards then (savedAfter.toMap, savedBefore.toMap) else (savedBefore.toMap, savedAfter.toMap)
+    reversePostOrder(proc)
   }
 }
 
@@ -756,7 +574,6 @@ object CCP {
 
 object CopyProp {
 
-
   def forwardFlagCalc(p: Procedure) = {
     val (beforeLive, afterLive) = getLiveVars(p)
     val dom = DefUseDomain(beforeLive)
@@ -779,9 +596,8 @@ object CopyProp {
       val deps: mutable.Set[Variable],
       var clobbered: Boolean,
       var useCount: Int,
-      var isFlagDep: Boolean,
+      var isFlagDep: Boolean
   )
-
 
   def PropFlagCalculations(p: Procedure, initialState: Map[Variable, PropState]) = {
     val state = mutable.HashMap[Variable, PropState]()
@@ -805,8 +621,11 @@ object CopyProp {
           ()
         }
         case a: Assign
-            if state.contains(a.lhs) && (a.rhs != state(a.lhs).e) && (canPropTo(state, a.rhs, true) != canPropTo(state, state(a.lhs).e, true))
-             => {
+            if state.contains(a.lhs) && (a.rhs != state(a.lhs).e) && (canPropTo(state, a.rhs, true) != canPropTo(
+              state,
+              state(a.lhs).e,
+              true
+            )) => {
           clobberFull(state, a.lhs)
         }
         case a: Assign if state.contains(a.lhs) => {
@@ -849,10 +668,14 @@ object CopyProp {
     }
   }
 
-  def isTrivial(e: Expr) = e match {
+  def isTrivial(e: Expr): Boolean = e match {
     case l: Literal                              => true
     case l: Variable                             => true
     case BinaryExpr(op, e: Variable, b: Literal) => true
+    case ZeroExtend(_, e) if isTrivial(e)        => true
+    case SignExtend(_, e) if isTrivial(e)        => true
+    case Extract(_, _, e) if isTrivial(e)        => true
+    case UnaryExpr(_, e) if isTrivial(e)         => true
     case _                                       => false
   }
 
@@ -873,7 +696,7 @@ object CopyProp {
           )(e)
 
       // partial eval after prop
-      eval.simplifyExprFixpoint(false)(ne.getOrElse(e))
+      simplifyExprFixpoint(ne.getOrElse(e))._1
     }
 
     def propfp(e: Expr) = {
@@ -1079,6 +902,15 @@ class ExprComplexity extends CILVisitor {
   }
 }
 
+/**
+ * Use this as a partially applied function. 
+ * Substitute(Map.from(substs).get, recurse = false)
+ *
+ * @res: defines the substitutions to make
+ * @recurse: continue substituting with `res` into each substituted expression
+ * @complexityThreshold: Stop substituting after the AST node count has increased by this much
+ *
+ */
 class Substitute(
     val res: Variable => Option[Expr],
     val recurse: Boolean = true,
