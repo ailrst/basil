@@ -1,5 +1,5 @@
 package ir.invariant
-import ir._
+import ir.*
 import util.Logger
 
 
@@ -33,6 +33,21 @@ def correctCalls(p: Program) : Boolean = {
       }
 
       r
+    }
+    case c: Return => {
+      val t = c.parent.parent
+      val outparams = (c.outParams.keySet == t.formalOutParam) 
+      val typecheck = c.outParams.forall((k, v) => k.getType == v.getType) && c.outParams.forall((k,v) => k.getType == v.getType)
+      if (!outparams) {
+        Logger.error(s"Return formal out params do  do not match procedure formal out params: ${c.outParams} != ${t.formalOutParam}")
+      }
+      if (!typecheck) {
+        val out = c.outParams.collect {
+          case (k,v) if k.getType != v.getType => s"$k := $v"
+        }
+        Logger.error(s"doesn't typecheck:$c  \n${if out.nonEmpty then " out : " else ""}${out.mkString(" ")}")
+      }
+      typecheck && outparams
     }
     case _ => true
   }

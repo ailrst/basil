@@ -7,7 +7,7 @@ Rely: x == old(x), y == old(y)
 Guarantee: old(x) == 0bv32 ==> x == 0bv32, old(Gamma_y) ==> x == 0bv32 || Gamma_y
 
 Subroutine: main
-Requires: Gamma_main_argc == false
+Requires: Gamma_R0 == false
 
 Subroutine: zero
-Ensures: R0 == 0bv64  && Gamma_R0
+Ensures: zero_result == 0bv32  && Gamma_R0

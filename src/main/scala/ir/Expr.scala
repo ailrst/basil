@@ -1,6 +1,4 @@
 package ir
-
-
 import boogie._
 import scala.collection.mutable
 
@@ -23,6 +21,15 @@ sealed trait Expr {
   def gammas: Set[Expr] = Set()
   def variables: Set[Variable] = Set()
   def acceptVisit(visitor: Visitor): Expr = throw new Exception("visitor " + visitor + " unimplemented for: " + this)
+
+  lazy val variablesCached = variables
+}
+
+def size(e: Expr) = {
+  e.getType match {
+    case BitVecType(s) => Some(s)
+    case _             => None
+  }
 }
 
 sealed trait Literal extends Expr {
@@ -48,6 +55,7 @@ case object FalseLiteral extends BoolLit {
 }
 
 case class BitVecLiteral(value: BigInt, size: Int) extends Literal {
+  assert(size > 0)
   override def toBoogie: BitVecBLiteral = BitVecBLiteral(value, size)
   override def getType: IRType = BitVecType(size)
   override def toString: String = s"${value}bv$size"
@@ -59,9 +67,10 @@ case class IntLiteral(value: BigInt) extends Literal {
   override def toString: String = value.toString
 }
 
-/**
-  * @param end : high bit exclusive
-  * @param start : low bit inclusive
+/** @param end
+  *   : high bit exclusive
+  * @param start
+  *   : low bit inclusive
   * @param body
   */
 case class Extract(end: Int, start: Int, body: Expr) extends Expr {
@@ -122,6 +131,7 @@ case class UnaryExpr(op: UnOp, arg: Expr) extends Expr {
   override def variables: Set[Variable] = arg.variables
   override def loads: Set[MemoryLoad] = arg.loads
   override def getType: IRType = (op, arg.getType) match {
+    case (BoolToBV1, BoolType)       => BitVecType(1)
     case (_: BoolUnOp, BoolType)     => BoolType
     case (_: BVUnOp, bv: BitVecType) => bv
     case (_: IntUnOp, IntType)       => IntType
@@ -149,6 +159,7 @@ sealed trait BoolUnOp(op: String) extends UnOp {
 }
 
 case object BoolNOT extends BoolUnOp("!")
+case object BoolToBV1 extends BoolUnOp("bool2bv1")
 
 sealed trait IntUnOp(op: String) extends UnOp {
   override def toString: String = op
@@ -156,7 +167,6 @@ sealed trait IntUnOp(op: String) extends UnOp {
 }
 
 case object IntNEG extends IntUnOp("-")
-
 
 sealed trait BVUnOp(op: String) extends UnOp {
   override def toString: String = op
@@ -189,7 +199,7 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
           } else {
             throw new Exception("bitvector size mismatch")
           }
-        case BVULT | BVULE | BVUGT | BVUGE | BVSLT | BVSLE | BVSGT | BVSGE =>
+        case BVULT | BVULE | BVUGT | BVUGE | BVSLT | BVSLE | BVSGT | BVSGE | BVSADDO =>
           if (bv1.size == bv2.size) {
             BoolType
           } else {
@@ -204,7 +214,9 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
         case IntEQ | IntNEQ | IntLT | IntLE | IntGT | IntGE => BoolType
       }
     case _ =>
-      throw new Exception("type mismatch, operator " + op + " type doesn't match args: (" + arg1 + ", " + arg2 + ")")
+      throw new Exception(
+        "type mismatch, operator " + op.getClass.getSimpleName + s" type doesn't match args: (" + arg1 + ", " + arg2 + ")"
+      )
   }
 
   private def inSize = arg1.getType match {
@@ -228,10 +240,13 @@ case class BinaryExpr(op: BinOp, arg1: Expr, arg2: Expr) extends Expr {
 
 }
 
-trait BinOp
+trait BinOp {
+  def opName: String
+}
 
 sealed trait BoolBinOp(op: String) extends BinOp {
   override def toString: String = op
+  def opName = op
 }
 
 case object BoolEQ extends BoolBinOp("==")
@@ -243,8 +258,10 @@ case object BoolEQUIV extends BoolBinOp("<==>")
 
 sealed trait BVBinOp(op: String) extends BinOp {
   override def toString: String = op
+  def opName = op
 }
 
+case object BVSADDO extends BVBinOp("saddo")
 case object BVAND extends BVBinOp("and")
 case object BVOR extends BVBinOp("or")
 case object BVADD extends BVBinOp("add")
@@ -277,6 +294,7 @@ case object BVCONCAT extends BVBinOp("++")
 
 sealed trait IntBinOp(op: String) extends BinOp {
   override def toString: String = op
+  def opName = op
   def toBV: BVBinOp = this match {
     case IntADD => BVADD
     case IntMUL => BVMUL
@@ -331,6 +349,7 @@ case class UninterpretedFunction(name: String, params: Seq[Expr], returnType: IR
   override def acceptVisit(visitor: Visitor): Expr = visitor.visitUninterpretedFunction(this)
   override def gammas: Set[Expr] = params.flatMap(_.gammas).toSet
   override def variables: Set[Variable] = params.flatMap(_.variables).toSet
+  override def toString = s"$name(${params.mkString(", ")})"
 }
 
 // Means something has a global scope from the perspective of the IR and Boogie
@@ -371,13 +390,19 @@ case class Register(override val name: String, size: Int) extends Variable with 
 }
 
 // Variable with scope local to the procedure, typically a temporary variable created in the lifting process
-case class LocalVar(override val name: String, override val irType: IRType) extends Variable {
+case class LocalVar(varName: String, override val irType: IRType, val index: Int = 0) extends Variable {
+  override val name = varName + (if (index > 0) then s"_$index" else "")
   override def toGamma: BVar = BVariable(s"Gamma_$name", BoolBType, Scope.Local)
   override def toBoogie: BVar = BVariable(s"$name", irType.toBoogie, Scope.Local)
   override def toString: String = s"LocalVar(${name}, ${if sharedVariable then "shared" else "unshared"}, $irType)"
   override def acceptVisit(visitor: Visitor): Variable = visitor.visitLocalVar(this)
 }
 
+object LocalVar {
+
+  def unapply(l: LocalVar): Option[(String, IRType)] = Some((s"${l.name}_${l.index}", l.irType))
+
+}
 
 // A memory section
 sealed trait Memory extends Global {
@@ -394,11 +419,13 @@ sealed trait Memory extends Global {
 }
 
 // A stack section of memory, which is local to a thread
-case class StackMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+case class StackMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
+    extends Memory {
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitStackMemory(this)
 }
 
 // A non-stack region of memory, which is shared between threads
-case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int) extends Memory {
+case class SharedMemory(override val name: String, override val addressSize: Int, override val valueSize: Int)
+    extends Memory {
   override def acceptVisit(visitor: Visitor): Memory = visitor.visitSharedMemory(this)
 }

@@ -270,6 +270,7 @@ case class BFunctionCall(name: String, args: List[BExpr], outType: BType, uninte
 
 case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
   override def getType: BType = (op, arg.getType) match {
+    case (BoolToBV1, BoolBType)       => BitVecBType(1)
     case (_: BoolUnOp, BoolBType)     => BoolBType
     case (_: BVUnOp, bv: BitVecBType) => bv
     case (_: IntUnOp, IntBType)       => IntBType
@@ -282,6 +283,7 @@ case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
   }
 
   override def toString: String = op match {
+    case BoolToBV1     => s"$op($arg)"
     case uOp: BoolUnOp => s"($uOp$arg)"
     case uOp: BVUnOp   => s"bv$uOp$inSize($arg)"
     case uOp: IntUnOp  => s"($uOp$arg)"
@@ -289,6 +291,7 @@ case class UnaryBExpr(op: UnOp, arg: BExpr) extends BExpr {
 
   override def functionOps: Set[FunctionOp] = {
     val thisFn = op match {
+      case b @ BoolToBV1 => Set(BoolToBV1Op(arg))
       case b: BVUnOp =>
         Set(BVFunctionOp(s"bv$b$inSize", s"bv$b", List(BParam(arg.getType)), BParam(getType)))
       case _ => Set()
@@ -359,7 +362,7 @@ case class BinaryBExpr(op: BinOp, arg1: BExpr, arg2: BExpr) extends BExpr {
           } else {
             throw new Exception(s"bitvector size mismatch: $arg1, $arg2")
           }
-        case BVULT | BVULE | BVUGT | BVUGE | BVSLT | BVSLE | BVSGT | BVSGE =>
+        case BVULT | BVULE | BVUGT | BVUGE | BVSLT | BVSLE | BVSGT | BVSGE | BVSADDO =>
           if (bv1.size == bv2.size) {
             BoolBType
           } else {
@@ -670,7 +673,7 @@ case class BInBounds(base: BExpr, len: BExpr, endian: Endian, i: BExpr) extends 
     case _              => throw new Exception(s"InBounds does not have Bitvector type: $this")
   }
 
-  val fnName: String = s"in_bounds${baseSize}"
+  val fnName: String = s"in_bounds${baseSize}_${if endian == Endian.LittleEndian then "le" else "be"}"
 
   override val getType: BType = BoolBType
   override def functionOps: Set[FunctionOp] =
@@ -678,6 +681,11 @@ case class BInBounds(base: BExpr, len: BExpr, endian: Endian, i: BExpr) extends 
   override def locals: Set[BVar]  = base.locals ++ len.locals ++ i.locals
   override def globals: Set[BVar] = base.globals ++ len.globals ++ i.globals 
   override def loads: Set[BExpr]  = base.loads ++ len.loads ++ i.loads 
+}
+
+
+case class BoolToBV1Op(arg: BExpr) extends FunctionOp {
+  val fnName: String = "bool2bv1"
 }
 
 case class BMemoryLoad(memory: BMapVar, index: BExpr, endian: Endian, bits: Int) extends BExpr {

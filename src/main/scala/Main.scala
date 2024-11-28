@@ -40,6 +40,8 @@ object Main {
       mainProcedureName: String = "main",
       @arg(name = "procedure-call-depth", doc = "Cull procedures beyond this call depth from the main function (defaults to Int.MaxValue)")
       procedureDepth: Int = Int.MaxValue,
+      @arg(name = "trim-early", doc = "Cull procedures BEFORE running analysis")
+      trimEarly: Flag,
       @arg(name = "help", short = 'h', doc = "Show this help message.")
       help: Flag,
       @arg(name = "analysis-results", doc = "Log analysis results in files at specified path.")
@@ -53,7 +55,9 @@ object Main {
       @arg(name = "summarise-procedures", doc = "Generates summaries of procedures which are used in pre/post-conditions (requires --analyse flag)")
       summariseProcedures: Flag,
       @arg(name = "simplify", doc = "Partial evaluate / simplify BASIL IR before output (requires --analyse flag)")
-      simplify: Flag
+      simplify: Flag,
+      @arg(name = "validate-simplify", doc = "Emit SMT2 check for algebraic simplification translation validation to 'rewrites.smt2'")
+      validateSimplify: Flag
   )
 
   def main(args: Array[String]): Unit = {
@@ -84,9 +88,11 @@ object Main {
     }
 
     val q = BASILConfig(
-      loading = ILLoadingConfig(conf.inputFileName, conf.relfFileName, conf.specFileName, conf.dumpIL, conf.mainProcedureName, conf.procedureDepth, conf.parameterForm.value),
+      loading = ILLoadingConfig(conf.inputFileName, conf.relfFileName, conf.specFileName, conf.dumpIL, conf.mainProcedureName, conf.procedureDepth, conf.parameterForm.value || conf.simplify.value, conf.trimEarly.value),
       runInterpret = conf.interpret.value,
-      staticAnalysis = if conf.analyse.value then Some(StaticAnalysisConfig(conf.dumpIL, conf.analysisResults, conf.analysisResultsDot, conf.threadSplit.value, conf.summariseProcedures.value, conf.simplify.value)) else None,
+      simplify = conf.simplify.value,
+      validateSimp = conf.validateSimplify.value,
+      staticAnalysis = if conf.analyse.value then Some(StaticAnalysisConfig(conf.dumpIL, conf.analysisResults, conf.analysisResultsDot, conf.threadSplit.value, conf.summariseProcedures.value)) else None,
       boogieTranslation = BoogieGeneratorConfig(if conf.lambdaStores.value then BoogieMemoryAccessMode.LambdaStoreSelect else BoogieMemoryAccessMode.SuccessiveStoreSelect,
         true, rely, conf.threadSplit.value),
       outputPrefix = conf.outFileName,

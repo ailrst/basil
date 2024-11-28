@@ -24,7 +24,6 @@ trait CILVisitor:
 
   def vstmt(e: Statement): VisitAction[List[Statement]] = DoChildren()
   def vjump(j: Jump): VisitAction[Jump] = DoChildren()
-  def vfallthrough(j: Option[GoTo]): VisitAction[Option[GoTo]] = DoChildren()
 
   def vexpr(e: Expr): VisitAction[Expr] = DoChildren()
   def vrvar(e: Variable): VisitAction[Variable] = DoChildren()
@@ -82,22 +81,47 @@ class CILVisitorImpl(val v: CILVisitor) {
     doVisit(v, v.vjump(j), j, continue)
   }
 
-  def visit_fallthrough(j: Option[GoTo]): Option[GoTo] = {
-    doVisit(v, v.vfallthrough(j), j, (j) => j)
-  }
 
-  def visit_expr(n: Expr): Expr = {
+
+   def visit_expr(n: Expr): Expr = {
     def continue(n: Expr): Expr = n match {
-      case n: Literal                           => n
-      case MemoryLoad(mem, index, endian, size) => MemoryLoad(visit_mem(mem), visit_expr(index), endian, size)
-      case Extract(end, start, arg)             => Extract(end, start, visit_expr(arg))
-      case Repeat(repeats, arg)                 => Repeat(repeats, visit_expr(arg))
-      case ZeroExtend(bits, arg)                => ZeroExtend(bits, visit_expr(arg))
-      case SignExtend(bits, arg)                => SignExtend(bits, visit_expr(arg))
-      case BinaryExpr(op, arg, arg2)            => BinaryExpr(op, visit_expr(arg), visit_expr(arg2))
-      case UnaryExpr(op, arg)                   => UnaryExpr(op, visit_expr(arg))
-      case v: Variable                          => visit_rvar(v)
-      case UninterpretedFunction(n, params, rt) => UninterpretedFunction(n, params.map(visit_expr), rt)
+      case n: Literal => n
+      case MemoryLoad(mem, index, endian, size) => {
+        val nmem = visit_mem(mem)
+        val nind = visit_expr(index)
+        if ((nmem ne mem) || (nind ne index)) MemoryLoad(visit_mem(mem), visit_expr(index), endian, size) else n
+      }
+      case Extract(end, start, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) Extract(end, start, narg) else n
+      }
+      case Repeat(repeats, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) Repeat(repeats, arg) else n
+      }
+      case ZeroExtend(bits, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) ZeroExtend(bits, narg) else n
+      }
+      case SignExtend(bits, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) SignExtend(bits, narg) else n
+      }
+      case BinaryExpr(op, arg, arg2) => {
+        val narg1 = visit_expr(arg)
+        val narg2 = visit_expr(arg2)
+        if ((narg1 ne arg) || (narg2 ne arg2)) BinaryExpr(op, narg1, narg2) else n
+      }
+      case UnaryExpr(op, arg) => {
+        val narg = visit_expr(arg)
+        if (narg ne arg) UnaryExpr(op, narg) else n
+      }
+      case v: Variable => visit_rvar(v)
+      case UninterpretedFunction(name, params, rt) => {
+        val nparams = params.map(visit_expr)
+        val updated = (params.zip(nparams).map((a, b) => a ne b)).contains(true)
+        if (updated) UninterpretedFunction(name, nparams, rt) else n
+      } 
     }
     doVisit(v, v.vexpr(n), n, continue)
   }
@@ -108,7 +132,9 @@ class CILVisitorImpl(val v: CILVisitor) {
         val actuals = d.actualParams.map(i => i._1 -> visit_expr(i._2))
         val outs = d.outParams.map(i => i._1 -> visit_lvar(i._2))
         v.enter_scope(actuals)
-        DirectCall(d.target, d.label, outs, actuals)
+        d.outParams = outs
+        d.actualParams = actuals
+        d
       }
       case i: IndirectCall => {
         i.target = visit_rvar(i.target)
@@ -172,7 +198,23 @@ class CILVisitorImpl(val v: CILVisitor) {
 
   def visit_prog(p: Program): Program = {
     def continue(p: Program) = {
-      p.procedures = p.procedures.flatMap(visit_proc)
+      for (i <- (0 until p.procedures.size)) {
+        visit_proc(p.procedures(i)) match {
+          case h::Nil if p.procedures(i) eq h => {}
+          case h::Nil if !(p.procedures(i) eq h) => {
+            // TODO: need some better approximation of knowing whether this procedure requires relinking?
+            p.removeProcedure(i)
+            p.addProcedure(h)
+          }
+          case Nil => p.removeProcedure(i)
+          case h::tl => {
+            p.removeProcedure(i)
+            for (x <- h::tl) {
+              p.addProcedure(x)
+            }
+          }
+        }
+      }
       p
     }
     doVisit(v, v.vprog(p), p, continue)

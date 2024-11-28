@@ -2,7 +2,7 @@ package translating
 import ir.{BoolOR, *}
 import boogie.*
 import specification.*
-import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion}
+import util.{BoogieGeneratorConfig, BoogieMemoryAccessMode, ProcRelyVersion, Logger}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -63,7 +63,7 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
         translatedProcedures
     }
     val defaultGlobals = List(BVarDecl(mem, List(externAttr)), BVarDecl(Gamma_mem, List(externAttr)))
-    val globalVars = procedures.flatMap(p => p.globals ++ p.freeRequires.flatMap(_.globals) ++ p.freeEnsures.flatMap(_.globals) ++ p.ensures.flatMap(_.globals) ++ p.requires.flatMap(_.globals))
+    val globalVars = procedures.flatMap(p => p.globals)
     val globalDecls = (globalVars.map(b => BVarDecl(b, List(externAttr))) ++ defaultGlobals).distinct.sorted.toList
 
     val globalConsts: List[BConstAxiomPair] =
@@ -100,7 +100,8 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
     val functionsUsed2 = functionsUsed1.map(p => functionOpToDefinition(p))
     val functionsUsed3 = functionsUsed2.flatMap(p => p.functionOps).map(p => functionOpToDefinition(p))
     val functionsUsed4 = functionsUsed3.flatMap(p => p.functionOps).map(p => functionOpToDefinition(p))
-    val functionsUsed = (functionsUsed2 ++ functionsUsed3 ++ functionsUsed4).toList.sorted
+    val functionsUsed5 = functionsUsed4.flatMap(p => p.functionOps).map(p => functionOpToDefinition(p))
+    val functionsUsed = (functionsUsed2 ++ functionsUsed3 ++ functionsUsed4 ++ functionsUsed5).toList.sorted
 
 
     val declarations = globalDecls ++ globalConsts ++ functionsUsed ++ rgLib ++ pushUpModifiesFixedPoint(rgProcs ++ procedures)
@@ -217,6 +218,12 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
 
   def functionOpToDefinition(f: FunctionOp): BFunction = {
     f match {
+      case b @ BoolToBV1Op(arg) =>  {
+        val invar = BParam("arg", BoolBType)
+        val outvar = BParam(BitVecBType(1))
+        val body = IfThenElse(invar, BitVecBLiteral(1,1), BitVecBLiteral(0, 1))
+        BFunction(b.fnName, List(invar), outvar, Some(body), List(externAttr))
+      }
       case b: BVFunctionOp => BFunction(b.name, b.in, b.out, None, List(externAttr, b.attribute))
       case m: MemoryLoadOp =>
         val memVar = BMapVar("memory", MapBType(BitVecBType(m.addressSize), BitVecBType(m.valueSize)), Scope.Parameter)
@@ -433,7 +440,7 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
 
 
   def translateProcedure(p: Procedure, readOnlyMemory: List[BExpr]): BProcedure = {
-    val body = (p.entryBlock.view ++ p.blocks.filterNot(x => p.entryBlock.contains(x))).map(translateBlock).toList
+    val body = (p.entryBlock.view ++ ArrayBuffer.from(p.blocks).sortBy( x => -x.rpoOrder).filterNot(x => p.entryBlock.contains(x))).map(translateBlock).toList
 
     val callsRely: Boolean = body.flatMap(_.body).exists(_ match
       case BProcedureCall("rely", lhs, params, comment) => true
@@ -567,7 +574,7 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
 
   def translateBlock(b: Block): BBlock = {
     val captureState = captureStateStatement(s"${b.label}")
-    val cmds = List(captureState) ++ b.statements.flatMap(s => translate(s)) ++ translate(b.jump)
+    val cmds = List() ++ b.statements.flatMap(s => translate(s)) ++ translate(b.jump)
 
     BBlock(b.label, cmds)
   }
@@ -693,11 +700,11 @@ class IRToBoogie(var program: Program, var spec: Specification, var thread: Opti
       val lhsGamma = m.mem.toGamma
       val rhsGamma = GammaStore(m.mem.toGamma, m.index.toBoogie, m.value.toGamma, m.size, m.size / m.mem.valueSize)
       val store = AssignCmd(List(lhs, lhsGamma), List(rhs, rhsGamma))
-      val stateSplit = s match {
+      val stateSplit = List.empty /*s match {
         case MemoryAssign(_, _, _, _, _, Some(label)) => List(captureStateStatement(s"$label"))
         case Assign(_, _, Some(label)) => List(captureStateStatement(s"$label"))
         case _ => List.empty
-      }
+      } */
       m.mem match {
         case s: StackMemory =>
           List(store) ++ stateSplit

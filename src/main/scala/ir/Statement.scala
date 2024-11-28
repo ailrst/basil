@@ -1,4 +1,5 @@
 package ir
+import util.Logger
 import util.intrusive_list.IntrusiveListElement
 import boogie.{BMapVar, GammaStore}
 import collection.immutable.SortedMap
@@ -155,7 +156,7 @@ class DirectCall(val target: Procedure,
     case None => Set()
   } */
   def calls: Set[Procedure] = Set(target)
-  override def toString: String = s"${labelStr}DirectCall(${target.name})"
+  override def toString: String = s"${labelStr}${outParams.map(_._2.name).mkString(",")} := DirectCall(${target.name})(${actualParams.map(_._2).mkString(",")})"
   override def acceptVisit(visitor: Visitor): Statement = visitor.visitDirectCall(this)
 
   override def linkParent(p: Block): Unit = {
