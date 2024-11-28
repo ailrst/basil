@@ -206,7 +206,6 @@ object IRTransform {
     val renamer = Renamer(boogieReserved)
     externalRemover.visitProgram(ctx.program)
     renamer.visitProgram(ctx.program)
-
     ctx
   }
 
@@ -273,13 +272,15 @@ object IRTransform {
 /** Methods relating to program static analysis.
   */
 object StaticAnalysis {
+  var first : Boolean = true
   /** Run all static analysis passes on the provided IRProgram.
     */
   def analyse(
-      ctx: IRContext,
+      ictx: IRContext,
       config: StaticAnalysisConfig,
       iteration: Int
   ): StaticAnalysisContext = {
+    var ctx = ictx
     val IRProgram: Program = ctx.program
     val externalFunctions: Set[ExternalFunction] = ctx.externalFunctions
     val globals: Set[SpecGlobal] = ctx.globals
@@ -323,9 +324,17 @@ object StaticAnalysis {
     val ANRSolver = ANRAnalysisSolver(IRProgram)
     val ANRResult = ANRSolver.analyze()
 
+
     Logger.debug("[!] Running RNA")
     val RNASolver = RNAAnalysisSolver(IRProgram)
     val RNAResult = RNASolver.analyze()
+
+    config.analysisResultsPath.foreach(s =>
+      writeToFile(printAnalysisResults(IRProgram, ANRResult), s"${s}-anr-result$iteration.txt")
+    )
+    config.analysisResultsPath.foreach(s =>
+      writeToFile(printAnalysisResults(IRProgram, RNAResult), s"${s}-rna-result$iteration.txt")
+    )
 
     Logger.debug("[!] Running Constant Propagation")
     val constPropSolver = ConstantPropagationSolver(IRProgram)
@@ -373,8 +382,19 @@ object StaticAnalysis {
       )
     })
 
-    if (config.simplify) {
-      transforms.SSARename.concretiseSSA(ctx.program, reachingDefinitionsAnalysisResults)
+    if (config.simplify && first) {
+      Logger.info("[!] Running simplification")
+      ctx = transforms.liftProcedureCallAbstraction(ctx)
+      writeToFile(serialiseIL(IRProgram), s"il-after-params.il")
+
+      val rd = ReachingDefinitionsAnalysisSolver(IRProgram).analyze()
+
+      config.analysisResultsPath.foreach(s =>
+        writeToFile(printAnalysisResults(IRProgram, rd), s"${s}-reachingdefs-result$iteration.txt")
+      )
+
+      transforms.SSARename.concretiseSSA(ctx.program, rd)
+      writeToFile(serialiseIL(IRProgram), s"il-after-ssa.il")
 
       val rds2 = ReachingDefinitionsAnalysisSolver(IRProgram)
       val rdr2 = rds2.analyze()
@@ -383,7 +403,7 @@ object StaticAnalysis {
       writeToFile(serialiseIL(IRProgram), s"il-after-copyprop.il")
     }
 
-    Logger.info("[!] Running Constant Propagation with SSA")
+    Logger.debug("[!] Running Constant Propagation with SSA")
     val constPropSolverWithSSA = ConstantPropagationSolverWithSSA(IRProgram, reachingDefinitionsAnalysisResults)
     val constPropResultWithSSA = constPropSolverWithSSA.analyze()
 
@@ -441,6 +461,7 @@ object StaticAnalysis {
       Logger.warn(s"Disabling IDE solver tests due to external main procedure: ${IRProgram.mainProcedure.name}")
     }
 
+    first = false
     StaticAnalysisContext(
       constPropResult = constPropResult,
       IRconstPropResult = newCPResult,
@@ -518,9 +539,17 @@ object RunUtils {
 
   def loadAndTranslate(q: BASILConfig): BASILResult = {
     Logger.debug("[!] Loading Program")
-    val ctx = IRLoading.load(q.loading)
+    var ctx = IRLoading.load(q.loading)
 
-    IRTransform.doCleanup(ctx)
+    ctx = IRTransform.doCleanup(ctx)
+
+    assert(invariant.correctCalls(ctx.program))
+    if (q.loading.parameterForm) {
+      ctx = ir.transforms.liftProcedureCallAbstraction(ctx)
+    } else {
+      ir.transforms.clearParams(ctx.program)
+    }
+    assert(invariant.correctCalls(ctx.program))
 
     q.loading.dumpIL.foreach(s => writeToFile(serialiseIL(ctx.program), s"$s-before-analysis.il"))
     val analysis = q.staticAnalysis.map(conf => staticAnalysis(conf, ctx))
