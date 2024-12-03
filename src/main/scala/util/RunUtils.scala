@@ -665,13 +665,18 @@ object RunUtils {
 
     if (q.runInterpret) {
       val fs = eval.interpretTrace(ctx)
-      Logger.info("Interpreter Trace:\n" + fs._2.t.mkString("\n"))
+
+      val stdout = fs._1.memoryState.getMem("stdout").toList.sortBy(_._1.value).map(_._2.value.toChar).mkString("")
+
+      Logger.info(s"Interpreter stdout:\n${stdout}")
+      writeToFile((fs._2.t.mkString("\n")), "interpret-trace.txt")
       val stopState = fs._1.nextCmd
       if (stopState != eval.Stopped()) {
         Logger.error(s"Interpreter exited with $stopState")
       } else {
         Logger.info("Interpreter stopped normally.")
       }
+      Logger.info(s"Finished interpret: trace written to ${interpret-trace.txt}")
     }
 
     IRTransform.prepareForTranslation(q, ctx)

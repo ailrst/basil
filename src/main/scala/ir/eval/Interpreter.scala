@@ -340,9 +340,11 @@ object LibcIntrinsic {
   def intrinsics[S, T <: Effects[S, InterpreterError]] =
     Map[String, T => State[S, Unit, InterpreterError]](
       "putc" -> singleArg("putc"),
+      "putchar" -> singleArg("putc"),
       "puts" -> singleArg("puts"),
       "printf" -> singleArg("print"),
       "malloc" -> singleArg("malloc"),
+      "__libc_malloc_impl" -> singleArg("malloc"),
       "free" -> singleArg("free"),
       "#free" -> singleArg("free"),
       "calloc" -> calloc
