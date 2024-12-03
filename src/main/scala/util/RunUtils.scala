@@ -664,6 +664,7 @@ object RunUtils {
     q.loading.dumpIL.foreach(s => DebugDumpIRLogger.writeToFile(File(s"$s-after-analysis.il"), pp_prog(ctx.program)))
 
     if (q.runInterpret) {
+      Logger.info("Start interpret")
       val fs = eval.interpretTrace(ctx)
 
       val stdout = fs._1.memoryState.getMem("stdout").toList.sortBy(_._1.value).map(_._2.value.toChar).mkString("")
@@ -676,7 +677,7 @@ object RunUtils {
       } else {
         Logger.info("Interpreter stopped normally.")
       }
-      Logger.info(s"Finished interpret: trace written to ${interpret-trace.txt}")
+      Logger.info(s"Finished interpret: trace written to interpret-trace.txt")
     }
 
     IRTransform.prepareForTranslation(q, ctx)
