@@ -201,7 +201,7 @@ class Procedure private (
                   var ensures: List[BExpr],
                 ) extends Iterable[CFGPosition] {
 
-  def name = procName //  + address.map("_" + _).getOrElse("") 
+  def name = procName + address.map("_" + _).getOrElse("") 
 
   private val _callers = mutable.HashSet[DirectCall]()
   _blocks.foreach(_.parent = this)
