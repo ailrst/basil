@@ -138,6 +138,7 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
       p.mainProcedure.name,
       memoryRegions(p).toList.sortBy(_.name).map(memdecl) ++
         globals(p).toList.sorted.map(vardecl)
+        ++ List("\nlet entry_procedure = " + p.mainProcedure.name)
         ++ List(initialMemory(p.initialMemory.values))
         ,
       p.procedures.toList.map(vproc).collect {
@@ -266,7 +267,9 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
         s"  blocks = [\n    " + indent(middleBlocks.mkString(";\n"), "    ") + "\n  ]"
       }
 
-    val blocks = (addr ++ iblocks ++ Seq(mblocks)).mkString(";\n")
+    val pname = Seq(s"  name = ${p.procName}")
+
+    val blocks = (pname ++ addr ++ iblocks ++ Seq(mblocks)).mkString(";\n")
 
     Proc(
       s"proc $name(${inParams.mkString(", ")}) -> (${outParams.mkString(", ")})",
@@ -310,7 +313,7 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
     val op = outParams.map((l, r) => l).mkString(", ")
 
     if (outParams.size > 5) {
-      BST(s"($op)\n:= call $procname (${inparams.map((l, r) => r).mkString(", ")})")
+      BST(s"($op)\n    := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
     } else if (outParams.size > 0) {
       BST(s"($op) := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
     } else {
