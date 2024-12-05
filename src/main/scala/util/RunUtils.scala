@@ -704,6 +704,10 @@ object RunUtils {
     }
     assert(invariant.singleCallBlockEnd(ctx.program))
 
+    q.loading.dumpIL.foreach(s => 
+      writeToFile(pp_prog(ctx.program), s"$s-output.il")
+    )
+
     BASILResult(ctx, analysis, boogiePrograms)
   }
 

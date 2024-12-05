@@ -159,6 +159,7 @@ val StaticAnalysisLogger  = Logger.deriveLogger("analysis", System.out)
 val SimplifyLogger = Logger.deriveLogger("simplify", System.out)
 val DebugDumpIRLogger = {
   val l = Logger.deriveLogger("debugdumpir")
+  l.setLevel(LogLevel.INFO)
   l
 }
 val VSALogger = StaticAnalysisLogger.deriveLogger("vsa")

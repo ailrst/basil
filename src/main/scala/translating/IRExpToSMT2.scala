@@ -50,7 +50,7 @@ trait BasilIR[Repr[+_]] extends BasilIRExp[Repr] {
     }
   }
 
-  def vblock(b: Block): Repr[Block] = vblock(b.label, b.statements.toList.map(vstmt), vjump(b.jump))
+  def vblock(b: Block): Repr[Block] = vblock(b.label, b.address, b.statements.toList.map(vstmt), vjump(b.jump))
   def vproc(p: Procedure): Repr[Procedure] = vproc(
     p.name,
     p.formalInParam.toList.map(vlvar),
@@ -60,7 +60,7 @@ trait BasilIR[Repr[+_]] extends BasilIRExp[Repr] {
     p.returnBlock.map(vblock)
   )
 
-  def vblock(label: String, statements: List[Repr[Statement]], terminator: Repr[Jump]): Repr[Block]
+  def vblock(label: String, address:Option[BigInt], statements: List[Repr[Statement]], terminator: Repr[Jump]): Repr[Block]
 
   def vprog(p: Program) : Repr[Program] = vprog(p.mainProcedure.name, p.procedures.toList.map(vproc))
   def vprog(mainProc: String, procedures: List[Repr[Procedure]]) : Repr[Program]
