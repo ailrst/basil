@@ -34,7 +34,7 @@ case class BST[T <: Expr | Command](v: String) extends PPProg[T] {
 }
 
 case class Prog(mainProc: String, globalDecls: List[String], procedures: List[Proc]) extends PPProg[Program] {
-  override def toString = globalDecls.map(_ + ";").mkString("\n") + "\n\n" + procedures.mkString("\n")
+  override def toString = globalDecls.map(_ + ";").mkString("\n") + "\n\n" + procedures.map(_.toString + ";\n").mkString("")
 }
 
 case class Proc(
@@ -56,7 +56,7 @@ case class PBlock(label: String, address: Option[String], commands: List[String]
     val indent = "  "
     val addr = address.map(" " + _).getOrElse("")
     s"block ${label}${addr} [\n"
-      ++ commands.map(indent + _ + ";").mkString("\n")
+      ++ commands.map("  " + _).mkString(";\n")
       ++ "\n]"
   }
 }
@@ -139,7 +139,7 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
       memoryRegions(p).toList.sortBy(_.name).map(memdecl) ++
         globals(p).toList.sorted.map(vardecl)
         ++ List("\nlet entry_procedure = " + p.mainProcedure.name)
-        ++ List(initialMemory(p.initialMemory.values))
+        // ++ List(initialMemory(p.initialMemory.values))
         ,
       p.procedures.toList.map(vproc).collect {
         case p: Proc => p
@@ -241,13 +241,18 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
 
   def vaddress(a: BigInt) = vintlit(a)
 
+  def vparam(l: Variable) : String = {
+    s"${l.name}:${vtype{l.getType}}"
+  }
+
   override def vproc(p: Procedure): PPProg[Procedure] = {
     seenVars.clear()
     val decls = locals(p).map(vardecl)
 
+
     val name = p.name
-    val inParams = p.formalInParam.toList.map(vlvar)
-    val outParams = p.formalOutParam.toList.map(vlvar)
+    val inParams = p.formalInParam.toList.map(vparam)
+    val outParams = p.formalOutParam.toList.map(vparam)
     val entryBlock = p.entryBlock.map(vblock)
     val middleBlocks =
       (p.blocks.toSet -- p.entryBlock.toSet -- p.returnBlock.toSet).toList.sortBy(x => -x.rpoOrder).map(vblock)
@@ -255,21 +260,20 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
 
     val localDecls = decls.toList.sorted
 
-
     val iblocks = entryBlock.map(b => (s"  entry = ${indent(b.toString)}")).toList
       ++ returnBlock.map(b => (s"  exit = ${indent(b.toString)}")).toList
 
     val addr = p.address.map(l => vaddress(l).toString).map("  address = " + _).toList
 
     val mblocks =
-      if (middleBlocks.size == 0) then ""
+      if (middleBlocks.size == 0) then None
       else {
-        s"  blocks = [\n    " + indent(middleBlocks.mkString(";\n"), "    ") + "\n  ]"
+        Some(s"  blocks = [\n    " + indent(middleBlocks.mkString(";\n"), "    ") + "\n  ]")
       }
 
-    val pname = Seq(s"  name = ${p.procName}")
+    val pname = Seq(s"  name = \"${p.procName}\"")
 
-    val blocks = (pname ++ addr ++ iblocks ++ Seq(mblocks)).mkString(";\n")
+    val blocks = (pname ++ addr ++ iblocks ++ mblocks.toList).map(_ + ";").mkString("\n")
 
     Proc(
       s"proc $name(${inParams.mkString(", ")}) -> (${outParams.mkString(", ")})",
@@ -297,33 +301,41 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
       size: Int
   ): BST[MemoryStore] = {
     val le = if endian == Endian.LittleEndian then "le" else "be"
-    BST(s"store_$le(${mem}, ${index}, ${value}, ${size})")
+    BST(s"store $le ${mem} ${index} ${value} ${size}")
   }
 
   def vload(lhs: PPProg[Variable], mem: String, index: PPProg[Expr], endian: Endian, size: Int): PPProg[MemoryLoad] = {
     val le = if endian == Endian.LittleEndian then "le" else "be"
-    BST(s"$lhs := load_$le(${mem}, ${index}, ${size})")
+    BST(s"$lhs := load $le ${mem} ${index} ${size}")
   }
 
   override def vcall(
-      outParams: List[(PPProg[Variable], PPProg[Expr])],
+      outParams: List[(Variable, PPProg[Expr])],
       procname: String,
-      inparams: List[(PPProg[Variable], PPProg[Expr])]
+      inparams: List[(Variable, PPProg[Expr])]
   ): PPProg[DirectCall] = {
-    val op = outParams.map((l, r) => l).mkString(", ")
+
+
+    val op = {
+      if (outParams.forall(_._1.isInstanceOf[LocalVar])) {
+        "var (" + outParams.map((l, r) => vparam(l)).mkString(", ") + ")"
+      } else {
+        "(" + outParams.map((l, r) => vlvar(l)).mkString(", ") + ")"
+      }
+    }
 
     if (outParams.size > 5) {
-      BST(s"($op)\n    := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
+      BST(s"$op\n    := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
     } else if (outParams.size > 0) {
-      BST(s"($op) := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
+      BST(s"$op := call $procname (${inparams.map((l, r) => r).mkString(", ")})")
     } else {
       BST(s"call $procname (${inparams.map((l, r) => r).mkString(", ")})")
     }
   }
 
-  override def vindirect(target: PPProg[Variable]): PPProg[IndirectCall] = BST(s"indirect_call(${target})")
-  override def vassert(body: PPProg[Expr]): PPProg[Assert] = BST(s"assert($body)")
-  override def vassume(body: PPProg[Expr]): PPProg[Assume] = BST(s"assume($body)")
+  override def vindirect(target: PPProg[Variable]): PPProg[IndirectCall] = BST(s"indirect call ${target} ")
+  override def vassert(body: PPProg[Expr]): PPProg[Assert] = BST(s"assert $body")
+  override def vassume(body: PPProg[Expr]): PPProg[Assume] = BST(s"assume $body")
   override def vnop(): PPProg[NOP] = BST("nop")
 
   override def vgoto(t: List[String]): PPProg[GoTo] = BST[GoTo](s"goto(${t.mkString(", ")})")
@@ -336,14 +348,14 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
     case BitVecType(sz) => s"bv$sz"
     case IntType        => "nat"
     case BoolType       => "bool"
-    case m: MapType     => s"${vtype(m.result)}[${vtype(m.param)}]"
+    case m: MapType     => s"map ${vtype(m.result)}[${vtype(m.param)}]"
   }
 
-  override def vrvar(e: Variable): PPProg[Variable] = BST(e.name)
+  override def vrvar(e: Variable): PPProg[Variable] = BST(s"${e.name}:${vtype(e.getType)}")
   override def vlvar(e: Variable): PPProg[Variable] = {
     e match {
       case l: LocalVar => BST("var " + e.name + s": ${vtype(e.getType)}")
-      case _           => BST(e.name)
+      case l           => BST(e.name + s": ${vtype(e.getType)}")
     }
   }
 
@@ -362,7 +374,7 @@ class BasilIRPrettyPrinter() extends BasilIR[PPProg] {
 
   override def vboollit(b: Boolean) = BST(b.toString)
   override def vintlit(i: BigInt) = BST("0x%x".format(i))
-  override def vbvlit(i: BitVecLiteral) = BST("0x%x".format(i.value) + s"bv${i.size}")
+  override def vbvlit(i: BitVecLiteral) = BST("0x%x".format(i.value) + s":bv${i.size}")
   override def vuninterp_function(name: String, args: Seq[PPProg[Expr]]): PPProg[Expr] = BST(
     s"$name(${args.mkString(", ")})"
   )
