@@ -8,7 +8,10 @@ position token BIdent ((upper | letter | '_' | '#')(upper | letter | digit | ["_
 token Str '"' ((char - ["\"\\"]) | ('\\' ["\"\\tnrf"]))* '"' ;
 token IntegerHex ('0' 'x' (digit | ["abcdef"])+);
 
+
 separator BIdent "," ;
+
+token BitvectorHex (('0' 'x' (digit | ["abcdef"])+)) ;
 
 comment "//" ;
 comment "/*" "*/" ;
@@ -22,17 +25,16 @@ MSym . MExpr ::= BIdent ;
 IntT . IntType ::= "int" ;
 BoolT . BoolType ::= "bool" ;
 MapT . MapType ::= "map" Type "[" Type "]" ;
-ShortBVT . BVType ::= BVTYPE ;
-BitvectorType . BVType ::= "bv" IntLit ;
+BVT . BVType ::= BVTYPE ;
 
 rules Type ::= IntType | BoolType | MapType | BVType ; 
 
 separator Expr "," ;
 
-HexInt . IntLit ::= IntegerHex ;
-DecInt . IntLit ::=  Integer ;
+HexInt . Int ::= IntegerHex ;
+DecInt . Int ::=  Integer ;
 
-AddrAttrSome . AddrAttr ::= "{" "address" "=" IntLit "}" ;
+AddrAttrSome . AddrAttr ::= "{" "address" "=" Int "}" ;
 AddrAttrNone . AddrAttr ::= ""  ;
 AddrAttrEmpty . AddrAttr ::= "{" "}" ;
 
@@ -47,8 +49,8 @@ IntAssign . Assign ::= IntLVar ":=" IntExpr ;
 BVAssign . Assign ::= BVLVar ":=" BVExpr ;
 BoolAssign . Assign ::= BoolLVar ":=" LogExpr ;
 
-SLoad . Statement ::= BVLVar ":=" "load" Endian BIdent BVExpr IntLit;
-SStore . Statement ::= "store" Endian BIdent Expr BVExpr IntLit;
+SLoad . Statement ::= BVLVar ":=" "load" Endian BIdent BVExpr Int;
+SStore . Statement ::= "store" Endian BIdent Expr BVExpr Int;
 
 
 DirectCall . Statement ::= "call" BIdent "(" [Expr] ")" ;
@@ -88,7 +90,7 @@ EntryNone . PEntry ::= "";
 ESome . PExit ::=  "exit" "=" Block ";";
 ENone . PExit ::= "";
 
-AddrSome . PAddress ::=  "address" "=" IntLit ";" ;
+AddrSome . PAddress ::=  "address" "=" Int ";" ;
 AddrNone . PAddress ::= "";
 
 BSome . InternalBlocks ::=  "blocks" "=" "[" [Block] "]" ";";
@@ -115,19 +117,19 @@ IntegerExpr   . Expr ::=  IntExpr;
 _ . BVExpr   ::= "(" BVExpr ")" ;
 _ . IntExpr  ::= "(" IntExpr ")" ;
 _ . LogExpr ::= "(" LogExpr ")" ;
-
 BVBinary    . BVExpr    ::= BVBinOp "(" BVExpr "," BVExpr ")" ;
 BVUnary     . BVExpr    ::= BVUnOp "(" BVExpr ")" ;
-ZeroExtend . BVExpr ::= "zero_extend" "(" IntLit "," BVExpr ")" ;
-SignExtend . BVExpr ::= "sign_extend" "(" IntLit "," BVExpr ")" ;
-Extract    . BVExpr ::= "extract" "(" IntLit "," IntLit "," BVExpr ")" ;
-Concat     . BVExpr ::= "bvconcat" "(" BVExpr "," BVExpr ")" ;
-BVLiteral . BVExpr ::=  IntLit ":" BVType ;
+
+ZeroExtend . BVExpr ::= "zero_extend" "(" Int "," BVExpr ")" ;
+SignExtend . BVExpr ::= "sign_extend" "(" Int "," BVExpr ")" ;
+Extract    . BVExpr ::= "extract" "(" Int "," Int "," BVExpr ")" ;
 
 BVLogBinary . LogExpr   ::= BVLogicalBinOp "(" BVExpr "," BVExpr ")" ;
 
+rules BVLiteral ::= Int ":" BVType ;
+BVLit . BVExpr ::=BVLiteral ;
 
-IntLiteral . IntExpr ::= IntLit;
+IntLit . IntExpr ::= Int;
 
 IRV . IntRVar ::= BIdent ":" IntType;
 BVRV . BVRVar ::= BIdent ":" BVType;
@@ -142,7 +144,7 @@ BoolLit . LogExpr ::= BoolLiteral;
 
 rules BVUnOp ::= "bvnot" | "bvneg" ;
 rules BVBinOp ::= "bvand"|"bvor"|"bvadd"|"bvmul"|"bvudiv"|"bvurem"|"bvshl"|"bvlshr"|"bvnand"|"bvnor"
-  |"bvxor"|"bvxnor"|"bvcomp"|"bvsub"|"bvsdiv"|"bvsrem"|"bvsmod"|"bvashr";
+  |"bvxor"|"bvxnor"|"bvcomp"|"bvsub"|"bvsdiv"|"bvsrem"|"bvsmod"|"bvashr"|"bvconcat" ;
 rules BVLogicalBinOp ::= "bvule" |  "bvugt" |  "bvuge" |  "bvslt" |  "bvsle" |  "bvsgt" |  "bvsge" |  "bveq"  |  "bvneq" | "bvult" ;
 
 rules IntBinOp ::= "intadd" | "intmul" | "intsub" | "intdiv" | "intmod"  ;
