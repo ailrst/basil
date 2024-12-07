@@ -686,6 +686,9 @@ object RunUtils {
 
     IRTransform.prepareForTranslation(q, ctx)
 
+    q.loading.dumpIL.foreach(s => 
+      writeToFile(pp_prog(ctx.program), s"$s-output.il")
+    )
     Logger.info("[!] Translating to Boogie")
 
     val regionInjector = analysis.flatMap(a => a.regionInjector)
@@ -704,9 +707,6 @@ object RunUtils {
     }
     assert(invariant.singleCallBlockEnd(ctx.program))
 
-    q.loading.dumpIL.foreach(s => 
-      writeToFile(pp_prog(ctx.program), s"$s-output.il")
-    )
 
     BASILResult(ctx, analysis, boogiePrograms)
   }
