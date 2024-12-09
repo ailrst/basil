@@ -1,17 +1,15 @@
 #include "desugar.hpp"
 class FindParam : public Skeleton {
 public:
-  std::vector<Param *> params = {} ;
-  void visitParam(Param *p) {
-    params.push_back(p);
-  };
+  std::vector<Param *> params = {};
+  void visitParam(Param *p) { params.push_back(p); };
 };
 
 class OneParamToLVar : public Skeleton {
-  std::vector<LVar *> * out_params;
+  std::vector<LVar *> *out_params;
 
 public:
-  OneParamToLVar(std::vector<LVar *> * out) : out_params (out) {}; 
+  OneParamToLVar(std::vector<LVar *> *out) : out_params(out){};
 
   void visitLocalBVLVar(LocalBVLVar *p) {
     out_params->push_back(new LVarBVLVar(p->clone()));
@@ -24,21 +22,22 @@ public:
   }
 
   void visitGlobalIntLVar(GlobalIntLVar *p) {
-    LVar * l = new LVarIntLVar(new LocalIntLVar(p->bident_, p->inttype_));
+    LVar *l = new LVarIntLVar(new LocalIntLVar(p->bident_, p->inttype_));
     out_params->push_back(l);
   }
   void visitGlobalBVLVar(GlobalBVLVar *p) {
-    LVar * l = new LVarBVLVar(new LocalBVLVar(p->bident_, p->bvtype_));
+    LVar *l = new LVarBVLVar(new LocalBVLVar(p->bident_, p->bvtype_));
     out_params->push_back(l);
   }
   void visitGlobalBoolLVar(GlobalBoolLVar *p) {
-    LVar * l = new LVarBoolLVar(new LocalBoolLVar(p->bident_, p->booltype_));
+    LVar *l = new LVarBoolLVar(new LocalBoolLVar(p->bident_, p->booltype_));
     out_params->push_back(l);
   }
 };
 
 void Normaliser::visitDirectCall(DirectCall *p) {
-  replacement = new DirectCallReturn(new ListLVar(), p->bident_->clone(), p->listexpr_->clone());
+  replacement = new DirectCallReturn(new ListLVar(), p->bident_->clone(),
+                                     p->listexpr_->clone());
 }
 
 void Normaliser::visitDirectCallReturnLocal(DirectCallReturnLocal *p) {
@@ -48,7 +47,8 @@ void Normaliser::visitDirectCallReturnLocal(DirectCallReturnLocal *p) {
   p->listlvar_->accept(getParam);
   delete getParam;
   assert(list->size() == p->listlvar_->size());
-  replacement = new DirectCallReturn(list, p->bident_->clone(), p->listexpr_->clone());
+  replacement =
+      new DirectCallReturn(list, p->bident_->clone(), p->listexpr_->clone());
 }
 
 void Normaliser::visitListStatement(ListStatement *b) {
@@ -63,4 +63,3 @@ void Normaliser::visitListStatement(ListStatement *b) {
     }
   }
 }
-

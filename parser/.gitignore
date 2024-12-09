@@ -1,5 +1,6 @@
+**/*.bak
 cpp/*
-java/*
+java/**/*.class
 ocaml/*
 ocamlBasil/*
 tex/*
