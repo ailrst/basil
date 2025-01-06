@@ -6,10 +6,7 @@ import os.Path
 import $ivy.`com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION`
 import contrib.scalapblib._
 
-
-
 object basil extends RootModule with ScalaModule with antlr.AntlrModule with ScalaPBModule{
-  def scalaVersion = "3.3.1"
 
   val javaTests = ivy"com.novocode:junit-interface:0.11"
   val scalaTests = ivy"org.scalatest::scalatest:3.2.10"
@@ -18,18 +15,50 @@ object basil extends RootModule with ScalaModule with antlr.AntlrModule with Sca
   val sourceCode = ivy"com.lihaoyi::sourcecode:0.3.0"
   val mainArgs = ivy"com.lihaoyi::mainargs:0.5.1"
   val sprayJson = ivy"io.spray::spray-json:1.3.6"
-  val scalapb = ivy"com.thesamet.scalapb::scalapb-runtime:0.11.15" 
+  val scalapb = ivy"com.thesamet.scalapb::scalapb-runtime:0.11.15"
+
+  object parser extends JavaModule {
+
+    override def millSourcePath = super.millSourcePath / "java" / "basil_ir" 
+    println(millSourcePath)
+
+    object Absyn extends JavaModule {
+      def sources = T.sources {
+          val s = Seq(PathRef(millSourcePath))
+          println(s)
+          s
+      }
+    }
+
+    def ivyDeps = Agg(antlrRuntime)
+    def moduleDeps = Seq(Absyn)
+    def sources = T.sources {
+      Seq(
+        "BasilIRLexerBaseListener.java", 
+        "BasilIRLexerListener.java",
+        "BasilIRParserBaseListener.java", 
+        "BasilIRParserListener.java",
+        "BasilIRLexer.java",
+        "BasilIRParser.java",
+        "BasilIRParser.java",
+        "PrettyPrinter.java",
+      ).map(p => PathRef(this.millSourcePath / p))
+    }
+
+  }
 
   def scalaPBVersion = "0.11.15"
+  def scalaVersion = "3.3.1"
 
+  def scalacOptions = Seq("-deprecation", "-unchecked", "-feature")
 
   def mainClass = Some("Main")
 
   override def scalaPBSources = T.sources {Seq(PathRef(this.millSourcePath / "main" / "protobuf"))}
   def millSourcePath = super.millSourcePath / "src"
   def ivyDeps = Agg(scalactic, antlrRuntime, sourceCode, mainArgs, sprayJson, scalapb)
-  def sources = T.sources {Seq(PathRef(this.millSourcePath / "main" / "scala" ))}
-
+  override def moduleDeps = Seq(parser)
+  def sources = T.sources { Seq(PathRef(this.millSourcePath / "main" / "scala")) }
 
   override def antlrPackage: Option[String] = Some("Parsers")
   override def antlrGenerateVisitor = true
@@ -37,15 +66,14 @@ object basil extends RootModule with ScalaModule with antlr.AntlrModule with Sca
     Seq(PathRef(millSourcePath / "main" / "antlr4"))
   }
 
-  object test extends ScalaTests with TestModule.ScalaTest  {
+  object test extends ScalaTests with TestModule.ScalaTest {
     def ivyDeps = Agg(scalaTests, javaTests)
-    def sources = T.sources {Seq(PathRef(this.millSourcePath / "scala" ))}
+    def sources = T.sources { Seq(PathRef(this.millSourcePath / "scala")) }
+
   }
 
-
-  /**
-   * Updates the expected
-   */
+  /** Updates the expected
+    */
 
   def updateExpectedBAP() = T.command {
     val correctPath = test.millSourcePath / "correct"
@@ -108,5 +136,6 @@ object basil extends RootModule with ScalaModule with antlr.AntlrModule with Sca
   def filesContentEqual(path1: Path, path2: Path): Boolean = {
     os.read.lines(path1) == os.read.lines(path2)
   }
+
 
 }

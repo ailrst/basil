@@ -51,16 +51,12 @@ object Main {
 
   @main(name = "BASIL")
   case class Config(
-    @arg(
-      name = "load-directory-bap",
-      doc = "Load relf, adt, and bir from directory (and spec from parent directory)"
-    )
+    @arg(name = "load-directory-bap", doc = "Load relf, adt, and bir from directory (and spec from parent directory)")
     bapInputDirName: Option[String],
-    @arg(
-      name = "load-directory-gtirb",
-      doc = "Load relf, gts, and bir from directory (and spec from parent directory)"
-    )
+    @arg(name = "load-directory-gtirb", doc = "Load relf, gts, and bir from directory (and spec from parent directory)")
     gtirbInputDirName: Option[String],
+    @arg(name = "load-ir", doc= "Load ir file")
+    loadIR: Option[String],
     @arg(name = "input", short = 'i', doc = "BAP .adt file or GTIRB/ASLi .gts file")
     inputFileName: Option[String],
     @arg(name = "relf", short = 'r', doc = "Name of the file containing the output of 'readelf -s -r -W'.")
@@ -143,11 +139,18 @@ object Main {
     val parser = ParserForClass[Config]
     val parsed = parser.constructEither(args.toSeq)
 
+
+
     val conf = parsed match {
       case Right(r) => r
       case Left(l) =>
         println(l)
         return
+    }
+
+    for (v <- conf.loadIR) {
+      basil_ir.parse(v)
+      return
     }
 
     if (conf.help.value) {
