@@ -20,7 +20,12 @@ trait LiveVarsAnalysisFunctions extends BackwardIDEAnalysis[Variable, TwoElement
   import edgelattice.{IdEdge, ConstEdge}
 
   def edgesCallToEntry(call: Command, entry: Return)(d: DL): Map[DL, EdgeFunction[TwoElement]] = {
-    Map(d -> IdEdge())
+    d match {
+      case Left(l) => Map() // maps all variables before the call to bottom
+      case Right(_) => entry.outParams.flatMap(_._2.variables).foldLeft(Map[DL, EdgeFunction[TwoElement]](d -> IdEdge())) {
+              (mp, expVar) => mp + (Left(expVar) -> ConstEdge(TwoElementTop))
+      }
+    }
   }
 
   def edgesExitToAfterCall(exit: Procedure, aftercall: DirectCall)(d: DL): Map[DL, EdgeFunction[TwoElement]] = {
@@ -88,6 +93,36 @@ trait LiveVarsAnalysisFunctions extends BackwardIDEAnalysis[Variable, TwoElement
           case Left(value) => if value != variable then Map(d -> IdEdge()) else Map()
           case Right(_) => Map(d -> IdEdge(), Left(variable) -> ConstEdge(TwoElementTop))
         }
+      case c: DirectCall if (c.target.isExternal.contains(true) || c.target.blocks.isEmpty) => {
+        val writes = ir.transforms.externalCallWrites(c.target.procName).toSet[Variable]
+        val reads = ir.transforms.externalCallReads(c.target.procName).toSet[Variable]
+        d match {
+          case Left(value) =>
+            if reads.contains(value) then
+              Map()
+            else
+              Map(d -> IdEdge())
+          case Right(_) =>
+            reads.foldLeft(Map[DL, EdgeFunction[TwoElement]](d -> IdEdge())) {
+              (mp, expVar) => mp + (Left(expVar) -> ConstEdge(TwoElementTop))
+            }
+        }
+      } 
+      case c: DirectCall  => {
+        val writes = c.outParams.map(_._2).toSet
+        val reads = c.actualParams.flatMap(_._2.variables).toSet
+        d match {
+          case Left(value) =>
+            if reads.contains(value) then
+              Map()
+            else
+              Map(d -> IdEdge())
+          case Right(_) =>
+            reads.foldLeft(Map[DL, EdgeFunction[TwoElement]](d -> IdEdge())) {
+              (mp, expVar) => mp + (Left(expVar) -> ConstEdge(TwoElementTop))
+            }
+        }
+      }
       case _ => Map(d -> IdEdge())
     }
   }
