@@ -23,6 +23,8 @@ given CoerceExpr: Conversion[RTSym, Expr] with
     case _ => ???
   }
 
+case class BranchInfo(val branch: Option[String], val guard: Expr, val branchTaken: Boolean, pcAssigned: Option[Expr])
+
 class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLabel, BV] {
 
   val endian = Endian.LittleEndian
@@ -33,6 +35,17 @@ class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLab
   val controlFlow: mutable.Map[String, EventuallyJump] = mutable.Map()
   val blocks: mutable.Map[String, ArrayBuffer[Statement]] = mutable.Map((entry -> ArrayBuffer.empty))
   val branches: mutable.Map[String, (String, String, String)] = mutable.Map()
+
+  var current_guard: BranchInfo = BranchInfo(None, TrueLiteral, false, None)
+
+  // maps block ids to guards
+  // We push the current guard forward as blocks are appended. We maintain this mapping so we
+  // can update the current guard when switch_ctx is called.
+  val block_guard: mutable.Map[String, BranchInfo] = mutable.Map()
+
+  def pcAssigns = block_guard.filter { case (k, v) =>
+    v.pcAssigned.isDefined
+  }
 
   def new_name(p: Option[String] = None) = entry + "_" + p.map(_ + "_").getOrElse("") + (counter += 1).toString
 
@@ -59,7 +72,13 @@ class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLab
   }
 
   def push_stmt(s: Statement) = {
-    blocks(current_pos).append(s)
+    s match {
+      case LocalAssign(Register("BranchTaken", 1), BitVecLiteral(1, 1), _) =>
+        current_guard = BranchInfo(current_guard.branch, current_guard.guard, true, current_guard.pcAssigned)
+      case LocalAssign(Register("_PC", BitVecType(64)), addr, _) =>
+        current_guard = BranchInfo(current_guard.branch, current_guard.guard, current_guard.branchTaken, Some(addr))
+      case _ => ()
+    }
   }
 
   def switch_ctx(c: String) = {
@@ -67,26 +86,53 @@ class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLab
     current_pos = c
   }
 
-  def gen_branch(cond: Expr): String = {
+  def gen_branch(cond: Expr) = {
     val branch_id = new_name(Some("branch"))
+
     val true_branch = push_block(Some("true"))
     val false_branch = push_block(Some("false"))
     val merge_block = push_block(Some("join"))
     blocks(true_branch).append(Assume(cond))
     blocks(false_branch).append(Assume(UnaryExpr(BoolNOT, cond)))
+
+    block_guard(true_branch) = BranchInfo(Some(branch_id), cond, false, None)
+    block_guard(false_branch) = BranchInfo(Some(branch_id), UnaryExpr(BoolNOT, cond), false, None)
+    block_guard(merge_block) = BranchInfo(None, TrueLiteral, false, None)
+    current_guard =
+      BranchInfo(Some(branch_id), current_guard.guard, current_guard.branchTaken, current_guard.pcAssigned)
+
     controlFlow(current_pos) = goto(true_branch, false_branch)
     controlFlow(true_branch) = goto(merge_block)
-    controlFlow(true_branch) = goto(merge_block)
+    controlFlow(false_branch) = goto(merge_block)
     branches.addOne((branch_id -> (true_branch, false_branch, merge_block)))
-    branch_id
+    switch_ctx(merge_block)
+    (branch_id, true_branch, false_branch, merge_block)
   }
 
-  def add_call(c: EventuallyJump) = {
+  def add_call(c: EventuallyCall) = {
     controlFlow.get(current_pos) match {
       case None => controlFlow(current_pos) = c
       case Some(l) => throw Exception(s"Existing jump $l")
     }
   }
+  def add_call(from: String, c: EventuallyJump) : Unit = {
+    controlFlow.get(from) match {
+      case None => controlFlow(current_pos) = c
+      case Some(EventuallyGoto(List(x))) => {
+        c match {
+          case EventuallyCall(c, None) => EventuallyCall(c, Some(x))
+          case EventuallyCall(_, Some(f)) => add_call(f.ident, c)
+          case EventuallyIndirectCall(c, None) => EventuallyIndirectCall(c, Some(x))
+          case EventuallyIndirectCall(_, Some(f)) => add_call(f.ident, c)
+          case EventuallyGoto(cs) => (EventuallyGoto(cs ++ List(x)))
+          case _ => throw Exception(s"Existing jump ${EventuallyGoto(List(x))} adding $c")
+        }
+
+      }
+      case Some(l) => throw Exception(s"Existing jump $l")
+    }
+  }
+
 
   def add_goto(l: String) = {
     controlFlow.get(current_pos) match {
@@ -220,8 +266,8 @@ class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLab
     arg4: RTSym
   ): RTSym = throw NotImplementedError()
   def f_gen_bit_lit(targ0: BigInt, arg0: BV): RTSym = BitVecLiteral(arg0.value, targ0.toInt)
-  def f_gen_bool_lit(arg0: Boolean): RTSym = if arg0 then TrueLiteral else FalseLiteral
-  def f_gen_branch(arg0: RTSym): RTLabel = gen_branch(arg0)
+  def f_gen_bool_lit(arg0: Boolean): RTSym = if arg0 then BitVecLiteral(1, 1) else BitVecLiteral(0, 1)
+  def f_gen_branch(arg0: RTSym): RTLabel = gen_branch(arg0)._1
   def f_cvt_bits_uint(targ0: BigInt, arg0: BV): BigInt = arg0.value
   def f_gen_cvt_bits_uint(targ0: BigInt, arg0: RTSym): RTSym = arg0
   def f_gen_cvt_bool_bv(arg0: RTSym): RTSym = arg0
@@ -346,14 +392,12 @@ class BasilLiftState(val entry: String = "block") extends LiftState[RTSym, RTLab
   def v_PSTATE_V = Mutable(Register("PSTATE.V", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "V")
   def v_PSTATE_N = Mutable(Register("PSTATE.N", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "N")
 
-
   def v__PC = Mutable(Register("_PC", 64))
   def v__R = Mutable(Register("_R", 128))
   def v__Z = Mutable(Register("_Z", 1))
   def v_SP_EL0 = Mutable(Register("R31", 64))
   def v_FPSR = Mutable(Register("FPSR", 1))
   def v_FPCR = Mutable(Register("FPCR", (32)))
-
 
   def v_PSTATE_BTYPE = Mutable(Register("PSTATE.BTYPE", 1))
   def v_BTypeCompatible = Mutable(Register("BTypeCompatible", 1))
@@ -533,178 +577,14 @@ def f_gen_FixedToFP(
   arg4: RTSym
 ): RTSym = throw NotImplementedError("func not implemented")
 
-def f_gen_bit_lit(st: BasilLiftState, targ0: BigInt, arg0: BitVecLiteral): RTSym =
-  BitVecLiteral(arg0.value, targ0.toInt)
-def f_gen_bool_lit(st: BasilLiftState, arg0: Boolean): RTSym = if arg0 then TrueLiteral else FalseLiteral
-
-def f_gen_branch(st: BasilLiftState, arg0: RTSym): RTLabel = st.gen_branch(arg0)
-def f_true_branch(st: BasilLiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._1
-def f_false_branch(st: BasilLiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._2
-def f_merge_branch(st: BasilLiftState, arg0: RTLabel): RTLabel = (st.branches(arg0))._3
-
-def f_cvt_bits_uint(st: BasilLiftState, targ0: BigInt, arg0: BitVecLiteral): BigInt = arg0.value
-def f_gen_cvt_bits_uint(st: BasilLiftState, targ0: BigInt, arg0: RTSym): RTSym = arg0
-def f_gen_cvt_bool_bv(st: BasilLiftState, arg0: RTSym): RTSym = arg0
-
-def f_gen_eor_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVEQ, arg0, arg1)
-def f_gen_eq_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVEQ, arg0, arg1)
-def f_gen_eq_enum(st: BasilLiftState, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVEQ, arg0, arg1)
-def f_gen_int_lit(st: BasilLiftState, arg0: BigInt): BitVecLiteral = BitVecLiteral(arg0, 1123)
-
-def f_gen_store(st: BasilLiftState, lval: RTSym, e: RTSym): Unit = lval match
-  case v: Variable => st.push_stmt(LocalAssign(v, e))
-  case m => throw NotImplementedError(s"fail assign $m")
-
-def f_gen_load(st: BasilLiftState, e: RTSym): RTSym = e match
-  case m: Memory => throw NotImplementedError()
-  case _ => e
-
-def f_gen_SignExtend(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: Expr, arg1: BitVecLiteral): RTSym = {
-  val oldSize = (targ0)
-  val newSize = (targ1)
-  if (arg1.value != newSize) {
-    throw Exception()
-  }
-  SignExtend((newSize - oldSize).toInt, arg0)
-}
-
-def f_gen_ZeroExtend(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: Expr, arg1: BitVecLiteral): RTSym = {
-  val oldSize = (targ0)
-  val newSize = (targ1)
-  if (arg1.value != newSize) {
-    throw Exception()
-  }
-  ZeroExtend((newSize - oldSize).toInt, arg0)
-}
-
-def f_gen_add_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVADD, arg0, arg1)
-def f_gen_and_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVAND, arg0, arg1)
-def f_gen_and_bool(st: BasilLiftState, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BoolAND, arg0, arg1)
-
-def f_gen_asr_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym): RTSym =
-  BinaryExpr(BVASHR, arg0, gen_zero_extend_to(targ0, arg1))
-def f_gen_lsl_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym): RTSym =
-  BinaryExpr(BVSHL, arg0, gen_zero_extend_to(targ0, arg1))
-def f_gen_lsr_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym): RTSym =
-  BinaryExpr(BVLSHR, arg0, gen_zero_extend_to(targ0, arg1))
-def f_gen_mul_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVMUL, arg0, arg1)
-def f_gen_ne_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVCOMP, arg0, arg1)
-def f_gen_not_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym): RTSym = arg0.getType match {
-  case BoolType => UnaryExpr(BoolNOT, arg0)
-  case BitVecType(_) => UnaryExpr(BVNOT, arg0)
-  case _: MapType => throw IllegalArgumentException()
-  case IntType => throw IllegalArgumentException()
-}
-
-def f_gen_not_bool(st: BasilLiftState, arg0: RTSym): RTSym = arg0.getType match {
-  case BoolType => UnaryExpr(BoolNOT, arg0)
-  case BitVecType(sz) => BinaryExpr(BVNEQ, BitVecLiteral(0, sz), arg0)
-  case _: MapType => throw IllegalArgumentException()
-  case IntType => throw IllegalArgumentException()
-}
-
-def f_gen_sdiv_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVSDIV, arg0, arg1)
-
-def f_gen_or_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVOR, arg0, arg1)
-def f_gen_or_bool(st: BasilLiftState, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BoolOR, arg0, arg1)
-def f_gen_sle_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVSLE, arg0, arg1)
-def f_gen_slt_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVSLT, arg0, arg1)
-def f_gen_sub_bits(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym): RTSym = BinaryExpr(BVSUB, arg0, arg1)
-
-def f_AtomicEnd(st: BasilLiftState): RTSym = LocalVar("ATOMICSTART", BoolType)
-def f_AtomicStart(st: BasilLiftState): RTSym = LocalVar("ATOMICSTART", BoolType)
-
-def f_replicate_bits(
-  st: BasilLiftState,
-  targ0: BigInt,
-  targ1: BigInt,
-  arg0: BitVecLiteral,
-  arg1: BigInt
-): BitVecLiteral = {
-
-  def bv_replicate(value: BitVecLiteral, times: Int): BitVecLiteral = {
-    var walk = BitVecLiteral(0, 0)
-    for (i <- 1 to times) {
-      walk = smt_concat(value, walk)
-    }
-    walk
-  }
-
-  bv_replicate(arg0, arg1.toInt)
-}
-def f_append_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, a: BitVecLiteral, b: BitVecLiteral): BitVecLiteral =
-  BitVecLiteral((a.value << b.size) + b.value, (a.size + b.size))
-
-def f_gen_AArch64_MemTag_set(st: BasilLiftState, arg0: RTSym, arg1: RTSym, arg2: RTSym): RTSym =
-  throw NotImplementedError("func not implemented")
-
-def f_gen_Mem_set(
-  st: BasilLiftState,
-  sz: BigInt,
-  ptr: RTSym,
-  width: BitVecLiteral,
-  acctype: RTSym,
-  value: RTSym
-): Unit =
-  assert(width.value == sz)
-  val stmt = MemoryStore(st.memory, ptr, value, st.endian, sz.toInt)
-  st.push_stmt(stmt)
-
-def f_gen_Mem_read(st: BasilLiftState, targ0: BigInt, arg0: RTSym, arg1: RTSym, arg2: RTSym): RTSym =
-  val s: Int = arg2 match
-    case BitVecLiteral(v, s) => v.toInt
-    case IntLiteral(v) => v.toInt
-    case _ => throw NotImplementedError(s"Cannot convert $arg2 to int")
-  SymLoad(st.memory, arg1, st.endian, s)
-
-def f_gen_slice(st: BasilLiftState, e: RTSym, lo: BigInt, wd: BigInt): RTSym = {
-  Extract((wd + lo).toInt, lo.toInt, e)
-}
-def f_gen_replicate_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: BitVecLiteral): RTSym = {
-  Range.Exclusive(1, arg1.value.toInt, 1).map(v => arg0).foldLeft(arg0)((a, b) => (BinaryExpr(BVCONCAT, a, b)))
-}
-def f_gen_append_bits(st: BasilLiftState, targ0: BigInt, targ1: BigInt, arg0: RTSym, arg1: RTSym): RTSym =
-  BinaryExpr(BVCONCAT, arg0, arg1)
-def f_gen_array_load(st: BasilLiftState, arg0: RTSym, arg1: BigInt): RTSym = arg0 match
-  case Register("_R", t) => Register("R" + arg1, 64)
-  case _ => {
-    Logger.warn(s"Unknown array load $arg0")
-    arg0
-  }
-def f_gen_array_store(st: BasilLiftState, arg0: RTSym, arg1: BigInt, arg2: RTSym): Unit = arg0 match
-  case Register(n, t) if n.contains("R") => st.push_stmt(LocalAssign(Register("R" + arg1, 64), arg2))
-  case _ => Logger.warn(s"Unknown array store $arg0")
-
-def f_gen_assert(st: BasilLiftState, arg0: RTSym) = st.push_stmt(Assert(arg0))
-def f_switch_context(st: BasilLiftState, arg0: RTLabel) = st.switch_ctx(arg0)
-
-/** Global variable definitions * */
-
-def v_PSTATE_C = Mutable(Register("PSTATE.C", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "C")
-def v_PSTATE_Z = Mutable(Register("PSTATE.Z", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "Z")
-def v_PSTATE_V = Mutable(Register("PSTATE.V", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "V")
-def v_PSTATE_N = Mutable(Register("PSTATE.N", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "N")
-def v__PC = Mutable(Register("_PC", 64)) // Expr_Var(Ident "_PC")
-def v__R = Mutable(Register("_R", 128))
-def v__Z = Mutable(Register("_Z", 1))
-def v_SP_EL0 = Mutable(Register("R31", 64))
-def v_FPSR = Mutable(Register("FPSR", 1))
-def v_FPCR = Mutable(Register("FPCR", (32)))
-
-def v_PSTATE_BTYPE = Mutable(Register("PSTATE.BTYPE", 1)) // Expr_Field(Expr_Var(Ident "PSTATE"), Ident "BTYPE")
-def v_BTypeCompatible = Mutable(Register("BTypeCompatible", 1)) // Expr_Var (Ident "BTypeCompatible")
-def v___BranchTaken = Mutable(Register("__BranchTaken", 1))
-def v_BTypeNext = Mutable(Register("BTypeNext", 1))
-def v___ExclusiveLocal = Mutable(Register("__ExclusiveLocal", 1))
 
 object Lifter {
 
-  def liftOpcode(op: BigInt, sp: BigInt, liftState : BasilLiftState = BasilLiftState()) = {
+  def liftOpcode(op: BigInt, sp: BigInt, liftState: BasilLiftState = BasilLiftState()) = {
     /* Invoking the lifter */
     val dec =
       f_A64_decoder[Expr | SymLoad, String, BitVecLiteral](liftState, BitVecLiteral(op, 32), BitVecLiteral(sp, 64))
     dec
   }
-
 
 }
