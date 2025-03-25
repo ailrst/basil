@@ -6,7 +6,23 @@ import os.Path
 import $ivy.`com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION`
 import contrib.scalapblib._
 
-object basil extends RootModule with ScalaModule with antlr.AntlrModule with ScalaPBModule {
+val baseDir = millSourcePath
+
+object gtsloader extends ScalaModule with ScalaPBModule  {
+  def scalaPBVersion = "0.11.15"
+  def scalaVersion = "3.3.4"
+
+  override def millSourcePath = baseDir / "src"
+  override def scalaPBSources = T.sources { Seq(PathRef(this.millSourcePath / "main" / "protobuf")) }
+  println(millSourcePath)
+}
+
+
+object lifter extends ScalaModule {
+  def scalaVersion = "3.3.4"
+}
+
+object basil extends ScalaModule with antlr.AntlrModule {
   def scalaVersion = "3.3.4"
 
   def scalacOptions: T[Seq[String]] = Seq("-deprecation")
@@ -19,13 +35,13 @@ object basil extends RootModule with ScalaModule with antlr.AntlrModule with Sca
   val mainArgs = ivy"com.lihaoyi::mainargs:0.5.1"
   val sprayJson = ivy"io.spray::spray-json:1.3.6"
   val scalapb = ivy"com.thesamet.scalapb::scalapb-runtime:0.11.15"
+  val parse = ivy"com.lihaoyi::fastparse:3.1.1"
 
-  def scalaPBVersion = "0.11.15"
 
+  def moduleDeps = Seq(lifter, gtsloader)
   def mainClass = Some("Main")
 
-  override def scalaPBSources = T.sources { Seq(PathRef(this.millSourcePath / "main" / "protobuf")) }
-  def millSourcePath = super.millSourcePath / "src"
+  def millSourcePath = baseDir / "src"
   def ivyDeps = Agg(scalactic, antlrRuntime, sourceCode, mainArgs, sprayJson, scalapb)
   def sources = T.sources { Seq(PathRef(this.millSourcePath / "main" / "scala")) }
 
