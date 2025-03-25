@@ -1,0 +1,14 @@
+/* AUTO-GENERATED ASLp LIFTER FILE */
+package lifter
+
+def f_aarch64_float_move_fp_imm[RTSym, RTLabel, BV <: RTSym] (v_st: LiftState[RTSym, RTLabel, BV],v_enc: BV,v_pc: BV) : Unit = {
+  if (v_st.f_eq_bits(BigInt(32), v_st.f_and_bits(BigInt(32), v_enc, v_st.mkBits(32, BigInt("00000000110000000000000000000000", 2))), v_st.mkBits(32, BigInt("00000000000000000000000000000000", 2)))) then {
+    v_st.f_gen_array_store (v_st.v__Z.v,v_st.f_cvt_bits_uint(BigInt(5), v_st.bvextract(v_enc,BigInt(0),BigInt(5))),v_st.f_gen_bit_lit(BigInt(128), v_st.f_ZeroExtend(BigInt(32), BigInt(128), v_st.f_append_bits(BigInt(9), BigInt(23), v_st.f_append_bits(BigInt(1), BigInt(8), v_st.bvextract(v_enc,BigInt(20),BigInt(1)), v_st.f_append_bits(BigInt(6), BigInt(2), v_st.f_append_bits(BigInt(1), BigInt(5), v_st.f_not_bits(BigInt(1), v_st.bvextract(v_enc,BigInt(19),BigInt(1))), v_st.f_replicate_bits(BigInt(1), BigInt(5), v_st.bvextract(v_enc,BigInt(19),BigInt(1)), BigInt(5))), v_st.bvextract(v_enc,BigInt(17),BigInt(2)))), v_st.f_append_bits(BigInt(4), BigInt(19), v_st.bvextract(v_enc,BigInt(13),BigInt(4)), v_st.mkBits(19, BigInt("0000000000000000000", 2)))), BigInt(128))))
+  } else {
+    if (v_st.f_eq_bits(BigInt(32), v_st.f_and_bits(BigInt(32), v_enc, v_st.mkBits(32, BigInt("00000000110000000000000000000000", 2))), v_st.mkBits(32, BigInt("00000000010000000000000000000000", 2)))) then {
+      v_st.f_gen_array_store (v_st.v__Z.v,v_st.f_cvt_bits_uint(BigInt(5), v_st.bvextract(v_enc,BigInt(0),BigInt(5))),v_st.f_gen_bit_lit(BigInt(128), v_st.f_ZeroExtend(BigInt(64), BigInt(128), v_st.f_append_bits(BigInt(12), BigInt(52), v_st.f_append_bits(BigInt(1), BigInt(11), v_st.bvextract(v_enc,BigInt(20),BigInt(1)), v_st.f_append_bits(BigInt(9), BigInt(2), v_st.f_append_bits(BigInt(1), BigInt(8), v_st.f_not_bits(BigInt(1), v_st.bvextract(v_enc,BigInt(19),BigInt(1))), v_st.f_replicate_bits(BigInt(1), BigInt(8), v_st.bvextract(v_enc,BigInt(19),BigInt(1)), BigInt(8))), v_st.bvextract(v_enc,BigInt(17),BigInt(2)))), v_st.f_append_bits(BigInt(4), BigInt(48), v_st.bvextract(v_enc,BigInt(13),BigInt(4)), v_st.mkBits(48, BigInt("000000000000000000000000000000000000000000000000", 2)))), BigInt(128))))
+    } else {
+      v_st.f_gen_array_store (v_st.v__Z.v,v_st.f_cvt_bits_uint(BigInt(5), v_st.bvextract(v_enc,BigInt(0),BigInt(5))),v_st.f_gen_bit_lit(BigInt(128), v_st.f_ZeroExtend(BigInt(16), BigInt(128), v_st.f_append_bits(BigInt(6), BigInt(10), v_st.f_append_bits(BigInt(1), BigInt(5), v_st.bvextract(v_enc,BigInt(20),BigInt(1)), v_st.f_append_bits(BigInt(3), BigInt(2), v_st.f_append_bits(BigInt(1), BigInt(2), v_st.f_not_bits(BigInt(1), v_st.bvextract(v_enc,BigInt(19),BigInt(1))), v_st.f_replicate_bits(BigInt(1), BigInt(2), v_st.bvextract(v_enc,BigInt(19),BigInt(1)), BigInt(2))), v_st.bvextract(v_enc,BigInt(17),BigInt(2)))), v_st.f_append_bits(BigInt(4), BigInt(6), v_st.bvextract(v_enc,BigInt(13),BigInt(4)), v_st.mkBits(6, BigInt("000000", 2)))), BigInt(128))))
+    }
+  }
+}
