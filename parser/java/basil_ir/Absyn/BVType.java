@@ -5,8 +5,7 @@ package basil_ir.Absyn;
 public abstract class BVType implements java.io.Serializable {
   public abstract <R,A> R accept(BVType.Visitor<R,A> v, A arg);
   public interface Visitor <R,A> {
-    public R visit(basil_ir.Absyn.ShortBVT p, A arg);
-    public R visit(basil_ir.Absyn.BitvectorType p, A arg);
+    public R visit(basil_ir.Absyn.BVT p, A arg);
 
   }
 

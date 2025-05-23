@@ -52,8 +52,8 @@ start_ListExpr returns [ basil_ir.Absyn.ListExpr result ]
   : x=listExpr EOF
     { $result = $x.result; }
   ;
-start_IntLit returns [ basil_ir.Absyn.IntLit result ]
-  : x=intLit EOF
+start_IntVal returns [ basil_ir.Absyn.IntVal result ]
+  : x=intVal EOF
     { $result = $x.result; }
   ;
 start_AddrAttr returns [ basil_ir.Absyn.AddrAttr result ]
@@ -72,8 +72,8 @@ start_Statement returns [ basil_ir.Absyn.Statement result ]
   : x=statement EOF
     { $result = $x.result; }
   ;
-start_Assign returns [ basil_ir.Absyn.Assign result ]
-  : x=assign EOF
+start_CallLVars returns [ basil_ir.Absyn.CallLVars result ]
+  : x=callLVars EOF
     { $result = $x.result; }
   ;
 start_Jump returns [ basil_ir.Absyn.Jump result ]
@@ -82,18 +82,6 @@ start_Jump returns [ basil_ir.Absyn.Jump result ]
   ;
 start_LVar returns [ basil_ir.Absyn.LVar result ]
   : x=lVar EOF
-    { $result = $x.result; }
-  ;
-start_BVLVar returns [ basil_ir.Absyn.BVLVar result ]
-  : x=bVLVar EOF
-    { $result = $x.result; }
-  ;
-start_IntLVar returns [ basil_ir.Absyn.IntLVar result ]
-  : x=intLVar EOF
-    { $result = $x.result; }
-  ;
-start_BoolLVar returns [ basil_ir.Absyn.BoolLVar result ]
-  : x=boolLVar EOF
     { $result = $x.result; }
   ;
 start_ListLVar returns [ basil_ir.Absyn.ListLVar result ]
@@ -110,10 +98,6 @@ start_Block returns [ basil_ir.Absyn.Block result ]
   ;
 start_PEntry returns [ basil_ir.Absyn.PEntry result ]
   : x=pEntry EOF
-    { $result = $x.result; }
-  ;
-start_PExit returns [ basil_ir.Absyn.PExit result ]
-  : x=pExit EOF
     { $result = $x.result; }
   ;
 start_PAddress returns [ basil_ir.Absyn.PAddress result ]
@@ -140,32 +124,12 @@ start_Expr returns [ basil_ir.Absyn.Expr result ]
   : x=expr EOF
     { $result = $x.result; }
   ;
-start_BVExpr returns [ basil_ir.Absyn.BVExpr result ]
-  : x=bVExpr EOF
+start_BinOp returns [ basil_ir.Absyn.BinOp result ]
+  : x=binOp EOF
     { $result = $x.result; }
   ;
-start_IntExpr returns [ basil_ir.Absyn.IntExpr result ]
-  : x=intExpr EOF
-    { $result = $x.result; }
-  ;
-start_LogExpr returns [ basil_ir.Absyn.LogExpr result ]
-  : x=logExpr EOF
-    { $result = $x.result; }
-  ;
-start_IntRVar returns [ basil_ir.Absyn.IntRVar result ]
-  : x=intRVar EOF
-    { $result = $x.result; }
-  ;
-start_BVRVar returns [ basil_ir.Absyn.BVRVar result ]
-  : x=bVRVar EOF
-    { $result = $x.result; }
-  ;
-start_BoolRVar returns [ basil_ir.Absyn.BoolRVar result ]
-  : x=boolRVar EOF
-    { $result = $x.result; }
-  ;
-start_BoolLiteral returns [ basil_ir.Absyn.BoolLiteral result ]
-  : x=boolLiteral EOF
+start_UnOp returns [ basil_ir.Absyn.UnOp result ]
+  : x=unOp EOF
     { $result = $x.result; }
   ;
 start_BVUnOp returns [ basil_ir.Absyn.BVUnOp result ]
@@ -214,13 +178,13 @@ listBIdent returns [ basil_ir.Absyn.ListBIdent result ]
     { $result = $p_3_3.result; $result.addFirst($p_3_1.getText()); }
   ;
 declaration returns [ basil_ir.Absyn.Declaration result ]
-  : Surrogate_id_SYMB_79 p_1_2=BIdent Surrogate_id_SYMB_2 p_1_4=mExpr
+  : Surrogate_id_SYMB_73 p_1_2=BIdent Surrogate_id_SYMB_2 p_1_4=mExpr
     { $result = new basil_ir.Absyn.LetDecl($p_1_2.getText(),$p_1_4.result); }
-  | Surrogate_id_SYMB_82 p_2_2=BIdent Surrogate_id_SYMB_3 p_2_4=type
+  | Surrogate_id_SYMB_76 p_2_2=BIdent Surrogate_id_SYMB_3 p_2_4=type
     { $result = new basil_ir.Absyn.MemDecl($p_2_2.getText(),$p_2_4.result); }
-  | Surrogate_id_SYMB_90 p_3_2=BIdent Surrogate_id_SYMB_3 p_3_4=type
+  | Surrogate_id_SYMB_84 p_3_2=BIdent Surrogate_id_SYMB_3 p_3_4=type
     { $result = new basil_ir.Absyn.VarDecl($p_3_2.getText(),$p_3_4.result); }
-  | Surrogate_id_SYMB_84 p_4_2=BIdent Surrogate_id_SYMB_9 p_4_4=listParams Surrogate_id_SYMB_10 Surrogate_id_SYMB_11 Surrogate_id_SYMB_9 p_4_8=listParams Surrogate_id_SYMB_10 p_4_10=procDef
+  | Surrogate_id_SYMB_78 p_4_2=BIdent Surrogate_id_SYMB_5 p_4_4=listParams Surrogate_id_SYMB_6 Surrogate_id_SYMB_7 Surrogate_id_SYMB_5 p_4_8=listParams Surrogate_id_SYMB_6 p_4_10=procDef
     { $result = new basil_ir.Absyn.Procedure($p_4_2.getText(),$p_4_4.result,$p_4_8.result,$p_4_10.result); }
   ;
 mExpr returns [ basil_ir.Absyn.MExpr result ]
@@ -230,22 +194,20 @@ mExpr returns [ basil_ir.Absyn.MExpr result ]
     { $result = new basil_ir.Absyn.BlockM($p_2_1.result); }
   ;
 intType returns [ basil_ir.Absyn.IntType result ]
-  : Surrogate_id_SYMB_65
+  : Surrogate_id_SYMB_59
     { $result = new basil_ir.Absyn.IntT(); }
   ;
 boolType returns [ basil_ir.Absyn.BoolType result ]
-  : Surrogate_id_SYMB_18
+  : Surrogate_id_SYMB_14
     { $result = new basil_ir.Absyn.BoolT(); }
   ;
 mapType returns [ basil_ir.Absyn.MapType result ]
-  : Surrogate_id_SYMB_81 p_1_2=type Surrogate_id_SYMB_4 p_1_4=type Surrogate_id_SYMB_5
-    { $result = new basil_ir.Absyn.MapT($p_1_2.result,$p_1_4.result); }
+  : Surrogate_id_SYMB_75 p_1_2=type p_1_3=BeginList p_1_4=type p_1_5=EndList
+    { $result = new basil_ir.Absyn.MapT($p_1_2.result,$p_1_3.getText(),$p_1_4.result,$p_1_5.getText()); }
   ;
 bVType returns [ basil_ir.Absyn.BVType result ]
   : p_1_1=BVTYPE
-    { $result = new basil_ir.Absyn.ShortBVT($p_1_1.getText()); }
-  | Surrogate_id_SYMB_26 p_2_2=intLit
-    { $result = new basil_ir.Absyn.BitvectorType($p_2_2.result); }
+    { $result = new basil_ir.Absyn.BVT($p_1_1.getText()); }
   ;
 type returns [ basil_ir.Absyn.Type result ]
   : p_1_1=intType
@@ -265,24 +227,24 @@ listExpr returns [ basil_ir.Absyn.ListExpr result ]
   | p_3_1=expr Surrogate_id_SYMB_1 p_3_3=listExpr
     { $result = $p_3_3.result; $result.addFirst($p_3_1.result); }
   ;
-intLit returns [ basil_ir.Absyn.IntLit result ]
+intVal returns [ basil_ir.Absyn.IntVal result ]
   : p_1_1=IntegerHex
     { $result = new basil_ir.Absyn.HexInt($p_1_1.getText()); }
   | p_2_1=INTEGER
     { $result = new basil_ir.Absyn.DecInt(Integer.parseInt($p_2_1.getText())); }
   ;
 addrAttr returns [ basil_ir.Absyn.AddrAttr result ]
-  : Surrogate_id_SYMB_6 Surrogate_id_SYMB_12 Surrogate_id_SYMB_2 p_1_4=intLit Surrogate_id_SYMB_7
-    { $result = new basil_ir.Absyn.AddrAttrSome($p_1_4.result); }
+  : p_1_1=BeginRec Surrogate_id_SYMB_8 Surrogate_id_SYMB_2 p_1_4=intVal p_1_5=EndRec
+    { $result = new basil_ir.Absyn.AddrAttrSome($p_1_1.getText(),$p_1_4.result,$p_1_5.getText()); }
   |  /* empty */
     { $result = new basil_ir.Absyn.AddrAttrNone(); }
-  | Surrogate_id_SYMB_6 Surrogate_id_SYMB_7
-    { $result = new basil_ir.Absyn.AddrAttrEmpty(); }
+  | p_3_1=BeginRec p_3_2=EndRec
+    { $result = new basil_ir.Absyn.AddrAttrEmpty($p_3_1.getText(),$p_3_2.getText()); }
   ;
 endian returns [ basil_ir.Absyn.Endian result ]
-  : Surrogate_id_SYMB_78
+  : Surrogate_id_SYMB_72
     { $result = new basil_ir.Absyn.LittleEndian(); }
-  | Surrogate_id_SYMB_15
+  | Surrogate_id_SYMB_11
     { $result = new basil_ir.Absyn.BigEndian(); }
   ;
 listStatement returns [ basil_ir.Absyn.ListStatement result ]
@@ -292,74 +254,48 @@ listStatement returns [ basil_ir.Absyn.ListStatement result ]
     { $result = $p_2_1.result; $result.addLast($p_2_2.result); }
   ;
 statement returns [ basil_ir.Absyn.Statement result ]
-  : p_1_1=assign
-    { $result = new basil_ir.Absyn.AssignStmt($p_1_1.result); }
-  | p_2_1=bVLVar Surrogate_id_SYMB_8 Surrogate_id_SYMB_80 p_2_4=endian p_2_5=BIdent p_2_6=bVExpr p_2_7=intLit
+  : p_1_1=lVar Surrogate_id_SYMB_4 p_1_3=expr
+    { $result = new basil_ir.Absyn.Assign($p_1_1.result,$p_1_3.result); }
+  | p_2_1=lVar Surrogate_id_SYMB_4 Surrogate_id_SYMB_74 p_2_4=endian p_2_5=BIdent p_2_6=expr p_2_7=intVal
     { $result = new basil_ir.Absyn.SLoad($p_2_1.result,$p_2_4.result,$p_2_5.getText(),$p_2_6.result,$p_2_7.result); }
-  | Surrogate_id_SYMB_87 p_3_2=endian p_3_3=BIdent p_3_4=expr p_3_5=bVExpr p_3_6=intLit
+  | Surrogate_id_SYMB_81 p_3_2=endian p_3_3=BIdent p_3_4=expr p_3_5=expr p_3_6=intVal
     { $result = new basil_ir.Absyn.SStore($p_3_2.result,$p_3_3.getText(),$p_3_4.result,$p_3_5.result,$p_3_6.result); }
-  | Surrogate_id_SYMB_58 p_4_2=BIdent Surrogate_id_SYMB_9 p_4_4=listExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.DirectCall($p_4_2.getText(),$p_4_4.result); }
-  | Surrogate_id_SYMB_90 Surrogate_id_SYMB_9 p_5_3=listLVar Surrogate_id_SYMB_10 Surrogate_id_SYMB_8 Surrogate_id_SYMB_58 p_5_7=BIdent Surrogate_id_SYMB_9 p_5_9=listExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.DirectCallReturnLocal($p_5_3.result,$p_5_7.getText(),$p_5_9.result); }
-  | Surrogate_id_SYMB_9 p_6_2=listLVar Surrogate_id_SYMB_10 Surrogate_id_SYMB_8 Surrogate_id_SYMB_58 p_6_6=BIdent Surrogate_id_SYMB_9 p_6_8=listExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.DirectCallReturn($p_6_2.result,$p_6_6.getText(),$p_6_8.result); }
-  | Surrogate_id_SYMB_64 Surrogate_id_SYMB_58 p_7_3=expr
-    { $result = new basil_ir.Absyn.IndirectCall($p_7_3.result); }
-  | Surrogate_id_SYMB_14 p_8_2=expr
-    { $result = new basil_ir.Absyn.Assume($p_8_2.result); }
-  | Surrogate_id_SYMB_13 p_9_2=expr
-    { $result = new basil_ir.Absyn.Assert($p_9_2.result); }
+  | p_4_1=callLVars Surrogate_id_SYMB_53 p_4_3=BIdent Surrogate_id_SYMB_5 p_4_5=listExpr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.DirectCall($p_4_1.result,$p_4_3.getText(),$p_4_5.result); }
+  | Surrogate_id_SYMB_58 Surrogate_id_SYMB_53 p_5_3=expr
+    { $result = new basil_ir.Absyn.IndirectCall($p_5_3.result); }
+  | Surrogate_id_SYMB_10 p_6_2=expr
+    { $result = new basil_ir.Absyn.Assume($p_6_2.result); }
+  | Surrogate_id_SYMB_9 p_7_2=expr
+    { $result = new basil_ir.Absyn.Assert($p_7_2.result); }
   ;
-assign returns [ basil_ir.Absyn.Assign result ]
-  : p_1_1=intLVar Surrogate_id_SYMB_8 p_1_3=intExpr
-    { $result = new basil_ir.Absyn.IntAssign($p_1_1.result,$p_1_3.result); }
-  | p_2_1=bVLVar Surrogate_id_SYMB_8 p_2_3=bVExpr
-    { $result = new basil_ir.Absyn.BVAssign($p_2_1.result,$p_2_3.result); }
-  | p_3_1=boolLVar Surrogate_id_SYMB_8 p_3_3=logExpr
-    { $result = new basil_ir.Absyn.BoolAssign($p_3_1.result,$p_3_3.result); }
+callLVars returns [ basil_ir.Absyn.CallLVars result ]
+  :  /* empty */
+    { $result = new basil_ir.Absyn.NoOutParams(); }
+  | Surrogate_id_SYMB_84 Surrogate_id_SYMB_5 p_2_3=listLVar Surrogate_id_SYMB_6 Surrogate_id_SYMB_4
+    { $result = new basil_ir.Absyn.LocalVars($p_2_3.result); }
+  | Surrogate_id_SYMB_5 p_3_2=listLVar Surrogate_id_SYMB_6 Surrogate_id_SYMB_4
+    { $result = new basil_ir.Absyn.ListOutParams($p_3_2.result); }
   ;
 jump returns [ basil_ir.Absyn.Jump result ]
-  : Surrogate_id_SYMB_63 Surrogate_id_SYMB_9 p_1_3=listBIdent Surrogate_id_SYMB_10
+  : Surrogate_id_SYMB_57 Surrogate_id_SYMB_5 p_1_3=listBIdent Surrogate_id_SYMB_6
     { $result = new basil_ir.Absyn.GoTo($p_1_3.result); }
-  | Surrogate_id_SYMB_89
+  | Surrogate_id_SYMB_83
     { $result = new basil_ir.Absyn.Unreachable(); }
-  | Surrogate_id_SYMB_85 Surrogate_id_SYMB_9 p_3_3=listExpr Surrogate_id_SYMB_10
+  | Surrogate_id_SYMB_79 Surrogate_id_SYMB_5 p_3_3=listExpr Surrogate_id_SYMB_6
     { $result = new basil_ir.Absyn.Return($p_3_3.result); }
   ;
 lVar returns [ basil_ir.Absyn.LVar result ]
-  : p_1_1=intLVar
-    { $result = new basil_ir.Absyn.LVarIntLVar($p_1_1.result); }
-  | p_2_1=bVLVar
-    { $result = new basil_ir.Absyn.LVarBVLVar($p_2_1.result); }
-  | p_3_1=boolLVar
-    { $result = new basil_ir.Absyn.LVarBoolLVar($p_3_1.result); }
-  ;
-bVLVar returns [ basil_ir.Absyn.BVLVar result ]
-  : Surrogate_id_SYMB_90 p_1_2=BIdent Surrogate_id_SYMB_3 p_1_4=bVType
-    { $result = new basil_ir.Absyn.LocalBVLVar($p_1_2.getText(),$p_1_4.result); }
-  | p_2_1=BIdent Surrogate_id_SYMB_3 p_2_3=bVType
-    { $result = new basil_ir.Absyn.GlobalBVLVar($p_2_1.getText(),$p_2_3.result); }
-  ;
-intLVar returns [ basil_ir.Absyn.IntLVar result ]
-  : Surrogate_id_SYMB_90 p_1_2=BIdent Surrogate_id_SYMB_3 p_1_4=intType
-    { $result = new basil_ir.Absyn.LocalIntLVar($p_1_2.getText(),$p_1_4.result); }
-  | p_2_1=BIdent Surrogate_id_SYMB_3 p_2_3=intType
-    { $result = new basil_ir.Absyn.GlobalIntLVar($p_2_1.getText(),$p_2_3.result); }
-  ;
-boolLVar returns [ basil_ir.Absyn.BoolLVar result ]
-  : Surrogate_id_SYMB_90 p_1_2=BIdent Surrogate_id_SYMB_3 p_1_4=boolType
-    { $result = new basil_ir.Absyn.LocalBoolLVar($p_1_2.getText(),$p_1_4.result); }
-  | p_2_1=BIdent Surrogate_id_SYMB_3 p_2_3=boolType
-    { $result = new basil_ir.Absyn.GlobalBoolLVar($p_2_1.getText(),$p_2_3.result); }
+  : Surrogate_id_SYMB_84 p_1_2=BIdent Surrogate_id_SYMB_3 p_1_4=type
+    { $result = new basil_ir.Absyn.LVarDef($p_1_2.getText(),$p_1_4.result); }
+  | p_2_1=BIdent Surrogate_id_SYMB_3 p_2_3=type
+    { $result = new basil_ir.Absyn.GlobalLVar($p_2_1.getText(),$p_2_3.result); }
   ;
 listLVar returns [ basil_ir.Absyn.ListLVar result ]
-  :  /* empty */
-    { $result = new basil_ir.Absyn.ListLVar(); }
-  | p_2_1=lVar
-    { $result = new basil_ir.Absyn.ListLVar(); $result.addLast($p_2_1.result); }
-  | p_3_1=lVar Surrogate_id_SYMB_1 p_3_3=listLVar
-    { $result = $p_3_3.result; $result.addFirst($p_3_1.result); }
+  : p_1_1=lVar
+    { $result = new basil_ir.Absyn.ListLVar(); $result.addLast($p_1_1.result); }
+  | p_2_1=lVar Surrogate_id_SYMB_1 p_2_3=listLVar
+    { $result = $p_2_3.result; $result.addFirst($p_2_1.result); }
   ;
 listBlock returns [ basil_ir.Absyn.ListBlock result ]
   :  /* empty */
@@ -370,36 +306,30 @@ listBlock returns [ basil_ir.Absyn.ListBlock result ]
     { $result = $p_3_3.result; $result.addFirst($p_3_1.result); }
   ;
 block returns [ basil_ir.Absyn.Block result ]
-  : Surrogate_id_SYMB_16 p_1_2=BIdent p_1_3=addrAttr Surrogate_id_SYMB_4 p_1_5=listStatement p_1_6=jump Surrogate_id_SYMB_5
-    { $result = new basil_ir.Absyn.B($p_1_2.getText(),$p_1_3.result,$p_1_5.result,$p_1_6.result); }
+  : Surrogate_id_SYMB_12 p_1_2=BIdent p_1_3=addrAttr p_1_4=BeginList p_1_5=listStatement p_1_6=jump p_1_7=EndList
+    { $result = new basil_ir.Absyn.B($p_1_2.getText(),$p_1_3.result,$p_1_4.getText(),$p_1_5.result,$p_1_6.result,$p_1_7.getText()); }
   ;
 pEntry returns [ basil_ir.Absyn.PEntry result ]
-  : Surrogate_id_SYMB_59 Surrogate_id_SYMB_2 p_1_3=block Surrogate_id_SYMB_0
-    { $result = new basil_ir.Absyn.EntrySome($p_1_3.result); }
+  : Surrogate_id_SYMB_54 Surrogate_id_SYMB_2 p_1_3=Str Surrogate_id_SYMB_0
+    { $result = new basil_ir.Absyn.EntrySome($p_1_3.getText()); }
   |  /* empty */
     { $result = new basil_ir.Absyn.EntryNone(); }
   ;
-pExit returns [ basil_ir.Absyn.PExit result ]
-  : Surrogate_id_SYMB_60 Surrogate_id_SYMB_2 p_1_3=block Surrogate_id_SYMB_0
-    { $result = new basil_ir.Absyn.ESome($p_1_3.result); }
-  |  /* empty */
-    { $result = new basil_ir.Absyn.ENone(); }
-  ;
 pAddress returns [ basil_ir.Absyn.PAddress result ]
-  : Surrogate_id_SYMB_12 Surrogate_id_SYMB_2 p_1_3=intLit Surrogate_id_SYMB_0
+  : Surrogate_id_SYMB_8 Surrogate_id_SYMB_2 p_1_3=intVal Surrogate_id_SYMB_0
     { $result = new basil_ir.Absyn.AddrSome($p_1_3.result); }
   |  /* empty */
     { $result = new basil_ir.Absyn.AddrNone(); }
   ;
 internalBlocks returns [ basil_ir.Absyn.InternalBlocks result ]
-  : Surrogate_id_SYMB_17 Surrogate_id_SYMB_2 Surrogate_id_SYMB_4 p_1_4=listBlock Surrogate_id_SYMB_5 Surrogate_id_SYMB_0
-    { $result = new basil_ir.Absyn.BSome($p_1_4.result); }
+  : Surrogate_id_SYMB_13 Surrogate_id_SYMB_2 p_1_3=BeginList p_1_4=listBlock p_1_5=EndList Surrogate_id_SYMB_0
+    { $result = new basil_ir.Absyn.BSome($p_1_3.getText(),$p_1_4.result,$p_1_5.getText()); }
   |  /* empty */
     { $result = new basil_ir.Absyn.BNone(); }
   ;
 procDef returns [ basil_ir.Absyn.ProcDef result ]
-  : Surrogate_id_SYMB_6 Surrogate_id_SYMB_83 Surrogate_id_SYMB_2 p_1_4=Str Surrogate_id_SYMB_0 p_1_6=pAddress p_1_7=pEntry p_1_8=pExit p_1_9=internalBlocks Surrogate_id_SYMB_7
-    { $result = new basil_ir.Absyn.PD($p_1_4.getText(),$p_1_6.result,$p_1_7.result,$p_1_8.result,$p_1_9.result); }
+  : p_1_1=BeginRec Surrogate_id_SYMB_77 Surrogate_id_SYMB_2 p_1_4=Str Surrogate_id_SYMB_0 p_1_6=pAddress p_1_7=pEntry p_1_8=internalBlocks p_1_9=EndRec
+    { $result = new basil_ir.Absyn.PD($p_1_1.getText(),$p_1_4.getText(),$p_1_6.result,$p_1_7.result,$p_1_8.result,$p_1_9.getText()); }
   ;
 params returns [ basil_ir.Absyn.Params result ]
   : p_1_1=BIdent Surrogate_id_SYMB_3 p_1_3=type
@@ -414,183 +344,155 @@ listParams returns [ basil_ir.Absyn.ListParams result ]
     { $result = $p_3_3.result; $result.addFirst($p_3_1.result); }
   ;
 expr returns [ basil_ir.Absyn.Expr result ]
-  : p_1_1=bVExpr
-    { $result = new basil_ir.Absyn.BitvectorExpr($p_1_1.result); }
-  | p_2_1=logExpr
-    { $result = new basil_ir.Absyn.LogicalExpr($p_2_1.result); }
-  | p_3_1=intExpr
-    { $result = new basil_ir.Absyn.IntegerExpr($p_3_1.result); }
-  ;
-bVExpr returns [ basil_ir.Absyn.BVExpr result ]
-  : Surrogate_id_SYMB_9 p_1_2=bVExpr Surrogate_id_SYMB_10
+  : Surrogate_id_SYMB_5 p_1_2=expr Surrogate_id_SYMB_6
     { $result = $p_1_2.result; }
-  | p_2_1=bVBinOp Surrogate_id_SYMB_9 p_2_3=bVExpr Surrogate_id_SYMB_1 p_2_5=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.BVBinary($p_2_1.result,$p_2_3.result,$p_2_5.result); }
-  | p_3_1=bVUnOp Surrogate_id_SYMB_9 p_3_3=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.BVUnary($p_3_1.result,$p_3_3.result); }
-  | Surrogate_id_SYMB_91 Surrogate_id_SYMB_9 p_4_3=intLit Surrogate_id_SYMB_1 p_4_5=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.ZeroExtend($p_4_3.result,$p_4_5.result); }
-  | Surrogate_id_SYMB_86 Surrogate_id_SYMB_9 p_5_3=intLit Surrogate_id_SYMB_1 p_5_5=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.SignExtend($p_5_3.result,$p_5_5.result); }
-  | Surrogate_id_SYMB_61 Surrogate_id_SYMB_9 p_6_3=intLit Surrogate_id_SYMB_1 p_6_5=intLit Surrogate_id_SYMB_1 p_6_7=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.Extract($p_6_3.result,$p_6_5.result,$p_6_7.result); }
-  | Surrogate_id_SYMB_31 Surrogate_id_SYMB_9 p_7_3=bVExpr Surrogate_id_SYMB_1 p_7_5=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.Concat($p_7_3.result,$p_7_5.result); }
-  | p_8_1=intLit Surrogate_id_SYMB_3 p_8_3=bVType
-    { $result = new basil_ir.Absyn.BVLiteral($p_8_1.result,$p_8_3.result); }
-  | p_9_1=bVRVar
-    { $result = new basil_ir.Absyn.RBVVar($p_9_1.result); }
+  | p_2_1=BIdent Surrogate_id_SYMB_3 p_2_3=type
+    { $result = new basil_ir.Absyn.RVar($p_2_1.getText(),$p_2_3.result); }
+  | p_3_1=binOp Surrogate_id_SYMB_5 p_3_3=expr Surrogate_id_SYMB_1 p_3_5=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.BinaryExpr($p_3_1.result,$p_3_3.result,$p_3_5.result); }
+  | p_4_1=unOp Surrogate_id_SYMB_5 p_4_3=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.UnaryExpr($p_4_1.result,$p_4_3.result); }
+  | Surrogate_id_SYMB_85 Surrogate_id_SYMB_5 p_5_3=intVal Surrogate_id_SYMB_1 p_5_5=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.ZeroExtend($p_5_3.result,$p_5_5.result); }
+  | Surrogate_id_SYMB_80 Surrogate_id_SYMB_5 p_6_3=intVal Surrogate_id_SYMB_1 p_6_5=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.SignExtend($p_6_3.result,$p_6_5.result); }
+  | Surrogate_id_SYMB_55 Surrogate_id_SYMB_5 p_7_3=intVal Surrogate_id_SYMB_1 p_7_5=intVal Surrogate_id_SYMB_1 p_7_7=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.Extract($p_7_3.result,$p_7_5.result,$p_7_7.result); }
+  | Surrogate_id_SYMB_26 Surrogate_id_SYMB_5 p_8_3=expr Surrogate_id_SYMB_1 p_8_5=expr Surrogate_id_SYMB_6
+    { $result = new basil_ir.Absyn.Concat($p_8_3.result,$p_8_5.result); }
+  | p_9_1=intVal Surrogate_id_SYMB_3 p_9_3=bVType
+    { $result = new basil_ir.Absyn.BVLiteral($p_9_1.result,$p_9_3.result); }
+  | p_10_1=intVal
+    { $result = new basil_ir.Absyn.IntLiteral($p_10_1.result); }
+  | Surrogate_id_SYMB_82
+    { $result = new basil_ir.Absyn.TrueLiteral(); }
+  | Surrogate_id_SYMB_56
+    { $result = new basil_ir.Absyn.FalseLiteral(); }
   ;
-intExpr returns [ basil_ir.Absyn.IntExpr result ]
-  : Surrogate_id_SYMB_9 p_1_2=intExpr Surrogate_id_SYMB_10
-    { $result = $p_1_2.result; }
-  | p_2_1=intLit
-    { $result = new basil_ir.Absyn.IntLiteral($p_2_1.result); }
-  | p_3_1=intRVar
-    { $result = new basil_ir.Absyn.RIntVar($p_3_1.result); }
-  | p_4_1=intBinOp Surrogate_id_SYMB_9 p_4_3=intExpr Surrogate_id_SYMB_1 p_4_5=intExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.IntBinary($p_4_1.result,$p_4_3.result,$p_4_5.result); }
-  | Surrogate_id_SYMB_75 Surrogate_id_SYMB_9 p_5_3=intExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.IntNeg($p_5_3.result); }
+binOp returns [ basil_ir.Absyn.BinOp result ]
+  : p_1_1=bVBinOp
+    { $result = new basil_ir.Absyn.BinOpBVBinOp($p_1_1.result); }
+  | p_2_1=bVLogicalBinOp
+    { $result = new basil_ir.Absyn.BinOpBVLogicalBinOp($p_2_1.result); }
+  | p_3_1=boolBinOp
+    { $result = new basil_ir.Absyn.BinOpBoolBinOp($p_3_1.result); }
+  | p_4_1=intLogicalBinOp
+    { $result = new basil_ir.Absyn.BinOpIntLogicalBinOp($p_4_1.result); }
+  | p_5_1=intBinOp
+    { $result = new basil_ir.Absyn.BinOpIntBinOp($p_5_1.result); }
   ;
-logExpr returns [ basil_ir.Absyn.LogExpr result ]
-  : Surrogate_id_SYMB_9 p_1_2=logExpr Surrogate_id_SYMB_10
-    { $result = $p_1_2.result; }
-  | p_2_1=bVLogicalBinOp Surrogate_id_SYMB_9 p_2_3=bVExpr Surrogate_id_SYMB_1 p_2_5=bVExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.BVLogBinary($p_2_1.result,$p_2_3.result,$p_2_5.result); }
-  | p_3_1=boolRVar
-    { $result = new basil_ir.Absyn.RLogVar($p_3_1.result); }
-  | p_4_1=boolLiteral
-    { $result = new basil_ir.Absyn.BoolLit($p_4_1.result); }
-  | p_5_1=intLogicalBinOp Surrogate_id_SYMB_9 p_5_3=intExpr Surrogate_id_SYMB_1 p_5_5=intExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.IntLogBinary($p_5_1.result,$p_5_3.result,$p_5_5.result); }
-  | p_6_1=boolBinOp Surrogate_id_SYMB_9 p_6_3=logExpr Surrogate_id_SYMB_1 p_6_5=logExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.BoolLogBinOp($p_6_1.result,$p_6_3.result,$p_6_5.result); }
-  | Surrogate_id_SYMB_24 Surrogate_id_SYMB_9 p_7_3=logExpr Surrogate_id_SYMB_10
-    { $result = new basil_ir.Absyn.BoolNot($p_7_3.result); }
-  ;
-intRVar returns [ basil_ir.Absyn.IntRVar result ]
-  : p_1_1=BIdent Surrogate_id_SYMB_3 p_1_3=intType
-    { $result = new basil_ir.Absyn.IRV($p_1_1.getText(),$p_1_3.result); }
-  ;
-bVRVar returns [ basil_ir.Absyn.BVRVar result ]
-  : p_1_1=BIdent Surrogate_id_SYMB_3 p_1_3=bVType
-    { $result = new basil_ir.Absyn.BVRV($p_1_1.getText(),$p_1_3.result); }
-  ;
-boolRVar returns [ basil_ir.Absyn.BoolRVar result ]
-  : p_1_1=BIdent Surrogate_id_SYMB_3 p_1_3=boolType
-    { $result = new basil_ir.Absyn.BRV($p_1_1.getText(),$p_1_3.result); }
-  ;
-boolLiteral returns [ basil_ir.Absyn.BoolLiteral result ]
-  : Surrogate_id_SYMB_88
-    { $result = new basil_ir.Absyn.BoolLiteral_true(); }
-  | Surrogate_id_SYMB_62
-    { $result = new basil_ir.Absyn.BoolLiteral_false(); }
+unOp returns [ basil_ir.Absyn.UnOp result ]
+  : p_1_1=bVUnOp
+    { $result = new basil_ir.Absyn.UnOpBVUnOp($p_1_1.result); }
+  | Surrogate_id_SYMB_20
+    { $result = new basil_ir.Absyn.UnOp_boolnot(); }
+  | Surrogate_id_SYMB_69
+    { $result = new basil_ir.Absyn.UnOp_intneg(); }
   ;
 bVUnOp returns [ basil_ir.Absyn.BVUnOp result ]
-  : Surrogate_id_SYMB_39
+  : Surrogate_id_SYMB_34
     { $result = new basil_ir.Absyn.BVUnOp_bvnot(); }
-  | Surrogate_id_SYMB_36
+  | Surrogate_id_SYMB_31
     { $result = new basil_ir.Absyn.BVUnOp_bvneg(); }
   ;
 bVBinOp returns [ basil_ir.Absyn.BVBinOp result ]
-  : Surrogate_id_SYMB_28
+  : Surrogate_id_SYMB_23
     { $result = new basil_ir.Absyn.BVBinOp_bvand(); }
-  | Surrogate_id_SYMB_40
-    { $result = new basil_ir.Absyn.BVBinOp_bvor(); }
-  | Surrogate_id_SYMB_27
-    { $result = new basil_ir.Absyn.BVBinOp_bvadd(); }
-  | Surrogate_id_SYMB_34
-    { $result = new basil_ir.Absyn.BVBinOp_bvmul(); }
-  | Surrogate_id_SYMB_50
-    { $result = new basil_ir.Absyn.BVBinOp_bvudiv(); }
-  | Surrogate_id_SYMB_55
-    { $result = new basil_ir.Absyn.BVBinOp_bvurem(); }
-  | Surrogate_id_SYMB_44
-    { $result = new basil_ir.Absyn.BVBinOp_bvshl(); }
-  | Surrogate_id_SYMB_33
-    { $result = new basil_ir.Absyn.BVBinOp_bvlshr(); }
   | Surrogate_id_SYMB_35
-    { $result = new basil_ir.Absyn.BVBinOp_bvnand(); }
-  | Surrogate_id_SYMB_38
-    { $result = new basil_ir.Absyn.BVBinOp_bvnor(); }
-  | Surrogate_id_SYMB_57
-    { $result = new basil_ir.Absyn.BVBinOp_bvxor(); }
-  | Surrogate_id_SYMB_56
-    { $result = new basil_ir.Absyn.BVBinOp_bvxnor(); }
-  | Surrogate_id_SYMB_30
-    { $result = new basil_ir.Absyn.BVBinOp_bvcomp(); }
-  | Surrogate_id_SYMB_49
-    { $result = new basil_ir.Absyn.BVBinOp_bvsub(); }
-  | Surrogate_id_SYMB_41
-    { $result = new basil_ir.Absyn.BVBinOp_bvsdiv(); }
-  | Surrogate_id_SYMB_48
-    { $result = new basil_ir.Absyn.BVBinOp_bvsrem(); }
-  | Surrogate_id_SYMB_47
-    { $result = new basil_ir.Absyn.BVBinOp_bvsmod(); }
+    { $result = new basil_ir.Absyn.BVBinOp_bvor(); }
+  | Surrogate_id_SYMB_22
+    { $result = new basil_ir.Absyn.BVBinOp_bvadd(); }
   | Surrogate_id_SYMB_29
+    { $result = new basil_ir.Absyn.BVBinOp_bvmul(); }
+  | Surrogate_id_SYMB_45
+    { $result = new basil_ir.Absyn.BVBinOp_bvudiv(); }
+  | Surrogate_id_SYMB_50
+    { $result = new basil_ir.Absyn.BVBinOp_bvurem(); }
+  | Surrogate_id_SYMB_39
+    { $result = new basil_ir.Absyn.BVBinOp_bvshl(); }
+  | Surrogate_id_SYMB_28
+    { $result = new basil_ir.Absyn.BVBinOp_bvlshr(); }
+  | Surrogate_id_SYMB_49
+    { $result = new basil_ir.Absyn.BVBinOp_bvult(); }
+  | Surrogate_id_SYMB_30
+    { $result = new basil_ir.Absyn.BVBinOp_bvnand(); }
+  | Surrogate_id_SYMB_33
+    { $result = new basil_ir.Absyn.BVBinOp_bvnor(); }
+  | Surrogate_id_SYMB_52
+    { $result = new basil_ir.Absyn.BVBinOp_bvxor(); }
+  | Surrogate_id_SYMB_51
+    { $result = new basil_ir.Absyn.BVBinOp_bvxnor(); }
+  | Surrogate_id_SYMB_25
+    { $result = new basil_ir.Absyn.BVBinOp_bvcomp(); }
+  | Surrogate_id_SYMB_44
+    { $result = new basil_ir.Absyn.BVBinOp_bvsub(); }
+  | Surrogate_id_SYMB_36
+    { $result = new basil_ir.Absyn.BVBinOp_bvsdiv(); }
+  | Surrogate_id_SYMB_43
+    { $result = new basil_ir.Absyn.BVBinOp_bvsrem(); }
+  | Surrogate_id_SYMB_42
+    { $result = new basil_ir.Absyn.BVBinOp_bvsmod(); }
+  | Surrogate_id_SYMB_24
     { $result = new basil_ir.Absyn.BVBinOp_bvashr(); }
   ;
 bVLogicalBinOp returns [ basil_ir.Absyn.BVLogicalBinOp result ]
-  : Surrogate_id_SYMB_53
+  : Surrogate_id_SYMB_48
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvule(); }
-  | Surrogate_id_SYMB_52
+  | Surrogate_id_SYMB_47
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvugt(); }
-  | Surrogate_id_SYMB_51
-    { $result = new basil_ir.Absyn.BVLogicalBinOp_bvuge(); }
   | Surrogate_id_SYMB_46
+    { $result = new basil_ir.Absyn.BVLogicalBinOp_bvuge(); }
+  | Surrogate_id_SYMB_41
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvslt(); }
-  | Surrogate_id_SYMB_45
+  | Surrogate_id_SYMB_40
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvsle(); }
-  | Surrogate_id_SYMB_43
+  | Surrogate_id_SYMB_38
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvsgt(); }
-  | Surrogate_id_SYMB_42
-    { $result = new basil_ir.Absyn.BVLogicalBinOp_bvsge(); }
-  | Surrogate_id_SYMB_32
-    { $result = new basil_ir.Absyn.BVLogicalBinOp_bveq(); }
   | Surrogate_id_SYMB_37
+    { $result = new basil_ir.Absyn.BVLogicalBinOp_bvsge(); }
+  | Surrogate_id_SYMB_27
+    { $result = new basil_ir.Absyn.BVLogicalBinOp_bveq(); }
+  | Surrogate_id_SYMB_32
     { $result = new basil_ir.Absyn.BVLogicalBinOp_bvneq(); }
-  | Surrogate_id_SYMB_54
-    { $result = new basil_ir.Absyn.BVLogicalBinOp_bvult(); }
   ;
 intBinOp returns [ basil_ir.Absyn.IntBinOp result ]
-  : Surrogate_id_SYMB_66
+  : Surrogate_id_SYMB_60
     { $result = new basil_ir.Absyn.IntBinOp_intadd(); }
-  | Surrogate_id_SYMB_74
+  | Surrogate_id_SYMB_68
     { $result = new basil_ir.Absyn.IntBinOp_intmul(); }
-  | Surrogate_id_SYMB_77
+  | Surrogate_id_SYMB_71
     { $result = new basil_ir.Absyn.IntBinOp_intsub(); }
-  | Surrogate_id_SYMB_67
+  | Surrogate_id_SYMB_61
     { $result = new basil_ir.Absyn.IntBinOp_intdiv(); }
-  | Surrogate_id_SYMB_73
+  | Surrogate_id_SYMB_67
     { $result = new basil_ir.Absyn.IntBinOp_intmod(); }
   ;
 intLogicalBinOp returns [ basil_ir.Absyn.IntLogicalBinOp result ]
-  : Surrogate_id_SYMB_68
+  : Surrogate_id_SYMB_62
     { $result = new basil_ir.Absyn.IntLogicalBinOp_inteq(); }
-  | Surrogate_id_SYMB_76
-    { $result = new basil_ir.Absyn.IntLogicalBinOp_intneq(); }
-  | Surrogate_id_SYMB_72
-    { $result = new basil_ir.Absyn.IntLogicalBinOp_intlt(); }
-  | Surrogate_id_SYMB_71
-    { $result = new basil_ir.Absyn.IntLogicalBinOp_intle(); }
   | Surrogate_id_SYMB_70
+    { $result = new basil_ir.Absyn.IntLogicalBinOp_intneq(); }
+  | Surrogate_id_SYMB_66
+    { $result = new basil_ir.Absyn.IntLogicalBinOp_intlt(); }
+  | Surrogate_id_SYMB_65
+    { $result = new basil_ir.Absyn.IntLogicalBinOp_intle(); }
+  | Surrogate_id_SYMB_64
     { $result = new basil_ir.Absyn.IntLogicalBinOp_intgt(); }
-  | Surrogate_id_SYMB_69
+  | Surrogate_id_SYMB_63
     { $result = new basil_ir.Absyn.IntLogicalBinOp_intge(); }
   ;
 boolBinOp returns [ basil_ir.Absyn.BoolBinOp result ]
-  : Surrogate_id_SYMB_20
+  : Surrogate_id_SYMB_16
     { $result = new basil_ir.Absyn.BoolBinOp_booleq(); }
-  | Surrogate_id_SYMB_23
-    { $result = new basil_ir.Absyn.BoolBinOp_boolneq(); }
   | Surrogate_id_SYMB_19
+    { $result = new basil_ir.Absyn.BoolBinOp_boolneq(); }
+  | Surrogate_id_SYMB_15
     { $result = new basil_ir.Absyn.BoolBinOp_booland(); }
-  | Surrogate_id_SYMB_25
-    { $result = new basil_ir.Absyn.BoolBinOp_boolor(); }
-  | Surrogate_id_SYMB_22
-    { $result = new basil_ir.Absyn.BoolBinOp_boolimplies(); }
   | Surrogate_id_SYMB_21
+    { $result = new basil_ir.Absyn.BoolBinOp_boolor(); }
+  | Surrogate_id_SYMB_18
+    { $result = new basil_ir.Absyn.BoolBinOp_boolimplies(); }
+  | Surrogate_id_SYMB_17
     { $result = new basil_ir.Absyn.BoolBinOp_boolequiv(); }
   ;
 

@@ -5,10 +5,9 @@ package basil_ir.Absyn;
 public class SStore  extends Statement {
   public final Endian endian_;
   public final String bident_;
-  public final Expr expr_;
-  public final BVExpr bvexpr_;
-  public final IntLit intlit_;
-  public SStore(Endian p1, String p2, Expr p3, BVExpr p4, IntLit p5) { endian_ = p1; bident_ = p2; expr_ = p3; bvexpr_ = p4; intlit_ = p5; }
+  public final Expr expr_1, expr_2;
+  public final IntVal intval_;
+  public SStore(Endian p1, String p2, Expr p3, Expr p4, IntVal p5) { endian_ = p1; bident_ = p2; expr_1 = p3; expr_2 = p4; intval_ = p5; }
 
   public <R,A> R accept(basil_ir.Absyn.Statement.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -16,13 +15,13 @@ public class SStore  extends Statement {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.SStore) {
       basil_ir.Absyn.SStore x = (basil_ir.Absyn.SStore)o;
-      return this.endian_.equals(x.endian_) && this.bident_.equals(x.bident_) && this.expr_.equals(x.expr_) && this.bvexpr_.equals(x.bvexpr_) && this.intlit_.equals(x.intlit_);
+      return this.endian_.equals(x.endian_) && this.bident_.equals(x.bident_) && this.expr_1.equals(x.expr_1) && this.expr_2.equals(x.expr_2) && this.intval_.equals(x.intval_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(37*(37*(37*(this.endian_.hashCode())+this.bident_.hashCode())+this.expr_.hashCode())+this.bvexpr_.hashCode())+this.intlit_.hashCode();
+    return 37*(37*(37*(37*(this.endian_.hashCode())+this.bident_.hashCode())+this.expr_1.hashCode())+this.expr_2.hashCode())+this.intval_.hashCode();
   }
 
 

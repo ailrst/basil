@@ -87,20 +87,17 @@ public class VisitSkel
     public R visit(basil_ir.Absyn.MapT p, A arg)
     { /* Code for MapT goes here */
       p.type_1.accept(new TypeVisitor<R,A>(), arg);
+      //p.beginlist_;
       p.type_2.accept(new TypeVisitor<R,A>(), arg);
+      //p.endlist_;
       return null;
     }
   }
   public class BVTypeVisitor<R,A> implements basil_ir.Absyn.BVType.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.ShortBVT p, A arg)
-    { /* Code for ShortBVT goes here */
+    public R visit(basil_ir.Absyn.BVT p, A arg)
+    { /* Code for BVT goes here */
       //p.bvtype_;
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BitvectorType p, A arg)
-    { /* Code for BitvectorType goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
       return null;
     }
   }
@@ -127,7 +124,7 @@ public class VisitSkel
       return null;
     }
   }
-  public class IntLitVisitor<R,A> implements basil_ir.Absyn.IntLit.Visitor<R,A>
+  public class IntValVisitor<R,A> implements basil_ir.Absyn.IntVal.Visitor<R,A>
   {
     public R visit(basil_ir.Absyn.HexInt p, A arg)
     { /* Code for HexInt goes here */
@@ -144,7 +141,9 @@ public class VisitSkel
   {
     public R visit(basil_ir.Absyn.AddrAttrSome p, A arg)
     { /* Code for AddrAttrSome goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      //p.beginrec_;
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
+      //p.endrec_;
       return null;
     }
     public R visit(basil_ir.Absyn.AddrAttrNone p, A arg)
@@ -153,6 +152,8 @@ public class VisitSkel
     }
     public R visit(basil_ir.Absyn.AddrAttrEmpty p, A arg)
     { /* Code for AddrAttrEmpty goes here */
+      //p.beginrec_;
+      //p.endrec_;
       return null;
     }
   }
@@ -169,53 +170,33 @@ public class VisitSkel
   }
   public class StatementVisitor<R,A> implements basil_ir.Absyn.Statement.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.AssignStmt p, A arg)
-    { /* Code for AssignStmt goes here */
-      p.assign_.accept(new AssignVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.Assign p, A arg)
+    { /* Code for Assign goes here */
+      p.lvar_.accept(new LVarVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.SLoad p, A arg)
     { /* Code for SLoad goes here */
-      p.bvlvar_.accept(new BVLVarVisitor<R,A>(), arg);
+      p.lvar_.accept(new LVarVisitor<R,A>(), arg);
       p.endian_.accept(new EndianVisitor<R,A>(), arg);
       //p.bident_;
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.SStore p, A arg)
     { /* Code for SStore goes here */
       p.endian_.accept(new EndianVisitor<R,A>(), arg);
       //p.bident_;
-      p.expr_.accept(new ExprVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      p.expr_1.accept(new ExprVisitor<R,A>(), arg);
+      p.expr_2.accept(new ExprVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.DirectCall p, A arg)
     { /* Code for DirectCall goes here */
-      //p.bident_;
-      for (basil_ir.Absyn.Expr x: p.listexpr_) {
-        x.accept(new ExprVisitor<R,A>(), arg);
-      }
-      return null;
-    }
-    public R visit(basil_ir.Absyn.DirectCallReturnLocal p, A arg)
-    { /* Code for DirectCallReturnLocal goes here */
-      for (basil_ir.Absyn.LVar x: p.listlvar_) {
-        x.accept(new LVarVisitor<R,A>(), arg);
-      }
-      //p.bident_;
-      for (basil_ir.Absyn.Expr x: p.listexpr_) {
-        x.accept(new ExprVisitor<R,A>(), arg);
-      }
-      return null;
-    }
-    public R visit(basil_ir.Absyn.DirectCallReturn p, A arg)
-    { /* Code for DirectCallReturn goes here */
-      for (basil_ir.Absyn.LVar x: p.listlvar_) {
-        x.accept(new LVarVisitor<R,A>(), arg);
-      }
+      p.calllvars_.accept(new CallLVarsVisitor<R,A>(), arg);
       //p.bident_;
       for (basil_ir.Absyn.Expr x: p.listexpr_) {
         x.accept(new ExprVisitor<R,A>(), arg);
@@ -238,24 +219,24 @@ public class VisitSkel
       return null;
     }
   }
-  public class AssignVisitor<R,A> implements basil_ir.Absyn.Assign.Visitor<R,A>
+  public class CallLVarsVisitor<R,A> implements basil_ir.Absyn.CallLVars.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.IntAssign p, A arg)
-    { /* Code for IntAssign goes here */
-      p.intlvar_.accept(new IntLVarVisitor<R,A>(), arg);
-      p.intexpr_.accept(new IntExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.NoOutParams p, A arg)
+    { /* Code for NoOutParams goes here */
       return null;
     }
-    public R visit(basil_ir.Absyn.BVAssign p, A arg)
-    { /* Code for BVAssign goes here */
-      p.bvlvar_.accept(new BVLVarVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.LocalVars p, A arg)
+    { /* Code for LocalVars goes here */
+      for (basil_ir.Absyn.LVar x: p.listlvar_) {
+        x.accept(new LVarVisitor<R,A>(), arg);
+      }
       return null;
     }
-    public R visit(basil_ir.Absyn.BoolAssign p, A arg)
-    { /* Code for BoolAssign goes here */
-      p.boollvar_.accept(new BoolLVarVisitor<R,A>(), arg);
-      p.logexpr_.accept(new LogExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.ListOutParams p, A arg)
+    { /* Code for ListOutParams goes here */
+      for (basil_ir.Absyn.LVar x: p.listlvar_) {
+        x.accept(new LVarVisitor<R,A>(), arg);
+      }
       return null;
     }
   }
@@ -282,64 +263,16 @@ public class VisitSkel
   }
   public class LVarVisitor<R,A> implements basil_ir.Absyn.LVar.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.LVarIntLVar p, A arg)
-    { /* Code for LVarIntLVar goes here */
-      p.intlvar_.accept(new IntLVarVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.LVarBVLVar p, A arg)
-    { /* Code for LVarBVLVar goes here */
-      p.bvlvar_.accept(new BVLVarVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.LVarBoolLVar p, A arg)
-    { /* Code for LVarBoolLVar goes here */
-      p.boollvar_.accept(new BoolLVarVisitor<R,A>(), arg);
-      return null;
-    }
-  }
-  public class BVLVarVisitor<R,A> implements basil_ir.Absyn.BVLVar.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.LocalBVLVar p, A arg)
-    { /* Code for LocalBVLVar goes here */
+    public R visit(basil_ir.Absyn.LVarDef p, A arg)
+    { /* Code for LVarDef goes here */
       //p.bident_;
-      p.bvtype_.accept(new BVTypeVisitor<R,A>(), arg);
+      p.type_.accept(new TypeVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.GlobalBVLVar p, A arg)
-    { /* Code for GlobalBVLVar goes here */
+    public R visit(basil_ir.Absyn.GlobalLVar p, A arg)
+    { /* Code for GlobalLVar goes here */
       //p.bident_;
-      p.bvtype_.accept(new BVTypeVisitor<R,A>(), arg);
-      return null;
-    }
-  }
-  public class IntLVarVisitor<R,A> implements basil_ir.Absyn.IntLVar.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.LocalIntLVar p, A arg)
-    { /* Code for LocalIntLVar goes here */
-      //p.bident_;
-      p.inttype_.accept(new IntTypeVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.GlobalIntLVar p, A arg)
-    { /* Code for GlobalIntLVar goes here */
-      //p.bident_;
-      p.inttype_.accept(new IntTypeVisitor<R,A>(), arg);
-      return null;
-    }
-  }
-  public class BoolLVarVisitor<R,A> implements basil_ir.Absyn.BoolLVar.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.LocalBoolLVar p, A arg)
-    { /* Code for LocalBoolLVar goes here */
-      //p.bident_;
-      p.booltype_.accept(new BoolTypeVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.GlobalBoolLVar p, A arg)
-    { /* Code for GlobalBoolLVar goes here */
-      //p.bident_;
-      p.booltype_.accept(new BoolTypeVisitor<R,A>(), arg);
+      p.type_.accept(new TypeVisitor<R,A>(), arg);
       return null;
     }
   }
@@ -349,10 +282,12 @@ public class VisitSkel
     { /* Code for B goes here */
       //p.bident_;
       p.addrattr_.accept(new AddrAttrVisitor<R,A>(), arg);
+      //p.beginlist_;
       for (basil_ir.Absyn.Statement x: p.liststatement_) {
         x.accept(new StatementVisitor<R,A>(), arg);
       }
       p.jump_.accept(new JumpVisitor<R,A>(), arg);
+      //p.endlist_;
       return null;
     }
   }
@@ -360,7 +295,7 @@ public class VisitSkel
   {
     public R visit(basil_ir.Absyn.EntrySome p, A arg)
     { /* Code for EntrySome goes here */
-      p.block_.accept(new BlockVisitor<R,A>(), arg);
+      //p.str_;
       return null;
     }
     public R visit(basil_ir.Absyn.EntryNone p, A arg)
@@ -368,23 +303,11 @@ public class VisitSkel
       return null;
     }
   }
-  public class PExitVisitor<R,A> implements basil_ir.Absyn.PExit.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.ESome p, A arg)
-    { /* Code for ESome goes here */
-      p.block_.accept(new BlockVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.ENone p, A arg)
-    { /* Code for ENone goes here */
-      return null;
-    }
-  }
   public class PAddressVisitor<R,A> implements basil_ir.Absyn.PAddress.Visitor<R,A>
   {
     public R visit(basil_ir.Absyn.AddrSome p, A arg)
     { /* Code for AddrSome goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.AddrNone p, A arg)
@@ -396,9 +319,11 @@ public class VisitSkel
   {
     public R visit(basil_ir.Absyn.BSome p, A arg)
     { /* Code for BSome goes here */
+      //p.beginlist_;
       for (basil_ir.Absyn.Block x: p.listblock_) {
         x.accept(new BlockVisitor<R,A>(), arg);
       }
+      //p.endlist_;
       return null;
     }
     public R visit(basil_ir.Absyn.BNone p, A arg)
@@ -410,11 +335,12 @@ public class VisitSkel
   {
     public R visit(basil_ir.Absyn.PD p, A arg)
     { /* Code for PD goes here */
+      //p.beginrec_;
       //p.str_;
       p.paddress_.accept(new PAddressVisitor<R,A>(), arg);
       p.pentry_.accept(new PEntryVisitor<R,A>(), arg);
-      p.pexit_.accept(new PExitVisitor<R,A>(), arg);
       p.internalblocks_.accept(new InternalBlocksVisitor<R,A>(), arg);
+      //p.endrec_;
       return null;
     }
   }
@@ -429,173 +355,111 @@ public class VisitSkel
   }
   public class ExprVisitor<R,A> implements basil_ir.Absyn.Expr.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.BitvectorExpr p, A arg)
-    { /* Code for BitvectorExpr goes here */
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.RVar p, A arg)
+    { /* Code for RVar goes here */
+      //p.bident_;
+      p.type_.accept(new TypeVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.LogicalExpr p, A arg)
-    { /* Code for LogicalExpr goes here */
-      p.logexpr_.accept(new LogExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.BinaryExpr p, A arg)
+    { /* Code for BinaryExpr goes here */
+      p.binop_.accept(new BinOpVisitor<R,A>(), arg);
+      p.expr_1.accept(new ExprVisitor<R,A>(), arg);
+      p.expr_2.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.IntegerExpr p, A arg)
-    { /* Code for IntegerExpr goes here */
-      p.intexpr_.accept(new IntExprVisitor<R,A>(), arg);
-      return null;
-    }
-  }
-  public class BVExprVisitor<R,A> implements basil_ir.Absyn.BVExpr.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.BVBinary p, A arg)
-    { /* Code for BVBinary goes here */
-      p.bvbinop_.accept(new BVBinOpVisitor<R,A>(), arg);
-      p.bvexpr_1.accept(new BVExprVisitor<R,A>(), arg);
-      p.bvexpr_2.accept(new BVExprVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BVUnary p, A arg)
-    { /* Code for BVUnary goes here */
-      p.bvunop_.accept(new BVUnOpVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.UnaryExpr p, A arg)
+    { /* Code for UnaryExpr goes here */
+      p.unop_.accept(new UnOpVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.ZeroExtend p, A arg)
     { /* Code for ZeroExtend goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.SignExtend p, A arg)
     { /* Code for SignExtend goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.Extract p, A arg)
     { /* Code for Extract goes here */
-      p.intlit_1.accept(new IntLitVisitor<R,A>(), arg);
-      p.intlit_2.accept(new IntLitVisitor<R,A>(), arg);
-      p.bvexpr_.accept(new BVExprVisitor<R,A>(), arg);
+      p.intval_1.accept(new IntValVisitor<R,A>(), arg);
+      p.intval_2.accept(new IntValVisitor<R,A>(), arg);
+      p.expr_.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.Concat p, A arg)
     { /* Code for Concat goes here */
-      p.bvexpr_1.accept(new BVExprVisitor<R,A>(), arg);
-      p.bvexpr_2.accept(new BVExprVisitor<R,A>(), arg);
+      p.expr_1.accept(new ExprVisitor<R,A>(), arg);
+      p.expr_2.accept(new ExprVisitor<R,A>(), arg);
       return null;
     }
     public R visit(basil_ir.Absyn.BVLiteral p, A arg)
     { /* Code for BVLiteral goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
       p.bvtype_.accept(new BVTypeVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.RBVVar p, A arg)
-    { /* Code for RBVVar goes here */
-      p.bvrvar_.accept(new BVRVarVisitor<R,A>(), arg);
-      return null;
-    }
-  }
-  public class IntExprVisitor<R,A> implements basil_ir.Absyn.IntExpr.Visitor<R,A>
-  {
     public R visit(basil_ir.Absyn.IntLiteral p, A arg)
     { /* Code for IntLiteral goes here */
-      p.intlit_.accept(new IntLitVisitor<R,A>(), arg);
+      p.intval_.accept(new IntValVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.RIntVar p, A arg)
-    { /* Code for RIntVar goes here */
-      p.intrvar_.accept(new IntRVarVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.TrueLiteral p, A arg)
+    { /* Code for TrueLiteral goes here */
       return null;
     }
-    public R visit(basil_ir.Absyn.IntBinary p, A arg)
-    { /* Code for IntBinary goes here */
-      p.intbinop_.accept(new IntBinOpVisitor<R,A>(), arg);
-      p.intexpr_1.accept(new IntExprVisitor<R,A>(), arg);
-      p.intexpr_2.accept(new IntExprVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.IntNeg p, A arg)
-    { /* Code for IntNeg goes here */
-      p.intexpr_.accept(new IntExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.FalseLiteral p, A arg)
+    { /* Code for FalseLiteral goes here */
       return null;
     }
   }
-  public class LogExprVisitor<R,A> implements basil_ir.Absyn.LogExpr.Visitor<R,A>
+  public class BinOpVisitor<R,A> implements basil_ir.Absyn.BinOp.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.BVLogBinary p, A arg)
-    { /* Code for BVLogBinary goes here */
+    public R visit(basil_ir.Absyn.BinOpBVBinOp p, A arg)
+    { /* Code for BinOpBVBinOp goes here */
+      p.bvbinop_.accept(new BVBinOpVisitor<R,A>(), arg);
+      return null;
+    }
+    public R visit(basil_ir.Absyn.BinOpBVLogicalBinOp p, A arg)
+    { /* Code for BinOpBVLogicalBinOp goes here */
       p.bvlogicalbinop_.accept(new BVLogicalBinOpVisitor<R,A>(), arg);
-      p.bvexpr_1.accept(new BVExprVisitor<R,A>(), arg);
-      p.bvexpr_2.accept(new BVExprVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.RLogVar p, A arg)
-    { /* Code for RLogVar goes here */
-      p.boolrvar_.accept(new BoolRVarVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BoolLit p, A arg)
-    { /* Code for BoolLit goes here */
-      p.boolliteral_.accept(new BoolLiteralVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.IntLogBinary p, A arg)
-    { /* Code for IntLogBinary goes here */
-      p.intlogicalbinop_.accept(new IntLogicalBinOpVisitor<R,A>(), arg);
-      p.intexpr_1.accept(new IntExprVisitor<R,A>(), arg);
-      p.intexpr_2.accept(new IntExprVisitor<R,A>(), arg);
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BoolLogBinOp p, A arg)
-    { /* Code for BoolLogBinOp goes here */
+    public R visit(basil_ir.Absyn.BinOpBoolBinOp p, A arg)
+    { /* Code for BinOpBoolBinOp goes here */
       p.boolbinop_.accept(new BoolBinOpVisitor<R,A>(), arg);
-      p.logexpr_1.accept(new LogExprVisitor<R,A>(), arg);
-      p.logexpr_2.accept(new LogExprVisitor<R,A>(), arg);
       return null;
     }
-    public R visit(basil_ir.Absyn.BoolNot p, A arg)
-    { /* Code for BoolNot goes here */
-      p.logexpr_.accept(new LogExprVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.BinOpIntLogicalBinOp p, A arg)
+    { /* Code for BinOpIntLogicalBinOp goes here */
+      p.intlogicalbinop_.accept(new IntLogicalBinOpVisitor<R,A>(), arg);
       return null;
     }
-  }
-  public class IntRVarVisitor<R,A> implements basil_ir.Absyn.IntRVar.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.IRV p, A arg)
-    { /* Code for IRV goes here */
-      //p.bident_;
-      p.inttype_.accept(new IntTypeVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.BinOpIntBinOp p, A arg)
+    { /* Code for BinOpIntBinOp goes here */
+      p.intbinop_.accept(new IntBinOpVisitor<R,A>(), arg);
       return null;
     }
   }
-  public class BVRVarVisitor<R,A> implements basil_ir.Absyn.BVRVar.Visitor<R,A>
+  public class UnOpVisitor<R,A> implements basil_ir.Absyn.UnOp.Visitor<R,A>
   {
-    public R visit(basil_ir.Absyn.BVRV p, A arg)
-    { /* Code for BVRV goes here */
-      //p.bident_;
-      p.bvtype_.accept(new BVTypeVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.UnOpBVUnOp p, A arg)
+    { /* Code for UnOpBVUnOp goes here */
+      p.bvunop_.accept(new BVUnOpVisitor<R,A>(), arg);
       return null;
     }
-  }
-  public class BoolRVarVisitor<R,A> implements basil_ir.Absyn.BoolRVar.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.BRV p, A arg)
-    { /* Code for BRV goes here */
-      //p.bident_;
-      p.booltype_.accept(new BoolTypeVisitor<R,A>(), arg);
+    public R visit(basil_ir.Absyn.UnOp_boolnot p, A arg)
+    { /* Code for UnOp_boolnot goes here */
       return null;
     }
-  }
-  public class BoolLiteralVisitor<R,A> implements basil_ir.Absyn.BoolLiteral.Visitor<R,A>
-  {
-    public R visit(basil_ir.Absyn.BoolLiteral_true p, A arg)
-    { /* Code for BoolLiteral_true goes here */
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BoolLiteral_false p, A arg)
-    { /* Code for BoolLiteral_false goes here */
+    public R visit(basil_ir.Absyn.UnOp_intneg p, A arg)
+    { /* Code for UnOp_intneg goes here */
       return null;
     }
   }
@@ -642,6 +506,10 @@ public class VisitSkel
     }
     public R visit(basil_ir.Absyn.BVBinOp_bvlshr p, A arg)
     { /* Code for BVBinOp_bvlshr goes here */
+      return null;
+    }
+    public R visit(basil_ir.Absyn.BVBinOp_bvult p, A arg)
+    { /* Code for BVBinOp_bvult goes here */
       return null;
     }
     public R visit(basil_ir.Absyn.BVBinOp_bvnand p, A arg)
@@ -721,10 +589,6 @@ public class VisitSkel
     }
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvneq p, A arg)
     { /* Code for BVLogicalBinOp_bvneq goes here */
-      return null;
-    }
-    public R visit(basil_ir.Absyn.BVLogicalBinOp_bvult p, A arg)
-    { /* Code for BVLogicalBinOp_bvult goes here */
       return null;
     }
   }

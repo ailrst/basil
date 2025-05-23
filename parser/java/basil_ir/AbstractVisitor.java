@@ -40,8 +40,7 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* BVType */
-    public R visit(basil_ir.Absyn.ShortBVT p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BitvectorType p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BVT p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(basil_ir.Absyn.BVType p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
@@ -53,10 +52,10 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visitDefault(basil_ir.Absyn.Type p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
-    /* IntLit */
+    /* IntVal */
     public R visit(basil_ir.Absyn.HexInt p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.DecInt p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.IntLit p, A arg) {
+    public R visitDefault(basil_ir.Absyn.IntVal p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* AddrAttr */
@@ -73,23 +72,21 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* Statement */
-    public R visit(basil_ir.Absyn.AssignStmt p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.Assign p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.SLoad p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.SStore p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.DirectCall p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.DirectCallReturnLocal p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.DirectCallReturn p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.IndirectCall p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.Assume p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.Assert p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(basil_ir.Absyn.Statement p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
-    /* Assign */
-    public R visit(basil_ir.Absyn.IntAssign p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BVAssign p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BoolAssign p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.Assign p, A arg) {
+    /* CallLVars */
+    public R visit(basil_ir.Absyn.NoOutParams p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.LocalVars p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.ListOutParams p, A arg) { return visitDefault(p, arg); }
+    public R visitDefault(basil_ir.Absyn.CallLVars p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* Jump */
@@ -100,28 +97,9 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* LVar */
-    public R visit(basil_ir.Absyn.LVarIntLVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.LVarBVLVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.LVarBoolLVar p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.LVarDef p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.GlobalLVar p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(basil_ir.Absyn.LVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BVLVar */
-    public R visit(basil_ir.Absyn.LocalBVLVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.GlobalBVLVar p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BVLVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* IntLVar */
-    public R visit(basil_ir.Absyn.LocalIntLVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.GlobalIntLVar p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.IntLVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BoolLVar */
-    public R visit(basil_ir.Absyn.LocalBoolLVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.GlobalBoolLVar p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BoolLVar p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* Block */
@@ -133,12 +111,6 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visit(basil_ir.Absyn.EntrySome p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.EntryNone p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(basil_ir.Absyn.PEntry p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* PExit */
-    public R visit(basil_ir.Absyn.ESome p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.ENone p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.PExit p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* PAddress */
@@ -164,61 +136,34 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* Expr */
-    public R visit(basil_ir.Absyn.BitvectorExpr p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.LogicalExpr p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.IntegerExpr p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.Expr p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BVExpr */
-    public R visit(basil_ir.Absyn.BVBinary p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BVUnary p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.RVar p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BinaryExpr p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.UnaryExpr p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.ZeroExtend p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.SignExtend p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.Extract p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.Concat p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVLiteral p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.RBVVar p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BVExpr p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* IntExpr */
     public R visit(basil_ir.Absyn.IntLiteral p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.RIntVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.IntBinary p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.IntNeg p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.IntExpr p, A arg) {
+    public R visit(basil_ir.Absyn.TrueLiteral p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.FalseLiteral p, A arg) { return visitDefault(p, arg); }
+    public R visitDefault(basil_ir.Absyn.Expr p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
-    /* LogExpr */
-    public R visit(basil_ir.Absyn.BVLogBinary p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.RLogVar p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BoolLit p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.IntLogBinary p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BoolLogBinOp p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BoolNot p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.LogExpr p, A arg) {
+    /* BinOp */
+    public R visit(basil_ir.Absyn.BinOpBVBinOp p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BinOpBVLogicalBinOp p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BinOpBoolBinOp p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BinOpIntLogicalBinOp p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BinOpIntBinOp p, A arg) { return visitDefault(p, arg); }
+    public R visitDefault(basil_ir.Absyn.BinOp p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
-    /* IntRVar */
-    public R visit(basil_ir.Absyn.IRV p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.IntRVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BVRVar */
-    public R visit(basil_ir.Absyn.BVRV p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BVRVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BoolRVar */
-    public R visit(basil_ir.Absyn.BRV p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BoolRVar p, A arg) {
-      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
-    }
-    /* BoolLiteral */
-    public R visit(basil_ir.Absyn.BoolLiteral_true p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BoolLiteral_false p, A arg) { return visitDefault(p, arg); }
-    public R visitDefault(basil_ir.Absyn.BoolLiteral p, A arg) {
+    /* UnOp */
+    public R visit(basil_ir.Absyn.UnOpBVUnOp p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.UnOp_boolnot p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.UnOp_intneg p, A arg) { return visitDefault(p, arg); }
+    public R visitDefault(basil_ir.Absyn.UnOp p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
     /* BVUnOp */
@@ -236,6 +181,7 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visit(basil_ir.Absyn.BVBinOp_bvurem p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVBinOp_bvshl p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVBinOp_bvlshr p, A arg) { return visitDefault(p, arg); }
+    public R visit(basil_ir.Absyn.BVBinOp_bvult p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVBinOp_bvnand p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVBinOp_bvnor p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVBinOp_bvxor p, A arg) { return visitDefault(p, arg); }
@@ -259,7 +205,6 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvsge p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bveq p, A arg) { return visitDefault(p, arg); }
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvneq p, A arg) { return visitDefault(p, arg); }
-    public R visit(basil_ir.Absyn.BVLogicalBinOp_bvult p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(basil_ir.Absyn.BVLogicalBinOp p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }

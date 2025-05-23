@@ -3,20 +3,22 @@
 package basil_ir.Absyn;
 
 public class AddrAttrEmpty  extends AddrAttr {
-  public AddrAttrEmpty() { }
+  public final String beginrec_, endrec_;
+  public AddrAttrEmpty(String p1, String p2) { beginrec_ = p1; endrec_ = p2; }
 
   public <R,A> R accept(basil_ir.Absyn.AddrAttr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.AddrAttrEmpty) {
-      return true;
+      basil_ir.Absyn.AddrAttrEmpty x = (basil_ir.Absyn.AddrAttrEmpty)o;
+      return this.beginrec_.equals(x.beginrec_) && this.endrec_.equals(x.endrec_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37;
+    return 37*(this.beginrec_.hashCode())+this.endrec_.hashCode();
   }
 
 

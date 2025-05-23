@@ -14,7 +14,6 @@ public abstract class BVLogicalBinOp implements java.io.Serializable {
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvsge p, A arg);
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bveq p, A arg);
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvneq p, A arg);
-    public R visit(basil_ir.Absyn.BVLogicalBinOp_bvult p, A arg);
 
   }
 

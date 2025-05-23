@@ -2,24 +2,24 @@
 
 package basil_ir.Absyn;
 
-public class ZeroExtend  extends BVExpr {
-  public final IntLit intlit_;
-  public final BVExpr bvexpr_;
-  public ZeroExtend(IntLit p1, BVExpr p2) { intlit_ = p1; bvexpr_ = p2; }
+public class ZeroExtend  extends Expr {
+  public final IntVal intval_;
+  public final Expr expr_;
+  public ZeroExtend(IntVal p1, Expr p2) { intval_ = p1; expr_ = p2; }
 
-  public <R,A> R accept(basil_ir.Absyn.BVExpr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.ZeroExtend) {
       basil_ir.Absyn.ZeroExtend x = (basil_ir.Absyn.ZeroExtend)o;
-      return this.intlit_.equals(x.intlit_) && this.bvexpr_.equals(x.bvexpr_);
+      return this.intval_.equals(x.intval_) && this.expr_.equals(x.expr_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(this.intlit_.hashCode())+this.bvexpr_.hashCode();
+    return 37*(this.intval_.hashCode())+this.expr_.hashCode();
   }
 
 

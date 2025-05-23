@@ -2,24 +2,24 @@
 
 package basil_ir.Absyn;
 
-public class Extract  extends BVExpr {
-  public final IntLit intlit_1, intlit_2;
-  public final BVExpr bvexpr_;
-  public Extract(IntLit p1, IntLit p2, BVExpr p3) { intlit_1 = p1; intlit_2 = p2; bvexpr_ = p3; }
+public class Extract  extends Expr {
+  public final IntVal intval_1, intval_2;
+  public final Expr expr_;
+  public Extract(IntVal p1, IntVal p2, Expr p3) { intval_1 = p1; intval_2 = p2; expr_ = p3; }
 
-  public <R,A> R accept(basil_ir.Absyn.BVExpr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.Extract) {
       basil_ir.Absyn.Extract x = (basil_ir.Absyn.Extract)o;
-      return this.intlit_1.equals(x.intlit_1) && this.intlit_2.equals(x.intlit_2) && this.bvexpr_.equals(x.bvexpr_);
+      return this.intval_1.equals(x.intval_1) && this.intval_2.equals(x.intval_2) && this.expr_.equals(x.expr_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(37*(this.intlit_1.hashCode())+this.intlit_2.hashCode())+this.bvexpr_.hashCode();
+    return 37*(37*(this.intval_1.hashCode())+this.intval_2.hashCode())+this.expr_.hashCode();
   }
 
 

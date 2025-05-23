@@ -79,13 +79,8 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
     }
 
 /* BVType */
-    public R visit(basil_ir.Absyn.ShortBVT p, A arg) {
+    public R visit(basil_ir.Absyn.BVT p, A arg) {
       R r = leaf(arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.BitvectorType p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
       return r;
     }
 
@@ -111,7 +106,7 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       return r;
     }
 
-/* IntLit */
+/* IntVal */
     public R visit(basil_ir.Absyn.HexInt p, A arg) {
       R r = leaf(arg);
       return r;
@@ -124,7 +119,7 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
 /* AddrAttr */
     public R visit(basil_ir.Absyn.AddrAttrSome p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.AddrAttrNone p, A arg) {
@@ -147,53 +142,31 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
     }
 
 /* Statement */
-    public R visit(basil_ir.Absyn.AssignStmt p, A arg) {
+    public R visit(basil_ir.Absyn.Assign p, A arg) {
       R r = leaf(arg);
-      r = combine(p.assign_.accept(this, arg), r, arg);
+      r = combine(p.lvar_.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.SLoad p, A arg) {
       R r = leaf(arg);
-      r = combine(p.bvlvar_.accept(this, arg), r, arg);
+      r = combine(p.lvar_.accept(this, arg), r, arg);
       r = combine(p.endian_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.SStore p, A arg) {
       R r = leaf(arg);
       r = combine(p.endian_.accept(this, arg), r, arg);
-      r = combine(p.expr_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.expr_1.accept(this, arg), r, arg);
+      r = combine(p.expr_2.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.DirectCall p, A arg) {
       R r = leaf(arg);
-      for (basil_ir.Absyn.Expr x : p.listexpr_)
-      {
-        r = combine(x.accept(this, arg), r, arg);
-      }
-      return r;
-    }
-    public R visit(basil_ir.Absyn.DirectCallReturnLocal p, A arg) {
-      R r = leaf(arg);
-      for (basil_ir.Absyn.LVar x : p.listlvar_)
-      {
-        r = combine(x.accept(this, arg), r, arg);
-      }
-      for (basil_ir.Absyn.Expr x : p.listexpr_)
-      {
-        r = combine(x.accept(this, arg), r, arg);
-      }
-      return r;
-    }
-    public R visit(basil_ir.Absyn.DirectCallReturn p, A arg) {
-      R r = leaf(arg);
-      for (basil_ir.Absyn.LVar x : p.listlvar_)
-      {
-        r = combine(x.accept(this, arg), r, arg);
-      }
+      r = combine(p.calllvars_.accept(this, arg), r, arg);
       for (basil_ir.Absyn.Expr x : p.listexpr_)
       {
         r = combine(x.accept(this, arg), r, arg);
@@ -216,23 +189,25 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       return r;
     }
 
-/* Assign */
-    public R visit(basil_ir.Absyn.IntAssign p, A arg) {
+/* CallLVars */
+    public R visit(basil_ir.Absyn.NoOutParams p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlvar_.accept(this, arg), r, arg);
-      r = combine(p.intexpr_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.BVAssign p, A arg) {
+    public R visit(basil_ir.Absyn.LocalVars p, A arg) {
       R r = leaf(arg);
-      r = combine(p.bvlvar_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      for (basil_ir.Absyn.LVar x : p.listlvar_)
+      {
+        r = combine(x.accept(this, arg), r, arg);
+      }
       return r;
     }
-    public R visit(basil_ir.Absyn.BoolAssign p, A arg) {
+    public R visit(basil_ir.Absyn.ListOutParams p, A arg) {
       R r = leaf(arg);
-      r = combine(p.boollvar_.accept(this, arg), r, arg);
-      r = combine(p.logexpr_.accept(this, arg), r, arg);
+      for (basil_ir.Absyn.LVar x : p.listlvar_)
+      {
+        r = combine(x.accept(this, arg), r, arg);
+      }
       return r;
     }
 
@@ -255,55 +230,14 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
     }
 
 /* LVar */
-    public R visit(basil_ir.Absyn.LVarIntLVar p, A arg) {
+    public R visit(basil_ir.Absyn.LVarDef p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlvar_.accept(this, arg), r, arg);
+      r = combine(p.type_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.LVarBVLVar p, A arg) {
+    public R visit(basil_ir.Absyn.GlobalLVar p, A arg) {
       R r = leaf(arg);
-      r = combine(p.bvlvar_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.LVarBoolLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.boollvar_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* BVLVar */
-    public R visit(basil_ir.Absyn.LocalBVLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvtype_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.GlobalBVLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvtype_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* IntLVar */
-    public R visit(basil_ir.Absyn.LocalIntLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.inttype_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.GlobalIntLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.inttype_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* BoolLVar */
-    public R visit(basil_ir.Absyn.LocalBoolLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.booltype_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.GlobalBoolLVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.booltype_.accept(this, arg), r, arg);
+      r = combine(p.type_.accept(this, arg), r, arg);
       return r;
     }
 
@@ -322,7 +256,6 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
 /* PEntry */
     public R visit(basil_ir.Absyn.EntrySome p, A arg) {
       R r = leaf(arg);
-      r = combine(p.block_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.EntryNone p, A arg) {
@@ -330,21 +263,10 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       return r;
     }
 
-/* PExit */
-    public R visit(basil_ir.Absyn.ESome p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.block_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.ENone p, A arg) {
-      R r = leaf(arg);
-      return r;
-    }
-
 /* PAddress */
     public R visit(basil_ir.Absyn.AddrSome p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.AddrNone p, A arg) {
@@ -371,7 +293,6 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       R r = leaf(arg);
       r = combine(p.paddress_.accept(this, arg), r, arg);
       r = combine(p.pentry_.accept(this, arg), r, arg);
-      r = combine(p.pexit_.accept(this, arg), r, arg);
       r = combine(p.internalblocks_.accept(this, arg), r, arg);
       return r;
     }
@@ -384,162 +305,107 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
     }
 
 /* Expr */
-    public R visit(basil_ir.Absyn.BitvectorExpr p, A arg) {
+    public R visit(basil_ir.Absyn.RVar p, A arg) {
       R r = leaf(arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      r = combine(p.type_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.LogicalExpr p, A arg) {
+    public R visit(basil_ir.Absyn.BinaryExpr p, A arg) {
       R r = leaf(arg);
-      r = combine(p.logexpr_.accept(this, arg), r, arg);
+      r = combine(p.binop_.accept(this, arg), r, arg);
+      r = combine(p.expr_1.accept(this, arg), r, arg);
+      r = combine(p.expr_2.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.IntegerExpr p, A arg) {
+    public R visit(basil_ir.Absyn.UnaryExpr p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intexpr_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* BVExpr */
-    public R visit(basil_ir.Absyn.BVBinary p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvbinop_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_1.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_2.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.BVUnary p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvunop_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      r = combine(p.unop_.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.ZeroExtend p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.SignExtend p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.Extract p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_1.accept(this, arg), r, arg);
-      r = combine(p.intlit_2.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_.accept(this, arg), r, arg);
+      r = combine(p.intval_1.accept(this, arg), r, arg);
+      r = combine(p.intval_2.accept(this, arg), r, arg);
+      r = combine(p.expr_.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.Concat p, A arg) {
       R r = leaf(arg);
-      r = combine(p.bvexpr_1.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_2.accept(this, arg), r, arg);
+      r = combine(p.expr_1.accept(this, arg), r, arg);
+      r = combine(p.expr_2.accept(this, arg), r, arg);
       return r;
     }
     public R visit(basil_ir.Absyn.BVLiteral p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       r = combine(p.bvtype_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.RBVVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvrvar_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* IntExpr */
     public R visit(basil_ir.Absyn.IntLiteral p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intlit_.accept(this, arg), r, arg);
+      r = combine(p.intval_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.RIntVar p, A arg) {
+    public R visit(basil_ir.Absyn.TrueLiteral p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intrvar_.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.IntBinary p, A arg) {
+    public R visit(basil_ir.Absyn.FalseLiteral p, A arg) {
       R r = leaf(arg);
-      r = combine(p.intbinop_.accept(this, arg), r, arg);
-      r = combine(p.intexpr_1.accept(this, arg), r, arg);
-      r = combine(p.intexpr_2.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.IntNeg p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.intexpr_.accept(this, arg), r, arg);
       return r;
     }
 
-/* LogExpr */
-    public R visit(basil_ir.Absyn.BVLogBinary p, A arg) {
+/* BinOp */
+    public R visit(basil_ir.Absyn.BinOpBVBinOp p, A arg) {
+      R r = leaf(arg);
+      r = combine(p.bvbinop_.accept(this, arg), r, arg);
+      return r;
+    }
+    public R visit(basil_ir.Absyn.BinOpBVLogicalBinOp p, A arg) {
       R r = leaf(arg);
       r = combine(p.bvlogicalbinop_.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_1.accept(this, arg), r, arg);
-      r = combine(p.bvexpr_2.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.RLogVar p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.boolrvar_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.BoolLit p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.boolliteral_.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.IntLogBinary p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.intlogicalbinop_.accept(this, arg), r, arg);
-      r = combine(p.intexpr_1.accept(this, arg), r, arg);
-      r = combine(p.intexpr_2.accept(this, arg), r, arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.BoolLogBinOp p, A arg) {
+    public R visit(basil_ir.Absyn.BinOpBoolBinOp p, A arg) {
       R r = leaf(arg);
       r = combine(p.boolbinop_.accept(this, arg), r, arg);
-      r = combine(p.logexpr_1.accept(this, arg), r, arg);
-      r = combine(p.logexpr_2.accept(this, arg), r, arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.BoolNot p, A arg) {
+    public R visit(basil_ir.Absyn.BinOpIntLogicalBinOp p, A arg) {
       R r = leaf(arg);
-      r = combine(p.logexpr_.accept(this, arg), r, arg);
+      r = combine(p.intlogicalbinop_.accept(this, arg), r, arg);
+      return r;
+    }
+    public R visit(basil_ir.Absyn.BinOpIntBinOp p, A arg) {
+      R r = leaf(arg);
+      r = combine(p.intbinop_.accept(this, arg), r, arg);
       return r;
     }
 
-/* IntRVar */
-    public R visit(basil_ir.Absyn.IRV p, A arg) {
+/* UnOp */
+    public R visit(basil_ir.Absyn.UnOpBVUnOp p, A arg) {
       R r = leaf(arg);
-      r = combine(p.inttype_.accept(this, arg), r, arg);
+      r = combine(p.bvunop_.accept(this, arg), r, arg);
       return r;
     }
-
-/* BVRVar */
-    public R visit(basil_ir.Absyn.BVRV p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.bvtype_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* BoolRVar */
-    public R visit(basil_ir.Absyn.BRV p, A arg) {
-      R r = leaf(arg);
-      r = combine(p.booltype_.accept(this, arg), r, arg);
-      return r;
-    }
-
-/* BoolLiteral */
-    public R visit(basil_ir.Absyn.BoolLiteral_true p, A arg) {
+    public R visit(basil_ir.Absyn.UnOp_boolnot p, A arg) {
       R r = leaf(arg);
       return r;
     }
-    public R visit(basil_ir.Absyn.BoolLiteral_false p, A arg) {
+    public R visit(basil_ir.Absyn.UnOp_intneg p, A arg) {
       R r = leaf(arg);
       return r;
     }
@@ -584,6 +450,10 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       return r;
     }
     public R visit(basil_ir.Absyn.BVBinOp_bvlshr p, A arg) {
+      R r = leaf(arg);
+      return r;
+    }
+    public R visit(basil_ir.Absyn.BVBinOp_bvult p, A arg) {
       R r = leaf(arg);
       return r;
     }
@@ -662,10 +532,6 @@ public abstract class FoldVisitor<R,A> implements AllVisitor<R,A> {
       return r;
     }
     public R visit(basil_ir.Absyn.BVLogicalBinOp_bvneq p, A arg) {
-      R r = leaf(arg);
-      return r;
-    }
-    public R visit(basil_ir.Absyn.BVLogicalBinOp_bvult p, A arg) {
       R r = leaf(arg);
       return r;
     }

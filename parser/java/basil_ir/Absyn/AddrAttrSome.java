@@ -3,8 +3,9 @@
 package basil_ir.Absyn;
 
 public class AddrAttrSome  extends AddrAttr {
-  public final IntLit intlit_;
-  public AddrAttrSome(IntLit p1) { intlit_ = p1; }
+  public final String beginrec_, endrec_;
+  public final IntVal intval_;
+  public AddrAttrSome(String p1, IntVal p2, String p3) { beginrec_ = p1; intval_ = p2; endrec_ = p3; }
 
   public <R,A> R accept(basil_ir.Absyn.AddrAttr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +13,13 @@ public class AddrAttrSome  extends AddrAttr {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.AddrAttrSome) {
       basil_ir.Absyn.AddrAttrSome x = (basil_ir.Absyn.AddrAttrSome)o;
-      return this.intlit_.equals(x.intlit_);
+      return this.beginrec_.equals(x.beginrec_) && this.intval_.equals(x.intval_) && this.endrec_.equals(x.endrec_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.intlit_.hashCode();
+    return 37*(37*(this.beginrec_.hashCode())+this.intval_.hashCode())+this.endrec_.hashCode();
   }
 
 

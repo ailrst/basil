@@ -2,13 +2,25 @@
 
 package basil_ir.Absyn;
 
-public abstract class Assign implements java.io.Serializable {
-  public abstract <R,A> R accept(Assign.Visitor<R,A> v, A arg);
-  public interface Visitor <R,A> {
-    public R visit(basil_ir.Absyn.IntAssign p, A arg);
-    public R visit(basil_ir.Absyn.BVAssign p, A arg);
-    public R visit(basil_ir.Absyn.BoolAssign p, A arg);
+public class Assign  extends Statement {
+  public final LVar lvar_;
+  public final Expr expr_;
+  public Assign(LVar p1, Expr p2) { lvar_ = p1; expr_ = p2; }
 
+  public <R,A> R accept(basil_ir.Absyn.Statement.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+
+  public boolean equals(java.lang.Object o) {
+    if (this == o) return true;
+    if (o instanceof basil_ir.Absyn.Assign) {
+      basil_ir.Absyn.Assign x = (basil_ir.Absyn.Assign)o;
+      return this.lvar_.equals(x.lvar_) && this.expr_.equals(x.expr_);
+    }
+    return false;
   }
+
+  public int hashCode() {
+    return 37*(this.lvar_.hashCode())+this.expr_.hashCode();
+  }
+
 
 }

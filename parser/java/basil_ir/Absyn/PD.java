@@ -3,12 +3,11 @@
 package basil_ir.Absyn;
 
 public class PD  extends ProcDef {
-  public final String str_;
+  public final String beginrec_, str_, endrec_;
   public final PAddress paddress_;
   public final PEntry pentry_;
-  public final PExit pexit_;
   public final InternalBlocks internalblocks_;
-  public PD(String p1, PAddress p2, PEntry p3, PExit p4, InternalBlocks p5) { str_ = p1; paddress_ = p2; pentry_ = p3; pexit_ = p4; internalblocks_ = p5; }
+  public PD(String p1, String p2, PAddress p3, PEntry p4, InternalBlocks p5, String p6) { beginrec_ = p1; str_ = p2; paddress_ = p3; pentry_ = p4; internalblocks_ = p5; endrec_ = p6; }
 
   public <R,A> R accept(basil_ir.Absyn.ProcDef.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -16,13 +15,13 @@ public class PD  extends ProcDef {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.PD) {
       basil_ir.Absyn.PD x = (basil_ir.Absyn.PD)o;
-      return this.str_.equals(x.str_) && this.paddress_.equals(x.paddress_) && this.pentry_.equals(x.pentry_) && this.pexit_.equals(x.pexit_) && this.internalblocks_.equals(x.internalblocks_);
+      return this.beginrec_.equals(x.beginrec_) && this.str_.equals(x.str_) && this.paddress_.equals(x.paddress_) && this.pentry_.equals(x.pentry_) && this.internalblocks_.equals(x.internalblocks_) && this.endrec_.equals(x.endrec_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(37*(37*(37*(this.str_.hashCode())+this.paddress_.hashCode())+this.pentry_.hashCode())+this.pexit_.hashCode())+this.internalblocks_.hashCode();
+    return 37*(37*(37*(37*(37*(this.beginrec_.hashCode())+this.str_.hashCode())+this.paddress_.hashCode())+this.pentry_.hashCode())+this.internalblocks_.hashCode())+this.endrec_.hashCode();
   }
 
 

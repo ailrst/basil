@@ -13,6 +13,7 @@ public abstract class BVBinOp implements java.io.Serializable {
     public R visit(basil_ir.Absyn.BVBinOp_bvurem p, A arg);
     public R visit(basil_ir.Absyn.BVBinOp_bvshl p, A arg);
     public R visit(basil_ir.Absyn.BVBinOp_bvlshr p, A arg);
+    public R visit(basil_ir.Absyn.BVBinOp_bvult p, A arg);
     public R visit(basil_ir.Absyn.BVBinOp_bvnand p, A arg);
     public R visit(basil_ir.Absyn.BVBinOp_bvnor p, A arg);
     public R visit(basil_ir.Absyn.BVBinOp_bvxor p, A arg);

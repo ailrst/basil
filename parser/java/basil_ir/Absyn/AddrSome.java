@@ -3,8 +3,8 @@
 package basil_ir.Absyn;
 
 public class AddrSome  extends PAddress {
-  public final IntLit intlit_;
-  public AddrSome(IntLit p1) { intlit_ = p1; }
+  public final IntVal intval_;
+  public AddrSome(IntVal p1) { intval_ = p1; }
 
   public <R,A> R accept(basil_ir.Absyn.PAddress.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +12,13 @@ public class AddrSome  extends PAddress {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.AddrSome) {
       basil_ir.Absyn.AddrSome x = (basil_ir.Absyn.AddrSome)o;
-      return this.intlit_.equals(x.intlit_);
+      return this.intval_.equals(x.intval_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.intlit_.hashCode();
+    return this.intval_.hashCode();
   }
 
 

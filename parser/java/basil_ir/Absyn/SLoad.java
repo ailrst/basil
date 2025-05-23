@@ -3,12 +3,12 @@
 package basil_ir.Absyn;
 
 public class SLoad  extends Statement {
-  public final BVLVar bvlvar_;
+  public final LVar lvar_;
   public final Endian endian_;
   public final String bident_;
-  public final BVExpr bvexpr_;
-  public final IntLit intlit_;
-  public SLoad(BVLVar p1, Endian p2, String p3, BVExpr p4, IntLit p5) { bvlvar_ = p1; endian_ = p2; bident_ = p3; bvexpr_ = p4; intlit_ = p5; }
+  public final Expr expr_;
+  public final IntVal intval_;
+  public SLoad(LVar p1, Endian p2, String p3, Expr p4, IntVal p5) { lvar_ = p1; endian_ = p2; bident_ = p3; expr_ = p4; intval_ = p5; }
 
   public <R,A> R accept(basil_ir.Absyn.Statement.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -16,13 +16,13 @@ public class SLoad  extends Statement {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.SLoad) {
       basil_ir.Absyn.SLoad x = (basil_ir.Absyn.SLoad)o;
-      return this.bvlvar_.equals(x.bvlvar_) && this.endian_.equals(x.endian_) && this.bident_.equals(x.bident_) && this.bvexpr_.equals(x.bvexpr_) && this.intlit_.equals(x.intlit_);
+      return this.lvar_.equals(x.lvar_) && this.endian_.equals(x.endian_) && this.bident_.equals(x.bident_) && this.expr_.equals(x.expr_) && this.intval_.equals(x.intval_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(37*(37*(37*(this.bvlvar_.hashCode())+this.endian_.hashCode())+this.bident_.hashCode())+this.bvexpr_.hashCode())+this.intlit_.hashCode();
+    return 37*(37*(37*(37*(this.lvar_.hashCode())+this.endian_.hashCode())+this.bident_.hashCode())+this.expr_.hashCode())+this.intval_.hashCode();
   }
 
 

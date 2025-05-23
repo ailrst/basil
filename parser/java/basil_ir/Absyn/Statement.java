@@ -5,12 +5,10 @@ package basil_ir.Absyn;
 public abstract class Statement implements java.io.Serializable {
   public abstract <R,A> R accept(Statement.Visitor<R,A> v, A arg);
   public interface Visitor <R,A> {
-    public R visit(basil_ir.Absyn.AssignStmt p, A arg);
+    public R visit(basil_ir.Absyn.Assign p, A arg);
     public R visit(basil_ir.Absyn.SLoad p, A arg);
     public R visit(basil_ir.Absyn.SStore p, A arg);
     public R visit(basil_ir.Absyn.DirectCall p, A arg);
-    public R visit(basil_ir.Absyn.DirectCallReturnLocal p, A arg);
-    public R visit(basil_ir.Absyn.DirectCallReturn p, A arg);
     public R visit(basil_ir.Absyn.IndirectCall p, A arg);
     public R visit(basil_ir.Absyn.Assume p, A arg);
     public R visit(basil_ir.Absyn.Assert p, A arg);

@@ -13,31 +13,22 @@ public class ComposVisitor<A> implements
   basil_ir.Absyn.MapType.Visitor<basil_ir.Absyn.MapType,A>,
   basil_ir.Absyn.BVType.Visitor<basil_ir.Absyn.BVType,A>,
   basil_ir.Absyn.Type.Visitor<basil_ir.Absyn.Type,A>,
-  basil_ir.Absyn.IntLit.Visitor<basil_ir.Absyn.IntLit,A>,
+  basil_ir.Absyn.IntVal.Visitor<basil_ir.Absyn.IntVal,A>,
   basil_ir.Absyn.AddrAttr.Visitor<basil_ir.Absyn.AddrAttr,A>,
   basil_ir.Absyn.Endian.Visitor<basil_ir.Absyn.Endian,A>,
   basil_ir.Absyn.Statement.Visitor<basil_ir.Absyn.Statement,A>,
-  basil_ir.Absyn.Assign.Visitor<basil_ir.Absyn.Assign,A>,
+  basil_ir.Absyn.CallLVars.Visitor<basil_ir.Absyn.CallLVars,A>,
   basil_ir.Absyn.Jump.Visitor<basil_ir.Absyn.Jump,A>,
   basil_ir.Absyn.LVar.Visitor<basil_ir.Absyn.LVar,A>,
-  basil_ir.Absyn.BVLVar.Visitor<basil_ir.Absyn.BVLVar,A>,
-  basil_ir.Absyn.IntLVar.Visitor<basil_ir.Absyn.IntLVar,A>,
-  basil_ir.Absyn.BoolLVar.Visitor<basil_ir.Absyn.BoolLVar,A>,
   basil_ir.Absyn.Block.Visitor<basil_ir.Absyn.Block,A>,
   basil_ir.Absyn.PEntry.Visitor<basil_ir.Absyn.PEntry,A>,
-  basil_ir.Absyn.PExit.Visitor<basil_ir.Absyn.PExit,A>,
   basil_ir.Absyn.PAddress.Visitor<basil_ir.Absyn.PAddress,A>,
   basil_ir.Absyn.InternalBlocks.Visitor<basil_ir.Absyn.InternalBlocks,A>,
   basil_ir.Absyn.ProcDef.Visitor<basil_ir.Absyn.ProcDef,A>,
   basil_ir.Absyn.Params.Visitor<basil_ir.Absyn.Params,A>,
   basil_ir.Absyn.Expr.Visitor<basil_ir.Absyn.Expr,A>,
-  basil_ir.Absyn.BVExpr.Visitor<basil_ir.Absyn.BVExpr,A>,
-  basil_ir.Absyn.IntExpr.Visitor<basil_ir.Absyn.IntExpr,A>,
-  basil_ir.Absyn.LogExpr.Visitor<basil_ir.Absyn.LogExpr,A>,
-  basil_ir.Absyn.IntRVar.Visitor<basil_ir.Absyn.IntRVar,A>,
-  basil_ir.Absyn.BVRVar.Visitor<basil_ir.Absyn.BVRVar,A>,
-  basil_ir.Absyn.BoolRVar.Visitor<basil_ir.Absyn.BoolRVar,A>,
-  basil_ir.Absyn.BoolLiteral.Visitor<basil_ir.Absyn.BoolLiteral,A>,
+  basil_ir.Absyn.BinOp.Visitor<basil_ir.Absyn.BinOp,A>,
+  basil_ir.Absyn.UnOp.Visitor<basil_ir.Absyn.UnOp,A>,
   basil_ir.Absyn.BVUnOp.Visitor<basil_ir.Absyn.BVUnOp,A>,
   basil_ir.Absyn.BVBinOp.Visitor<basil_ir.Absyn.BVBinOp,A>,
   basil_ir.Absyn.BVLogicalBinOp.Visitor<basil_ir.Absyn.BVLogicalBinOp,A>,
@@ -120,20 +111,17 @@ public class ComposVisitor<A> implements
     public basil_ir.Absyn.MapType visit(basil_ir.Absyn.MapT p, A arg)
     {
       basil_ir.Absyn.Type type_1 = p.type_1.accept(this, arg);
+      String beginlist_ = p.beginlist_;
       basil_ir.Absyn.Type type_2 = p.type_2.accept(this, arg);
-      return new basil_ir.Absyn.MapT(type_1, type_2);
+      String endlist_ = p.endlist_;
+      return new basil_ir.Absyn.MapT(type_1, beginlist_, type_2, endlist_);
     }
 
     /* BVType */
-    public basil_ir.Absyn.BVType visit(basil_ir.Absyn.ShortBVT p, A arg)
+    public basil_ir.Absyn.BVType visit(basil_ir.Absyn.BVT p, A arg)
     {
       String bvtype_ = p.bvtype_;
-      return new basil_ir.Absyn.ShortBVT(bvtype_);
-    }
-    public basil_ir.Absyn.BVType visit(basil_ir.Absyn.BitvectorType p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.BitvectorType(intlit_);
+      return new basil_ir.Absyn.BVT(bvtype_);
     }
 
     /* Type */
@@ -158,13 +146,13 @@ public class ComposVisitor<A> implements
       return new basil_ir.Absyn.TypeBVType(bvtype_);
     }
 
-    /* IntLit */
-    public basil_ir.Absyn.IntLit visit(basil_ir.Absyn.HexInt p, A arg)
+    /* IntVal */
+    public basil_ir.Absyn.IntVal visit(basil_ir.Absyn.HexInt p, A arg)
     {
       String integerhex_ = p.integerhex_;
       return new basil_ir.Absyn.HexInt(integerhex_);
     }
-    public basil_ir.Absyn.IntLit visit(basil_ir.Absyn.DecInt p, A arg)
+    public basil_ir.Absyn.IntVal visit(basil_ir.Absyn.DecInt p, A arg)
     {
       Integer integer_ = p.integer_;
       return new basil_ir.Absyn.DecInt(integer_);
@@ -173,8 +161,10 @@ public class ComposVisitor<A> implements
     /* AddrAttr */
     public basil_ir.Absyn.AddrAttr visit(basil_ir.Absyn.AddrAttrSome p, A arg)
     {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.AddrAttrSome(intlit_);
+      String beginrec_ = p.beginrec_;
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      String endrec_ = p.endrec_;
+      return new basil_ir.Absyn.AddrAttrSome(beginrec_, intval_, endrec_);
     }
     public basil_ir.Absyn.AddrAttr visit(basil_ir.Absyn.AddrAttrNone p, A arg)
     {
@@ -182,7 +172,9 @@ public class ComposVisitor<A> implements
     }
     public basil_ir.Absyn.AddrAttr visit(basil_ir.Absyn.AddrAttrEmpty p, A arg)
     {
-      return new basil_ir.Absyn.AddrAttrEmpty();
+      String beginrec_ = p.beginrec_;
+      String endrec_ = p.endrec_;
+      return new basil_ir.Absyn.AddrAttrEmpty(beginrec_, endrec_);
     }
 
     /* Endian */
@@ -196,68 +188,40 @@ public class ComposVisitor<A> implements
     }
 
     /* Statement */
-    public basil_ir.Absyn.Statement visit(basil_ir.Absyn.AssignStmt p, A arg)
+    public basil_ir.Absyn.Statement visit(basil_ir.Absyn.Assign p, A arg)
     {
-      basil_ir.Absyn.Assign assign_ = p.assign_.accept(this, arg);
-      return new basil_ir.Absyn.AssignStmt(assign_);
+      basil_ir.Absyn.LVar lvar_ = p.lvar_.accept(this, arg);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      return new basil_ir.Absyn.Assign(lvar_, expr_);
     }
     public basil_ir.Absyn.Statement visit(basil_ir.Absyn.SLoad p, A arg)
     {
-      basil_ir.Absyn.BVLVar bvlvar_ = p.bvlvar_.accept(this, arg);
+      basil_ir.Absyn.LVar lvar_ = p.lvar_.accept(this, arg);
       basil_ir.Absyn.Endian endian_ = p.endian_.accept(this, arg);
       String bident_ = p.bident_;
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.SLoad(bvlvar_, endian_, bident_, bvexpr_, intlit_);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      return new basil_ir.Absyn.SLoad(lvar_, endian_, bident_, expr_, intval_);
     }
     public basil_ir.Absyn.Statement visit(basil_ir.Absyn.SStore p, A arg)
     {
       basil_ir.Absyn.Endian endian_ = p.endian_.accept(this, arg);
       String bident_ = p.bident_;
-      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.SStore(endian_, bident_, expr_, bvexpr_, intlit_);
+      basil_ir.Absyn.Expr expr_1 = p.expr_1.accept(this, arg);
+      basil_ir.Absyn.Expr expr_2 = p.expr_2.accept(this, arg);
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      return new basil_ir.Absyn.SStore(endian_, bident_, expr_1, expr_2, intval_);
     }
     public basil_ir.Absyn.Statement visit(basil_ir.Absyn.DirectCall p, A arg)
     {
+      basil_ir.Absyn.CallLVars calllvars_ = p.calllvars_.accept(this, arg);
       String bident_ = p.bident_;
       basil_ir.Absyn.ListExpr listexpr_ = new basil_ir.Absyn.ListExpr();
       for (basil_ir.Absyn.Expr x : p.listexpr_)
       {
         listexpr_.add(x.accept(this,arg));
       }
-      return new basil_ir.Absyn.DirectCall(bident_, listexpr_);
-    }
-    public basil_ir.Absyn.Statement visit(basil_ir.Absyn.DirectCallReturnLocal p, A arg)
-    {
-      basil_ir.Absyn.ListLVar listlvar_ = new basil_ir.Absyn.ListLVar();
-      for (basil_ir.Absyn.LVar x : p.listlvar_)
-      {
-        listlvar_.add(x.accept(this,arg));
-      }
-      String bident_ = p.bident_;
-      basil_ir.Absyn.ListExpr listexpr_ = new basil_ir.Absyn.ListExpr();
-      for (basil_ir.Absyn.Expr x : p.listexpr_)
-      {
-        listexpr_.add(x.accept(this,arg));
-      }
-      return new basil_ir.Absyn.DirectCallReturnLocal(listlvar_, bident_, listexpr_);
-    }
-    public basil_ir.Absyn.Statement visit(basil_ir.Absyn.DirectCallReturn p, A arg)
-    {
-      basil_ir.Absyn.ListLVar listlvar_ = new basil_ir.Absyn.ListLVar();
-      for (basil_ir.Absyn.LVar x : p.listlvar_)
-      {
-        listlvar_.add(x.accept(this,arg));
-      }
-      String bident_ = p.bident_;
-      basil_ir.Absyn.ListExpr listexpr_ = new basil_ir.Absyn.ListExpr();
-      for (basil_ir.Absyn.Expr x : p.listexpr_)
-      {
-        listexpr_.add(x.accept(this,arg));
-      }
-      return new basil_ir.Absyn.DirectCallReturn(listlvar_, bident_, listexpr_);
+      return new basil_ir.Absyn.DirectCall(calllvars_, bident_, listexpr_);
     }
     public basil_ir.Absyn.Statement visit(basil_ir.Absyn.IndirectCall p, A arg)
     {
@@ -275,24 +239,28 @@ public class ComposVisitor<A> implements
       return new basil_ir.Absyn.Assert(expr_);
     }
 
-    /* Assign */
-    public basil_ir.Absyn.Assign visit(basil_ir.Absyn.IntAssign p, A arg)
+    /* CallLVars */
+    public basil_ir.Absyn.CallLVars visit(basil_ir.Absyn.NoOutParams p, A arg)
     {
-      basil_ir.Absyn.IntLVar intlvar_ = p.intlvar_.accept(this, arg);
-      basil_ir.Absyn.IntExpr intexpr_ = p.intexpr_.accept(this, arg);
-      return new basil_ir.Absyn.IntAssign(intlvar_, intexpr_);
+      return new basil_ir.Absyn.NoOutParams();
     }
-    public basil_ir.Absyn.Assign visit(basil_ir.Absyn.BVAssign p, A arg)
+    public basil_ir.Absyn.CallLVars visit(basil_ir.Absyn.LocalVars p, A arg)
     {
-      basil_ir.Absyn.BVLVar bvlvar_ = p.bvlvar_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.BVAssign(bvlvar_, bvexpr_);
+      basil_ir.Absyn.ListLVar listlvar_ = new basil_ir.Absyn.ListLVar();
+      for (basil_ir.Absyn.LVar x : p.listlvar_)
+      {
+        listlvar_.add(x.accept(this,arg));
+      }
+      return new basil_ir.Absyn.LocalVars(listlvar_);
     }
-    public basil_ir.Absyn.Assign visit(basil_ir.Absyn.BoolAssign p, A arg)
+    public basil_ir.Absyn.CallLVars visit(basil_ir.Absyn.ListOutParams p, A arg)
     {
-      basil_ir.Absyn.BoolLVar boollvar_ = p.boollvar_.accept(this, arg);
-      basil_ir.Absyn.LogExpr logexpr_ = p.logexpr_.accept(this, arg);
-      return new basil_ir.Absyn.BoolAssign(boollvar_, logexpr_);
+      basil_ir.Absyn.ListLVar listlvar_ = new basil_ir.Absyn.ListLVar();
+      for (basil_ir.Absyn.LVar x : p.listlvar_)
+      {
+        listlvar_.add(x.accept(this,arg));
+      }
+      return new basil_ir.Absyn.ListOutParams(listlvar_);
     }
 
     /* Jump */
@@ -316,62 +284,17 @@ public class ComposVisitor<A> implements
     }
 
     /* LVar */
-    public basil_ir.Absyn.LVar visit(basil_ir.Absyn.LVarIntLVar p, A arg)
-    {
-      basil_ir.Absyn.IntLVar intlvar_ = p.intlvar_.accept(this, arg);
-      return new basil_ir.Absyn.LVarIntLVar(intlvar_);
-    }
-    public basil_ir.Absyn.LVar visit(basil_ir.Absyn.LVarBVLVar p, A arg)
-    {
-      basil_ir.Absyn.BVLVar bvlvar_ = p.bvlvar_.accept(this, arg);
-      return new basil_ir.Absyn.LVarBVLVar(bvlvar_);
-    }
-    public basil_ir.Absyn.LVar visit(basil_ir.Absyn.LVarBoolLVar p, A arg)
-    {
-      basil_ir.Absyn.BoolLVar boollvar_ = p.boollvar_.accept(this, arg);
-      return new basil_ir.Absyn.LVarBoolLVar(boollvar_);
-    }
-
-    /* BVLVar */
-    public basil_ir.Absyn.BVLVar visit(basil_ir.Absyn.LocalBVLVar p, A arg)
+    public basil_ir.Absyn.LVar visit(basil_ir.Absyn.LVarDef p, A arg)
     {
       String bident_ = p.bident_;
-      basil_ir.Absyn.BVType bvtype_ = p.bvtype_.accept(this, arg);
-      return new basil_ir.Absyn.LocalBVLVar(bident_, bvtype_);
+      basil_ir.Absyn.Type type_ = p.type_.accept(this, arg);
+      return new basil_ir.Absyn.LVarDef(bident_, type_);
     }
-    public basil_ir.Absyn.BVLVar visit(basil_ir.Absyn.GlobalBVLVar p, A arg)
+    public basil_ir.Absyn.LVar visit(basil_ir.Absyn.GlobalLVar p, A arg)
     {
       String bident_ = p.bident_;
-      basil_ir.Absyn.BVType bvtype_ = p.bvtype_.accept(this, arg);
-      return new basil_ir.Absyn.GlobalBVLVar(bident_, bvtype_);
-    }
-
-    /* IntLVar */
-    public basil_ir.Absyn.IntLVar visit(basil_ir.Absyn.LocalIntLVar p, A arg)
-    {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.IntType inttype_ = p.inttype_.accept(this, arg);
-      return new basil_ir.Absyn.LocalIntLVar(bident_, inttype_);
-    }
-    public basil_ir.Absyn.IntLVar visit(basil_ir.Absyn.GlobalIntLVar p, A arg)
-    {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.IntType inttype_ = p.inttype_.accept(this, arg);
-      return new basil_ir.Absyn.GlobalIntLVar(bident_, inttype_);
-    }
-
-    /* BoolLVar */
-    public basil_ir.Absyn.BoolLVar visit(basil_ir.Absyn.LocalBoolLVar p, A arg)
-    {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.BoolType booltype_ = p.booltype_.accept(this, arg);
-      return new basil_ir.Absyn.LocalBoolLVar(bident_, booltype_);
-    }
-    public basil_ir.Absyn.BoolLVar visit(basil_ir.Absyn.GlobalBoolLVar p, A arg)
-    {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.BoolType booltype_ = p.booltype_.accept(this, arg);
-      return new basil_ir.Absyn.GlobalBoolLVar(bident_, booltype_);
+      basil_ir.Absyn.Type type_ = p.type_.accept(this, arg);
+      return new basil_ir.Absyn.GlobalLVar(bident_, type_);
     }
 
     /* Block */
@@ -379,42 +302,33 @@ public class ComposVisitor<A> implements
     {
       String bident_ = p.bident_;
       basil_ir.Absyn.AddrAttr addrattr_ = p.addrattr_.accept(this, arg);
+      String beginlist_ = p.beginlist_;
       basil_ir.Absyn.ListStatement liststatement_ = new basil_ir.Absyn.ListStatement();
       for (basil_ir.Absyn.Statement x : p.liststatement_)
       {
         liststatement_.add(x.accept(this,arg));
       }
       basil_ir.Absyn.Jump jump_ = p.jump_.accept(this, arg);
-      return new basil_ir.Absyn.B(bident_, addrattr_, liststatement_, jump_);
+      String endlist_ = p.endlist_;
+      return new basil_ir.Absyn.B(bident_, addrattr_, beginlist_, liststatement_, jump_, endlist_);
     }
 
     /* PEntry */
     public basil_ir.Absyn.PEntry visit(basil_ir.Absyn.EntrySome p, A arg)
     {
-      basil_ir.Absyn.Block block_ = p.block_.accept(this, arg);
-      return new basil_ir.Absyn.EntrySome(block_);
+      String str_ = p.str_;
+      return new basil_ir.Absyn.EntrySome(str_);
     }
     public basil_ir.Absyn.PEntry visit(basil_ir.Absyn.EntryNone p, A arg)
     {
       return new basil_ir.Absyn.EntryNone();
     }
 
-    /* PExit */
-    public basil_ir.Absyn.PExit visit(basil_ir.Absyn.ESome p, A arg)
-    {
-      basil_ir.Absyn.Block block_ = p.block_.accept(this, arg);
-      return new basil_ir.Absyn.ESome(block_);
-    }
-    public basil_ir.Absyn.PExit visit(basil_ir.Absyn.ENone p, A arg)
-    {
-      return new basil_ir.Absyn.ENone();
-    }
-
     /* PAddress */
     public basil_ir.Absyn.PAddress visit(basil_ir.Absyn.AddrSome p, A arg)
     {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.AddrSome(intlit_);
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      return new basil_ir.Absyn.AddrSome(intval_);
     }
     public basil_ir.Absyn.PAddress visit(basil_ir.Absyn.AddrNone p, A arg)
     {
@@ -424,12 +338,14 @@ public class ComposVisitor<A> implements
     /* InternalBlocks */
     public basil_ir.Absyn.InternalBlocks visit(basil_ir.Absyn.BSome p, A arg)
     {
+      String beginlist_ = p.beginlist_;
       basil_ir.Absyn.ListBlock listblock_ = new basil_ir.Absyn.ListBlock();
       for (basil_ir.Absyn.Block x : p.listblock_)
       {
         listblock_.add(x.accept(this,arg));
       }
-      return new basil_ir.Absyn.BSome(listblock_);
+      String endlist_ = p.endlist_;
+      return new basil_ir.Absyn.BSome(beginlist_, listblock_, endlist_);
     }
     public basil_ir.Absyn.InternalBlocks visit(basil_ir.Absyn.BNone p, A arg)
     {
@@ -439,12 +355,13 @@ public class ComposVisitor<A> implements
     /* ProcDef */
     public basil_ir.Absyn.ProcDef visit(basil_ir.Absyn.PD p, A arg)
     {
+      String beginrec_ = p.beginrec_;
       String str_ = p.str_;
       basil_ir.Absyn.PAddress paddress_ = p.paddress_.accept(this, arg);
       basil_ir.Absyn.PEntry pentry_ = p.pentry_.accept(this, arg);
-      basil_ir.Absyn.PExit pexit_ = p.pexit_.accept(this, arg);
       basil_ir.Absyn.InternalBlocks internalblocks_ = p.internalblocks_.accept(this, arg);
-      return new basil_ir.Absyn.PD(str_, paddress_, pentry_, pexit_, internalblocks_);
+      String endrec_ = p.endrec_;
+      return new basil_ir.Absyn.PD(beginrec_, str_, paddress_, pentry_, internalblocks_, endrec_);
     }
 
     /* Params */
@@ -456,167 +373,110 @@ public class ComposVisitor<A> implements
     }
 
     /* Expr */
-    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.BitvectorExpr p, A arg)
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.RVar p, A arg)
     {
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.BitvectorExpr(bvexpr_);
+      String bident_ = p.bident_;
+      basil_ir.Absyn.Type type_ = p.type_.accept(this, arg);
+      return new basil_ir.Absyn.RVar(bident_, type_);
     }
-    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.LogicalExpr p, A arg)
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.BinaryExpr p, A arg)
     {
-      basil_ir.Absyn.LogExpr logexpr_ = p.logexpr_.accept(this, arg);
-      return new basil_ir.Absyn.LogicalExpr(logexpr_);
+      basil_ir.Absyn.BinOp binop_ = p.binop_.accept(this, arg);
+      basil_ir.Absyn.Expr expr_1 = p.expr_1.accept(this, arg);
+      basil_ir.Absyn.Expr expr_2 = p.expr_2.accept(this, arg);
+      return new basil_ir.Absyn.BinaryExpr(binop_, expr_1, expr_2);
     }
-    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.IntegerExpr p, A arg)
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.UnaryExpr p, A arg)
     {
-      basil_ir.Absyn.IntExpr intexpr_ = p.intexpr_.accept(this, arg);
-      return new basil_ir.Absyn.IntegerExpr(intexpr_);
+      basil_ir.Absyn.UnOp unop_ = p.unop_.accept(this, arg);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      return new basil_ir.Absyn.UnaryExpr(unop_, expr_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.ZeroExtend p, A arg)
+    {
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      return new basil_ir.Absyn.ZeroExtend(intval_, expr_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.SignExtend p, A arg)
+    {
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      return new basil_ir.Absyn.SignExtend(intval_, expr_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.Extract p, A arg)
+    {
+      basil_ir.Absyn.IntVal intval_1 = p.intval_1.accept(this, arg);
+      basil_ir.Absyn.IntVal intval_2 = p.intval_2.accept(this, arg);
+      basil_ir.Absyn.Expr expr_ = p.expr_.accept(this, arg);
+      return new basil_ir.Absyn.Extract(intval_1, intval_2, expr_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.Concat p, A arg)
+    {
+      basil_ir.Absyn.Expr expr_1 = p.expr_1.accept(this, arg);
+      basil_ir.Absyn.Expr expr_2 = p.expr_2.accept(this, arg);
+      return new basil_ir.Absyn.Concat(expr_1, expr_2);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.BVLiteral p, A arg)
+    {
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      basil_ir.Absyn.BVType bvtype_ = p.bvtype_.accept(this, arg);
+      return new basil_ir.Absyn.BVLiteral(intval_, bvtype_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.IntLiteral p, A arg)
+    {
+      basil_ir.Absyn.IntVal intval_ = p.intval_.accept(this, arg);
+      return new basil_ir.Absyn.IntLiteral(intval_);
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.TrueLiteral p, A arg)
+    {
+      return new basil_ir.Absyn.TrueLiteral();
+    }
+    public basil_ir.Absyn.Expr visit(basil_ir.Absyn.FalseLiteral p, A arg)
+    {
+      return new basil_ir.Absyn.FalseLiteral();
     }
 
-    /* BVExpr */
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.BVBinary p, A arg)
+    /* BinOp */
+    public basil_ir.Absyn.BinOp visit(basil_ir.Absyn.BinOpBVBinOp p, A arg)
     {
       basil_ir.Absyn.BVBinOp bvbinop_ = p.bvbinop_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_1 = p.bvexpr_1.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_2 = p.bvexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.BVBinary(bvbinop_, bvexpr_1, bvexpr_2);
+      return new basil_ir.Absyn.BinOpBVBinOp(bvbinop_);
     }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.BVUnary p, A arg)
-    {
-      basil_ir.Absyn.BVUnOp bvunop_ = p.bvunop_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.BVUnary(bvunop_, bvexpr_);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.ZeroExtend p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.ZeroExtend(intlit_, bvexpr_);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.SignExtend p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.SignExtend(intlit_, bvexpr_);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.Extract p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_1 = p.intlit_1.accept(this, arg);
-      basil_ir.Absyn.IntLit intlit_2 = p.intlit_2.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_ = p.bvexpr_.accept(this, arg);
-      return new basil_ir.Absyn.Extract(intlit_1, intlit_2, bvexpr_);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.Concat p, A arg)
-    {
-      basil_ir.Absyn.BVExpr bvexpr_1 = p.bvexpr_1.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_2 = p.bvexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.Concat(bvexpr_1, bvexpr_2);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.BVLiteral p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      basil_ir.Absyn.BVType bvtype_ = p.bvtype_.accept(this, arg);
-      return new basil_ir.Absyn.BVLiteral(intlit_, bvtype_);
-    }
-    public basil_ir.Absyn.BVExpr visit(basil_ir.Absyn.RBVVar p, A arg)
-    {
-      basil_ir.Absyn.BVRVar bvrvar_ = p.bvrvar_.accept(this, arg);
-      return new basil_ir.Absyn.RBVVar(bvrvar_);
-    }
-
-    /* IntExpr */
-    public basil_ir.Absyn.IntExpr visit(basil_ir.Absyn.IntLiteral p, A arg)
-    {
-      basil_ir.Absyn.IntLit intlit_ = p.intlit_.accept(this, arg);
-      return new basil_ir.Absyn.IntLiteral(intlit_);
-    }
-    public basil_ir.Absyn.IntExpr visit(basil_ir.Absyn.RIntVar p, A arg)
-    {
-      basil_ir.Absyn.IntRVar intrvar_ = p.intrvar_.accept(this, arg);
-      return new basil_ir.Absyn.RIntVar(intrvar_);
-    }
-    public basil_ir.Absyn.IntExpr visit(basil_ir.Absyn.IntBinary p, A arg)
-    {
-      basil_ir.Absyn.IntBinOp intbinop_ = p.intbinop_.accept(this, arg);
-      basil_ir.Absyn.IntExpr intexpr_1 = p.intexpr_1.accept(this, arg);
-      basil_ir.Absyn.IntExpr intexpr_2 = p.intexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.IntBinary(intbinop_, intexpr_1, intexpr_2);
-    }
-    public basil_ir.Absyn.IntExpr visit(basil_ir.Absyn.IntNeg p, A arg)
-    {
-      basil_ir.Absyn.IntExpr intexpr_ = p.intexpr_.accept(this, arg);
-      return new basil_ir.Absyn.IntNeg(intexpr_);
-    }
-
-    /* LogExpr */
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.BVLogBinary p, A arg)
+    public basil_ir.Absyn.BinOp visit(basil_ir.Absyn.BinOpBVLogicalBinOp p, A arg)
     {
       basil_ir.Absyn.BVLogicalBinOp bvlogicalbinop_ = p.bvlogicalbinop_.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_1 = p.bvexpr_1.accept(this, arg);
-      basil_ir.Absyn.BVExpr bvexpr_2 = p.bvexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.BVLogBinary(bvlogicalbinop_, bvexpr_1, bvexpr_2);
+      return new basil_ir.Absyn.BinOpBVLogicalBinOp(bvlogicalbinop_);
     }
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.RLogVar p, A arg)
-    {
-      basil_ir.Absyn.BoolRVar boolrvar_ = p.boolrvar_.accept(this, arg);
-      return new basil_ir.Absyn.RLogVar(boolrvar_);
-    }
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.BoolLit p, A arg)
-    {
-      basil_ir.Absyn.BoolLiteral boolliteral_ = p.boolliteral_.accept(this, arg);
-      return new basil_ir.Absyn.BoolLit(boolliteral_);
-    }
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.IntLogBinary p, A arg)
-    {
-      basil_ir.Absyn.IntLogicalBinOp intlogicalbinop_ = p.intlogicalbinop_.accept(this, arg);
-      basil_ir.Absyn.IntExpr intexpr_1 = p.intexpr_1.accept(this, arg);
-      basil_ir.Absyn.IntExpr intexpr_2 = p.intexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.IntLogBinary(intlogicalbinop_, intexpr_1, intexpr_2);
-    }
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.BoolLogBinOp p, A arg)
+    public basil_ir.Absyn.BinOp visit(basil_ir.Absyn.BinOpBoolBinOp p, A arg)
     {
       basil_ir.Absyn.BoolBinOp boolbinop_ = p.boolbinop_.accept(this, arg);
-      basil_ir.Absyn.LogExpr logexpr_1 = p.logexpr_1.accept(this, arg);
-      basil_ir.Absyn.LogExpr logexpr_2 = p.logexpr_2.accept(this, arg);
-      return new basil_ir.Absyn.BoolLogBinOp(boolbinop_, logexpr_1, logexpr_2);
+      return new basil_ir.Absyn.BinOpBoolBinOp(boolbinop_);
     }
-    public basil_ir.Absyn.LogExpr visit(basil_ir.Absyn.BoolNot p, A arg)
+    public basil_ir.Absyn.BinOp visit(basil_ir.Absyn.BinOpIntLogicalBinOp p, A arg)
     {
-      basil_ir.Absyn.LogExpr logexpr_ = p.logexpr_.accept(this, arg);
-      return new basil_ir.Absyn.BoolNot(logexpr_);
+      basil_ir.Absyn.IntLogicalBinOp intlogicalbinop_ = p.intlogicalbinop_.accept(this, arg);
+      return new basil_ir.Absyn.BinOpIntLogicalBinOp(intlogicalbinop_);
     }
-
-    /* IntRVar */
-    public basil_ir.Absyn.IntRVar visit(basil_ir.Absyn.IRV p, A arg)
+    public basil_ir.Absyn.BinOp visit(basil_ir.Absyn.BinOpIntBinOp p, A arg)
     {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.IntType inttype_ = p.inttype_.accept(this, arg);
-      return new basil_ir.Absyn.IRV(bident_, inttype_);
+      basil_ir.Absyn.IntBinOp intbinop_ = p.intbinop_.accept(this, arg);
+      return new basil_ir.Absyn.BinOpIntBinOp(intbinop_);
     }
 
-    /* BVRVar */
-    public basil_ir.Absyn.BVRVar visit(basil_ir.Absyn.BVRV p, A arg)
+    /* UnOp */
+    public basil_ir.Absyn.UnOp visit(basil_ir.Absyn.UnOpBVUnOp p, A arg)
     {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.BVType bvtype_ = p.bvtype_.accept(this, arg);
-      return new basil_ir.Absyn.BVRV(bident_, bvtype_);
+      basil_ir.Absyn.BVUnOp bvunop_ = p.bvunop_.accept(this, arg);
+      return new basil_ir.Absyn.UnOpBVUnOp(bvunop_);
     }
-
-    /* BoolRVar */
-    public basil_ir.Absyn.BoolRVar visit(basil_ir.Absyn.BRV p, A arg)
+    public basil_ir.Absyn.UnOp visit(basil_ir.Absyn.UnOp_boolnot p, A arg)
     {
-      String bident_ = p.bident_;
-      basil_ir.Absyn.BoolType booltype_ = p.booltype_.accept(this, arg);
-      return new basil_ir.Absyn.BRV(bident_, booltype_);
+      return new basil_ir.Absyn.UnOp_boolnot();
     }
-
-    /* BoolLiteral */
-    public basil_ir.Absyn.BoolLiteral visit(basil_ir.Absyn.BoolLiteral_true p, A arg)
+    public basil_ir.Absyn.UnOp visit(basil_ir.Absyn.UnOp_intneg p, A arg)
     {
-      return new basil_ir.Absyn.BoolLiteral_true();
-    }
-    public basil_ir.Absyn.BoolLiteral visit(basil_ir.Absyn.BoolLiteral_false p, A arg)
-    {
-      return new basil_ir.Absyn.BoolLiteral_false();
+      return new basil_ir.Absyn.UnOp_intneg();
     }
 
     /* BVUnOp */
@@ -661,6 +521,10 @@ public class ComposVisitor<A> implements
     public basil_ir.Absyn.BVBinOp visit(basil_ir.Absyn.BVBinOp_bvlshr p, A arg)
     {
       return new basil_ir.Absyn.BVBinOp_bvlshr();
+    }
+    public basil_ir.Absyn.BVBinOp visit(basil_ir.Absyn.BVBinOp_bvult p, A arg)
+    {
+      return new basil_ir.Absyn.BVBinOp_bvult();
     }
     public basil_ir.Absyn.BVBinOp visit(basil_ir.Absyn.BVBinOp_bvnand p, A arg)
     {
@@ -739,10 +603,6 @@ public class ComposVisitor<A> implements
     public basil_ir.Absyn.BVLogicalBinOp visit(basil_ir.Absyn.BVLogicalBinOp_bvneq p, A arg)
     {
       return new basil_ir.Absyn.BVLogicalBinOp_bvneq();
-    }
-    public basil_ir.Absyn.BVLogicalBinOp visit(basil_ir.Absyn.BVLogicalBinOp_bvult p, A arg)
-    {
-      return new basil_ir.Absyn.BVLogicalBinOp_bvult();
     }
 
     /* IntBinOp */

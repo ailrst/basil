@@ -3,8 +3,8 @@
 package basil_ir.Absyn;
 
 public class EntrySome  extends PEntry {
-  public final Block block_;
-  public EntrySome(Block p1) { block_ = p1; }
+  public final String str_;
+  public EntrySome(String p1) { str_ = p1; }
 
   public <R,A> R accept(basil_ir.Absyn.PEntry.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +12,13 @@ public class EntrySome  extends PEntry {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.EntrySome) {
       basil_ir.Absyn.EntrySome x = (basil_ir.Absyn.EntrySome)o;
-      return this.block_.equals(x.block_);
+      return this.str_.equals(x.str_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.block_.hashCode();
+    return this.str_.hashCode();
   }
 
 

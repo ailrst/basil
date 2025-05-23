@@ -2,11 +2,11 @@
 
 package basil_ir.Absyn;
 
-public class HexInt  extends IntLit {
+public class HexInt  extends IntVal {
   public final String integerhex_;
   public HexInt(String p1) { integerhex_ = p1; }
 
-  public <R,A> R accept(basil_ir.Absyn.IntLit.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.IntVal.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;

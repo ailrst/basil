@@ -5,9 +5,17 @@ package basil_ir.Absyn;
 public abstract class Expr implements java.io.Serializable {
   public abstract <R,A> R accept(Expr.Visitor<R,A> v, A arg);
   public interface Visitor <R,A> {
-    public R visit(basil_ir.Absyn.BitvectorExpr p, A arg);
-    public R visit(basil_ir.Absyn.LogicalExpr p, A arg);
-    public R visit(basil_ir.Absyn.IntegerExpr p, A arg);
+    public R visit(basil_ir.Absyn.RVar p, A arg);
+    public R visit(basil_ir.Absyn.BinaryExpr p, A arg);
+    public R visit(basil_ir.Absyn.UnaryExpr p, A arg);
+    public R visit(basil_ir.Absyn.ZeroExtend p, A arg);
+    public R visit(basil_ir.Absyn.SignExtend p, A arg);
+    public R visit(basil_ir.Absyn.Extract p, A arg);
+    public R visit(basil_ir.Absyn.Concat p, A arg);
+    public R visit(basil_ir.Absyn.BVLiteral p, A arg);
+    public R visit(basil_ir.Absyn.IntLiteral p, A arg);
+    public R visit(basil_ir.Absyn.TrueLiteral p, A arg);
+    public R visit(basil_ir.Absyn.FalseLiteral p, A arg);
 
   }
 

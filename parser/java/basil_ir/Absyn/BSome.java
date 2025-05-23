@@ -3,8 +3,9 @@
 package basil_ir.Absyn;
 
 public class BSome  extends InternalBlocks {
+  public final String beginlist_, endlist_;
   public final ListBlock listblock_;
-  public BSome(ListBlock p1) { listblock_ = p1; }
+  public BSome(String p1, ListBlock p2, String p3) { beginlist_ = p1; listblock_ = p2; endlist_ = p3; }
 
   public <R,A> R accept(basil_ir.Absyn.InternalBlocks.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +13,13 @@ public class BSome  extends InternalBlocks {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.BSome) {
       basil_ir.Absyn.BSome x = (basil_ir.Absyn.BSome)o;
-      return this.listblock_.equals(x.listblock_);
+      return this.beginlist_.equals(x.beginlist_) && this.listblock_.equals(x.listblock_) && this.endlist_.equals(x.endlist_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.listblock_.hashCode();
+    return 37*(37*(this.beginlist_.hashCode())+this.listblock_.hashCode())+this.endlist_.hashCode();
   }
 
 

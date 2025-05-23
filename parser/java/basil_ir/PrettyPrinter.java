@@ -230,7 +230,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String print(basil_ir.Absyn.IntLit foo)
+  public static String print(basil_ir.Absyn.IntVal foo)
   {
     pp(foo, 0);
     trim();
@@ -238,7 +238,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String show(basil_ir.Absyn.IntLit foo)
+  public static String show(basil_ir.Absyn.IntVal foo)
   {
     sh(foo);
     String temp = buf_.toString();
@@ -305,7 +305,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String print(basil_ir.Absyn.Assign foo)
+  public static String print(basil_ir.Absyn.CallLVars foo)
   {
     pp(foo, 0);
     trim();
@@ -313,7 +313,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String show(basil_ir.Absyn.Assign foo)
+  public static String show(basil_ir.Absyn.CallLVars foo)
   {
     sh(foo);
     String temp = buf_.toString();
@@ -344,51 +344,6 @@ public class PrettyPrinter
     return temp;
   }
   public static String show(basil_ir.Absyn.LVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.BVLVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.BVLVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.IntLVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.IntLVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.BoolLVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.BoolLVar foo)
   {
     sh(foo);
     String temp = buf_.toString();
@@ -449,21 +404,6 @@ public class PrettyPrinter
     return temp;
   }
   public static String show(basil_ir.Absyn.PEntry foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.PExit foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.PExit foo)
   {
     sh(foo);
     String temp = buf_.toString();
@@ -560,7 +500,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String print(basil_ir.Absyn.BVExpr foo)
+  public static String print(basil_ir.Absyn.BinOp foo)
   {
     pp(foo, 0);
     trim();
@@ -568,14 +508,14 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String show(basil_ir.Absyn.BVExpr foo)
+  public static String show(basil_ir.Absyn.BinOp foo)
   {
     sh(foo);
     String temp = buf_.toString();
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String print(basil_ir.Absyn.IntExpr foo)
+  public static String print(basil_ir.Absyn.UnOp foo)
   {
     pp(foo, 0);
     trim();
@@ -583,82 +523,7 @@ public class PrettyPrinter
     buf_.delete(0,buf_.length());
     return temp;
   }
-  public static String show(basil_ir.Absyn.IntExpr foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.LogExpr foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.LogExpr foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.IntRVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.IntRVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.BVRVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.BVRVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.BoolRVar foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.BoolRVar foo)
-  {
-    sh(foo);
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String print(basil_ir.Absyn.BoolLiteral foo)
-  {
-    pp(foo, 0);
-    trim();
-    String temp = buf_.toString();
-    buf_.delete(0,buf_.length());
-    return temp;
-  }
-  public static String show(basil_ir.Absyn.BoolLiteral foo)
+  public static String show(basil_ir.Absyn.UnOp foo)
   {
     sh(foo);
     String temp = buf_.toString();
@@ -915,9 +780,9 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("map");
        pp(_mapt.type_1, 0);
-       render("[");
+       pp(_mapt.beginlist_, 0);
        pp(_mapt.type_2, 0);
-       render("]");
+       pp(_mapt.endlist_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -925,19 +790,11 @@ public class PrettyPrinter
 
   private static void pp(basil_ir.Absyn.BVType foo, int _i_)
   {
-    if (foo instanceof basil_ir.Absyn.ShortBVT)
+    if (foo instanceof basil_ir.Absyn.BVT)
     {
-       basil_ir.Absyn.ShortBVT _shortbvt = (basil_ir.Absyn.ShortBVT) foo;
+       basil_ir.Absyn.BVT _bvt = (basil_ir.Absyn.BVT) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_shortbvt.bvtype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.BitvectorType)
-    {
-       basil_ir.Absyn.BitvectorType _bitvectortype = (basil_ir.Absyn.BitvectorType) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("bv");
-       pp(_bitvectortype.intlit_, 0);
+       pp(_bvt.bvtype_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -998,7 +855,7 @@ public class PrettyPrinter
   }
 
 
-  private static void pp(basil_ir.Absyn.IntLit foo, int _i_)
+  private static void pp(basil_ir.Absyn.IntVal foo, int _i_)
   {
     if (foo instanceof basil_ir.Absyn.HexInt)
     {
@@ -1023,11 +880,11 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.AddrAttrSome _addrattrsome = (basil_ir.Absyn.AddrAttrSome) foo;
        if (_i_ > 0) render(_L_PAREN);
-       render("{");
+       pp(_addrattrsome.beginrec_, 0);
        render("address");
        render("=");
-       pp(_addrattrsome.intlit_, 0);
-       render("}");
+       pp(_addrattrsome.intval_, 0);
+       pp(_addrattrsome.endrec_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.AddrAttrNone)
@@ -1040,8 +897,8 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.AddrAttrEmpty _addrattrempty = (basil_ir.Absyn.AddrAttrEmpty) foo;
        if (_i_ > 0) render(_L_PAREN);
-       render("{");
-       render("}");
+       pp(_addrattrempty.beginrec_, 0);
+       pp(_addrattrempty.endrec_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1083,24 +940,26 @@ public class PrettyPrinter
 
   private static void pp(basil_ir.Absyn.Statement foo, int _i_)
   {
-    if (foo instanceof basil_ir.Absyn.AssignStmt)
+    if (foo instanceof basil_ir.Absyn.Assign)
     {
-       basil_ir.Absyn.AssignStmt _assignstmt = (basil_ir.Absyn.AssignStmt) foo;
+       basil_ir.Absyn.Assign _assign = (basil_ir.Absyn.Assign) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_assignstmt.assign_, 0);
+       pp(_assign.lvar_, 0);
+       render(":=");
+       pp(_assign.expr_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.SLoad)
     {
        basil_ir.Absyn.SLoad _sload = (basil_ir.Absyn.SLoad) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_sload.bvlvar_, 0);
+       pp(_sload.lvar_, 0);
        render(":=");
        render("load");
        pp(_sload.endian_, 0);
        pp(_sload.bident_, 0);
-       pp(_sload.bvexpr_, 0);
-       pp(_sload.intlit_, 0);
+       pp(_sload.expr_, 0);
+       pp(_sload.intval_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.SStore)
@@ -1110,50 +969,20 @@ public class PrettyPrinter
        render("store");
        pp(_sstore.endian_, 0);
        pp(_sstore.bident_, 0);
-       pp(_sstore.expr_, 0);
-       pp(_sstore.bvexpr_, 0);
-       pp(_sstore.intlit_, 0);
+       pp(_sstore.expr_1, 0);
+       pp(_sstore.expr_2, 0);
+       pp(_sstore.intval_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.DirectCall)
     {
        basil_ir.Absyn.DirectCall _directcall = (basil_ir.Absyn.DirectCall) foo;
        if (_i_ > 0) render(_L_PAREN);
+       pp(_directcall.calllvars_, 0);
        render("call");
        pp(_directcall.bident_, 0);
        render("(");
        pp(_directcall.listexpr_, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.DirectCallReturnLocal)
-    {
-       basil_ir.Absyn.DirectCallReturnLocal _directcallreturnlocal = (basil_ir.Absyn.DirectCallReturnLocal) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("var");
-       render("(");
-       pp(_directcallreturnlocal.listlvar_, 0);
-       render(")");
-       render(":=");
-       render("call");
-       pp(_directcallreturnlocal.bident_, 0);
-       render("(");
-       pp(_directcallreturnlocal.listexpr_, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.DirectCallReturn)
-    {
-       basil_ir.Absyn.DirectCallReturn _directcallreturn = (basil_ir.Absyn.DirectCallReturn) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("(");
-       pp(_directcallreturn.listlvar_, 0);
-       render(")");
-       render(":=");
-       render("call");
-       pp(_directcallreturn.bident_, 0);
-       render("(");
-       pp(_directcallreturn.listexpr_, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1185,33 +1014,33 @@ public class PrettyPrinter
 
   }
 
-  private static void pp(basil_ir.Absyn.Assign foo, int _i_)
+  private static void pp(basil_ir.Absyn.CallLVars foo, int _i_)
   {
-    if (foo instanceof basil_ir.Absyn.IntAssign)
+    if (foo instanceof basil_ir.Absyn.NoOutParams)
     {
-       basil_ir.Absyn.IntAssign _intassign = (basil_ir.Absyn.IntAssign) foo;
+       basil_ir.Absyn.NoOutParams _nooutparams = (basil_ir.Absyn.NoOutParams) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_intassign.intlvar_, 0);
-       render(":=");
-       pp(_intassign.intexpr_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.BVAssign)
+    else     if (foo instanceof basil_ir.Absyn.LocalVars)
     {
-       basil_ir.Absyn.BVAssign _bvassign = (basil_ir.Absyn.BVAssign) foo;
+       basil_ir.Absyn.LocalVars _localvars = (basil_ir.Absyn.LocalVars) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_bvassign.bvlvar_, 0);
+       render("var");
+       render("(");
+       pp(_localvars.listlvar_, 0);
+       render(")");
        render(":=");
-       pp(_bvassign.bvexpr_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.BoolAssign)
+    else     if (foo instanceof basil_ir.Absyn.ListOutParams)
     {
-       basil_ir.Absyn.BoolAssign _boolassign = (basil_ir.Absyn.BoolAssign) foo;
+       basil_ir.Absyn.ListOutParams _listoutparams = (basil_ir.Absyn.ListOutParams) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_boolassign.boollvar_, 0);
+       render("(");
+       pp(_listoutparams.listlvar_, 0);
+       render(")");
        render(":=");
-       pp(_boolassign.logexpr_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1251,97 +1080,23 @@ public class PrettyPrinter
 
   private static void pp(basil_ir.Absyn.LVar foo, int _i_)
   {
-    if (foo instanceof basil_ir.Absyn.LVarIntLVar)
+    if (foo instanceof basil_ir.Absyn.LVarDef)
     {
-       basil_ir.Absyn.LVarIntLVar _lvarintlvar = (basil_ir.Absyn.LVarIntLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_lvarintlvar.intlvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.LVarBVLVar)
-    {
-       basil_ir.Absyn.LVarBVLVar _lvarbvlvar = (basil_ir.Absyn.LVarBVLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_lvarbvlvar.bvlvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.LVarBoolLVar)
-    {
-       basil_ir.Absyn.LVarBoolLVar _lvarboollvar = (basil_ir.Absyn.LVarBoolLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_lvarboollvar.boollvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BVLVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalBVLVar)
-    {
-       basil_ir.Absyn.LocalBVLVar _localbvlvar = (basil_ir.Absyn.LocalBVLVar) foo;
+       basil_ir.Absyn.LVarDef _lvardef = (basil_ir.Absyn.LVarDef) foo;
        if (_i_ > 0) render(_L_PAREN);
        render("var");
-       pp(_localbvlvar.bident_, 0);
+       pp(_lvardef.bident_, 0);
        render(":");
-       pp(_localbvlvar.bvtype_, 0);
+       pp(_lvardef.type_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.GlobalBVLVar)
+    else     if (foo instanceof basil_ir.Absyn.GlobalLVar)
     {
-       basil_ir.Absyn.GlobalBVLVar _globalbvlvar = (basil_ir.Absyn.GlobalBVLVar) foo;
+       basil_ir.Absyn.GlobalLVar _globallvar = (basil_ir.Absyn.GlobalLVar) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_globalbvlvar.bident_, 0);
+       pp(_globallvar.bident_, 0);
        render(":");
-       pp(_globalbvlvar.bvtype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.IntLVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalIntLVar)
-    {
-       basil_ir.Absyn.LocalIntLVar _localintlvar = (basil_ir.Absyn.LocalIntLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("var");
-       pp(_localintlvar.bident_, 0);
-       render(":");
-       pp(_localintlvar.inttype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.GlobalIntLVar)
-    {
-       basil_ir.Absyn.GlobalIntLVar _globalintlvar = (basil_ir.Absyn.GlobalIntLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_globalintlvar.bident_, 0);
-       render(":");
-       pp(_globalintlvar.inttype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BoolLVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalBoolLVar)
-    {
-       basil_ir.Absyn.LocalBoolLVar _localboollvar = (basil_ir.Absyn.LocalBoolLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("var");
-       pp(_localboollvar.bident_, 0);
-       render(":");
-       pp(_localboollvar.booltype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.GlobalBoolLVar)
-    {
-       basil_ir.Absyn.GlobalBoolLVar _globalboollvar = (basil_ir.Absyn.GlobalBoolLVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_globalboollvar.bident_, 0);
-       render(":");
-       pp(_globalboollvar.booltype_, 0);
+       pp(_globallvar.type_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1400,10 +1155,10 @@ public class PrettyPrinter
        render("block");
        pp(_b.bident_, 0);
        pp(_b.addrattr_, 0);
-       render("[");
+       pp(_b.beginlist_, 0);
        pp(_b.liststatement_, 0);
        pp(_b.jump_, 0);
-       render("]");
+       pp(_b.endlist_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1415,36 +1170,15 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.EntrySome _entrysome = (basil_ir.Absyn.EntrySome) foo;
        if (_i_ > 0) render(_L_PAREN);
-       render("entry");
+       render("entry_block");
        render("=");
-       pp(_entrysome.block_, 0);
+       pp(_entrysome.str_, 0);
        render(";");
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.EntryNone)
     {
        basil_ir.Absyn.EntryNone _entrynone = (basil_ir.Absyn.EntryNone) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.PExit foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.ESome)
-    {
-       basil_ir.Absyn.ESome _esome = (basil_ir.Absyn.ESome) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("exit");
-       render("=");
-       pp(_esome.block_, 0);
-       render(";");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.ENone)
-    {
-       basil_ir.Absyn.ENone _enone = (basil_ir.Absyn.ENone) foo;
        if (_i_ > 0) render(_L_PAREN);
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1459,7 +1193,7 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("address");
        render("=");
-       pp(_addrsome.intlit_, 0);
+       pp(_addrsome.intval_, 0);
        render(";");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1480,9 +1214,9 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("blocks");
        render("=");
-       render("[");
+       pp(_bsome.beginlist_, 0);
        pp(_bsome.listblock_, 0);
-       render("]");
+       pp(_bsome.endlist_, 0);
        render(";");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1501,16 +1235,15 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.PD _pd = (basil_ir.Absyn.PD) foo;
        if (_i_ > 0) render(_L_PAREN);
-       render("{");
+       pp(_pd.beginrec_, 0);
        render("name");
        render("=");
        pp(_pd.str_, 0);
        render(";");
        pp(_pd.paddress_, 0);
        pp(_pd.pentry_, 0);
-       pp(_pd.pexit_, 0);
        pp(_pd.internalblocks_, 0);
-       render("}");
+       pp(_pd.endrec_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1554,51 +1287,34 @@ public class PrettyPrinter
 
   private static void pp(basil_ir.Absyn.Expr foo, int _i_)
   {
-    if (foo instanceof basil_ir.Absyn.BitvectorExpr)
+    if (foo instanceof basil_ir.Absyn.RVar)
     {
-       basil_ir.Absyn.BitvectorExpr _bitvectorexpr = (basil_ir.Absyn.BitvectorExpr) foo;
+       basil_ir.Absyn.RVar _rvar = (basil_ir.Absyn.RVar) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_bitvectorexpr.bvexpr_, 0);
+       pp(_rvar.bident_, 0);
+       render(":");
+       pp(_rvar.type_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.LogicalExpr)
+    else     if (foo instanceof basil_ir.Absyn.BinaryExpr)
     {
-       basil_ir.Absyn.LogicalExpr _logicalexpr = (basil_ir.Absyn.LogicalExpr) foo;
+       basil_ir.Absyn.BinaryExpr _binaryexpr = (basil_ir.Absyn.BinaryExpr) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_logicalexpr.logexpr_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.IntegerExpr)
-    {
-       basil_ir.Absyn.IntegerExpr _integerexpr = (basil_ir.Absyn.IntegerExpr) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_integerexpr.intexpr_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BVExpr foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.BVBinary)
-    {
-       basil_ir.Absyn.BVBinary _bvbinary = (basil_ir.Absyn.BVBinary) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_bvbinary.bvbinop_, 0);
+       pp(_binaryexpr.binop_, 0);
        render("(");
-       pp(_bvbinary.bvexpr_1, 0);
+       pp(_binaryexpr.expr_1, 0);
        render(",");
-       pp(_bvbinary.bvexpr_2, 0);
+       pp(_binaryexpr.expr_2, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.BVUnary)
+    else     if (foo instanceof basil_ir.Absyn.UnaryExpr)
     {
-       basil_ir.Absyn.BVUnary _bvunary = (basil_ir.Absyn.BVUnary) foo;
+       basil_ir.Absyn.UnaryExpr _unaryexpr = (basil_ir.Absyn.UnaryExpr) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_bvunary.bvunop_, 0);
+       pp(_unaryexpr.unop_, 0);
        render("(");
-       pp(_bvunary.bvexpr_, 0);
+       pp(_unaryexpr.expr_, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1608,9 +1324,9 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("zero_extend");
        render("(");
-       pp(_zeroextend.intlit_, 0);
+       pp(_zeroextend.intval_, 0);
        render(",");
-       pp(_zeroextend.bvexpr_, 0);
+       pp(_zeroextend.expr_, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1620,9 +1336,9 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("sign_extend");
        render("(");
-       pp(_signextend.intlit_, 0);
+       pp(_signextend.intval_, 0);
        render(",");
-       pp(_signextend.bvexpr_, 0);
+       pp(_signextend.expr_, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1632,11 +1348,11 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("extract");
        render("(");
-       pp(_extract.intlit_1, 0);
+       pp(_extract.intval_1, 0);
        render(",");
-       pp(_extract.intlit_2, 0);
+       pp(_extract.intval_2, 0);
        render(",");
-       pp(_extract.bvexpr_, 0);
+       pp(_extract.expr_, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1646,9 +1362,9 @@ public class PrettyPrinter
        if (_i_ > 0) render(_L_PAREN);
        render("bvconcat");
        render("(");
-       pp(_concat.bvexpr_1, 0);
+       pp(_concat.expr_1, 0);
        render(",");
-       pp(_concat.bvexpr_2, 0);
+       pp(_concat.expr_2, 0);
        render(")");
        if (_i_ > 0) render(_R_PAREN);
     }
@@ -1656,183 +1372,96 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.BVLiteral _bvliteral = (basil_ir.Absyn.BVLiteral) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_bvliteral.intlit_, 0);
+       pp(_bvliteral.intval_, 0);
        render(":");
        pp(_bvliteral.bvtype_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.RBVVar)
-    {
-       basil_ir.Absyn.RBVVar _rbvvar = (basil_ir.Absyn.RBVVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_rbvvar.bvrvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.IntExpr foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.IntLiteral)
+    else     if (foo instanceof basil_ir.Absyn.IntLiteral)
     {
        basil_ir.Absyn.IntLiteral _intliteral = (basil_ir.Absyn.IntLiteral) foo;
        if (_i_ > 0) render(_L_PAREN);
-       pp(_intliteral.intlit_, 0);
+       pp(_intliteral.intval_, 0);
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.RIntVar)
+    else     if (foo instanceof basil_ir.Absyn.TrueLiteral)
     {
-       basil_ir.Absyn.RIntVar _rintvar = (basil_ir.Absyn.RIntVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_rintvar.intrvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.IntBinary)
-    {
-       basil_ir.Absyn.IntBinary _intbinary = (basil_ir.Absyn.IntBinary) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_intbinary.intbinop_, 0);
-       render("(");
-       pp(_intbinary.intexpr_1, 0);
-       render(",");
-       pp(_intbinary.intexpr_2, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.IntNeg)
-    {
-       basil_ir.Absyn.IntNeg _intneg = (basil_ir.Absyn.IntNeg) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("intneg");
-       render("(");
-       pp(_intneg.intexpr_, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.LogExpr foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.BVLogBinary)
-    {
-       basil_ir.Absyn.BVLogBinary _bvlogbinary = (basil_ir.Absyn.BVLogBinary) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_bvlogbinary.bvlogicalbinop_, 0);
-       render("(");
-       pp(_bvlogbinary.bvexpr_1, 0);
-       render(",");
-       pp(_bvlogbinary.bvexpr_2, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.RLogVar)
-    {
-       basil_ir.Absyn.RLogVar _rlogvar = (basil_ir.Absyn.RLogVar) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_rlogvar.boolrvar_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.BoolLit)
-    {
-       basil_ir.Absyn.BoolLit _boollit = (basil_ir.Absyn.BoolLit) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_boollit.boolliteral_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.IntLogBinary)
-    {
-       basil_ir.Absyn.IntLogBinary _intlogbinary = (basil_ir.Absyn.IntLogBinary) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_intlogbinary.intlogicalbinop_, 0);
-       render("(");
-       pp(_intlogbinary.intexpr_1, 0);
-       render(",");
-       pp(_intlogbinary.intexpr_2, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.BoolLogBinOp)
-    {
-       basil_ir.Absyn.BoolLogBinOp _boollogbinop = (basil_ir.Absyn.BoolLogBinOp) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_boollogbinop.boolbinop_, 0);
-       render("(");
-       pp(_boollogbinop.logexpr_1, 0);
-       render(",");
-       pp(_boollogbinop.logexpr_2, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.BoolNot)
-    {
-       basil_ir.Absyn.BoolNot _boolnot = (basil_ir.Absyn.BoolNot) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("boolnot");
-       render("(");
-       pp(_boolnot.logexpr_, 0);
-       render(")");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.IntRVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.IRV)
-    {
-       basil_ir.Absyn.IRV _irv = (basil_ir.Absyn.IRV) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_irv.bident_, 0);
-       render(":");
-       pp(_irv.inttype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BVRVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.BVRV)
-    {
-       basil_ir.Absyn.BVRV _bvrv = (basil_ir.Absyn.BVRV) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_bvrv.bident_, 0);
-       render(":");
-       pp(_bvrv.bvtype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BoolRVar foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.BRV)
-    {
-       basil_ir.Absyn.BRV _brv = (basil_ir.Absyn.BRV) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       pp(_brv.bident_, 0);
-       render(":");
-       pp(_brv.booltype_, 0);
-       if (_i_ > 0) render(_R_PAREN);
-    }
-
-  }
-
-  private static void pp(basil_ir.Absyn.BoolLiteral foo, int _i_)
-  {
-    if (foo instanceof basil_ir.Absyn.BoolLiteral_true)
-    {
-       basil_ir.Absyn.BoolLiteral_true _boolliteral_true = (basil_ir.Absyn.BoolLiteral_true) foo;
+       basil_ir.Absyn.TrueLiteral _trueliteral = (basil_ir.Absyn.TrueLiteral) foo;
        if (_i_ > 0) render(_L_PAREN);
        render("true");
        if (_i_ > 0) render(_R_PAREN);
     }
-    else     if (foo instanceof basil_ir.Absyn.BoolLiteral_false)
+    else     if (foo instanceof basil_ir.Absyn.FalseLiteral)
     {
-       basil_ir.Absyn.BoolLiteral_false _boolliteral_false = (basil_ir.Absyn.BoolLiteral_false) foo;
+       basil_ir.Absyn.FalseLiteral _falseliteral = (basil_ir.Absyn.FalseLiteral) foo;
        if (_i_ > 0) render(_L_PAREN);
        render("false");
+       if (_i_ > 0) render(_R_PAREN);
+    }
+
+  }
+
+  private static void pp(basil_ir.Absyn.BinOp foo, int _i_)
+  {
+    if (foo instanceof basil_ir.Absyn.BinOpBVBinOp)
+    {
+       basil_ir.Absyn.BinOpBVBinOp _binopbvbinop = (basil_ir.Absyn.BinOpBVBinOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_binopbvbinop.bvbinop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.BinOpBVLogicalBinOp)
+    {
+       basil_ir.Absyn.BinOpBVLogicalBinOp _binopbvlogicalbinop = (basil_ir.Absyn.BinOpBVLogicalBinOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_binopbvlogicalbinop.bvlogicalbinop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.BinOpBoolBinOp)
+    {
+       basil_ir.Absyn.BinOpBoolBinOp _binopboolbinop = (basil_ir.Absyn.BinOpBoolBinOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_binopboolbinop.boolbinop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.BinOpIntLogicalBinOp)
+    {
+       basil_ir.Absyn.BinOpIntLogicalBinOp _binopintlogicalbinop = (basil_ir.Absyn.BinOpIntLogicalBinOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_binopintlogicalbinop.intlogicalbinop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.BinOpIntBinOp)
+    {
+       basil_ir.Absyn.BinOpIntBinOp _binopintbinop = (basil_ir.Absyn.BinOpIntBinOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_binopintbinop.intbinop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+
+  }
+
+  private static void pp(basil_ir.Absyn.UnOp foo, int _i_)
+  {
+    if (foo instanceof basil_ir.Absyn.UnOpBVUnOp)
+    {
+       basil_ir.Absyn.UnOpBVUnOp _unopbvunop = (basil_ir.Absyn.UnOpBVUnOp) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       pp(_unopbvunop.bvunop_, 0);
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.UnOp_boolnot)
+    {
+       basil_ir.Absyn.UnOp_boolnot _unop_boolnot = (basil_ir.Absyn.UnOp_boolnot) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       render("boolnot");
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.UnOp_intneg)
+    {
+       basil_ir.Absyn.UnOp_intneg _unop_intneg = (basil_ir.Absyn.UnOp_intneg) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       render("intneg");
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -1913,6 +1542,13 @@ public class PrettyPrinter
        basil_ir.Absyn.BVBinOp_bvlshr _bvbinop_bvlshr = (basil_ir.Absyn.BVBinOp_bvlshr) foo;
        if (_i_ > 0) render(_L_PAREN);
        render("bvlshr");
+       if (_i_ > 0) render(_R_PAREN);
+    }
+    else     if (foo instanceof basil_ir.Absyn.BVBinOp_bvult)
+    {
+       basil_ir.Absyn.BVBinOp_bvult _bvbinop_bvult = (basil_ir.Absyn.BVBinOp_bvult) foo;
+       if (_i_ > 0) render(_L_PAREN);
+       render("bvult");
        if (_i_ > 0) render(_R_PAREN);
     }
     else     if (foo instanceof basil_ir.Absyn.BVBinOp_bvnand)
@@ -2051,13 +1687,6 @@ public class PrettyPrinter
        basil_ir.Absyn.BVLogicalBinOp_bvneq _bvlogicalbinop_bvneq = (basil_ir.Absyn.BVLogicalBinOp_bvneq) foo;
        if (_i_ > 0) render(_L_PAREN);
        render("bvneq");
-       if (_i_ > 0) render(_R_PAREN);
-    }
-    else     if (foo instanceof basil_ir.Absyn.BVLogicalBinOp_bvult)
-    {
-       basil_ir.Absyn.BVLogicalBinOp_bvult _bvlogicalbinop_bvult = (basil_ir.Absyn.BVLogicalBinOp_bvult) foo;
-       if (_i_ > 0) render(_L_PAREN);
-       render("bvult");
        if (_i_ > 0) render(_R_PAREN);
     }
 
@@ -2324,27 +1953,21 @@ public class PrettyPrinter
        render("(");
        render("MapT");
        sh(_mapt.type_1);
+       sh(_mapt.beginlist_);
        sh(_mapt.type_2);
+       sh(_mapt.endlist_);
        render(")");
     }
   }
 
   private static void sh(basil_ir.Absyn.BVType foo)
   {
-    if (foo instanceof basil_ir.Absyn.ShortBVT)
+    if (foo instanceof basil_ir.Absyn.BVT)
     {
-       basil_ir.Absyn.ShortBVT _shortbvt = (basil_ir.Absyn.ShortBVT) foo;
+       basil_ir.Absyn.BVT _bvt = (basil_ir.Absyn.BVT) foo;
        render("(");
-       render("ShortBVT");
-       sh(_shortbvt.bvtype_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.BitvectorType)
-    {
-       basil_ir.Absyn.BitvectorType _bitvectortype = (basil_ir.Absyn.BitvectorType) foo;
-       render("(");
-       render("BitvectorType");
-       sh(_bitvectortype.intlit_);
+       render("BVT");
+       sh(_bvt.bvtype_);
        render(")");
     }
   }
@@ -2395,7 +2018,7 @@ public class PrettyPrinter
      }
   }
 
-  private static void sh(basil_ir.Absyn.IntLit foo)
+  private static void sh(basil_ir.Absyn.IntVal foo)
   {
     if (foo instanceof basil_ir.Absyn.HexInt)
     {
@@ -2422,7 +2045,9 @@ public class PrettyPrinter
        basil_ir.Absyn.AddrAttrSome _addrattrsome = (basil_ir.Absyn.AddrAttrSome) foo;
        render("(");
        render("AddrAttrSome");
-       sh(_addrattrsome.intlit_);
+       sh(_addrattrsome.beginrec_);
+       sh(_addrattrsome.intval_);
+       sh(_addrattrsome.endrec_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.AddrAttrNone)
@@ -2433,7 +2058,11 @@ public class PrettyPrinter
     if (foo instanceof basil_ir.Absyn.AddrAttrEmpty)
     {
        basil_ir.Absyn.AddrAttrEmpty _addrattrempty = (basil_ir.Absyn.AddrAttrEmpty) foo;
+       render("(");
        render("AddrAttrEmpty");
+       sh(_addrattrempty.beginrec_);
+       sh(_addrattrempty.endrec_);
+       render(")");
     }
   }
 
@@ -2463,12 +2092,13 @@ public class PrettyPrinter
 
   private static void sh(basil_ir.Absyn.Statement foo)
   {
-    if (foo instanceof basil_ir.Absyn.AssignStmt)
+    if (foo instanceof basil_ir.Absyn.Assign)
     {
-       basil_ir.Absyn.AssignStmt _assignstmt = (basil_ir.Absyn.AssignStmt) foo;
+       basil_ir.Absyn.Assign _assign = (basil_ir.Absyn.Assign) foo;
        render("(");
-       render("AssignStmt");
-       sh(_assignstmt.assign_);
+       render("Assign");
+       sh(_assign.lvar_);
+       sh(_assign.expr_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.SLoad)
@@ -2476,11 +2106,11 @@ public class PrettyPrinter
        basil_ir.Absyn.SLoad _sload = (basil_ir.Absyn.SLoad) foo;
        render("(");
        render("SLoad");
-       sh(_sload.bvlvar_);
+       sh(_sload.lvar_);
        sh(_sload.endian_);
        sh(_sload.bident_);
-       sh(_sload.bvexpr_);
-       sh(_sload.intlit_);
+       sh(_sload.expr_);
+       sh(_sload.intval_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.SStore)
@@ -2490,9 +2120,9 @@ public class PrettyPrinter
        render("SStore");
        sh(_sstore.endian_);
        sh(_sstore.bident_);
-       sh(_sstore.expr_);
-       sh(_sstore.bvexpr_);
-       sh(_sstore.intlit_);
+       sh(_sstore.expr_1);
+       sh(_sstore.expr_2);
+       sh(_sstore.intval_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.DirectCall)
@@ -2500,37 +2130,10 @@ public class PrettyPrinter
        basil_ir.Absyn.DirectCall _directcall = (basil_ir.Absyn.DirectCall) foo;
        render("(");
        render("DirectCall");
+       sh(_directcall.calllvars_);
        sh(_directcall.bident_);
        render("[");
        sh(_directcall.listexpr_);
-       render("]");
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.DirectCallReturnLocal)
-    {
-       basil_ir.Absyn.DirectCallReturnLocal _directcallreturnlocal = (basil_ir.Absyn.DirectCallReturnLocal) foo;
-       render("(");
-       render("DirectCallReturnLocal");
-       render("[");
-       sh(_directcallreturnlocal.listlvar_);
-       render("]");
-       sh(_directcallreturnlocal.bident_);
-       render("[");
-       sh(_directcallreturnlocal.listexpr_);
-       render("]");
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.DirectCallReturn)
-    {
-       basil_ir.Absyn.DirectCallReturn _directcallreturn = (basil_ir.Absyn.DirectCallReturn) foo;
-       render("(");
-       render("DirectCallReturn");
-       render("[");
-       sh(_directcallreturn.listlvar_);
-       render("]");
-       sh(_directcallreturn.bident_);
-       render("[");
-       sh(_directcallreturn.listexpr_);
        render("]");
        render(")");
     }
@@ -2560,33 +2163,31 @@ public class PrettyPrinter
     }
   }
 
-  private static void sh(basil_ir.Absyn.Assign foo)
+  private static void sh(basil_ir.Absyn.CallLVars foo)
   {
-    if (foo instanceof basil_ir.Absyn.IntAssign)
+    if (foo instanceof basil_ir.Absyn.NoOutParams)
     {
-       basil_ir.Absyn.IntAssign _intassign = (basil_ir.Absyn.IntAssign) foo;
+       basil_ir.Absyn.NoOutParams _nooutparams = (basil_ir.Absyn.NoOutParams) foo;
+       render("NoOutParams");
+    }
+    if (foo instanceof basil_ir.Absyn.LocalVars)
+    {
+       basil_ir.Absyn.LocalVars _localvars = (basil_ir.Absyn.LocalVars) foo;
        render("(");
-       render("IntAssign");
-       sh(_intassign.intlvar_);
-       sh(_intassign.intexpr_);
+       render("LocalVars");
+       render("[");
+       sh(_localvars.listlvar_);
+       render("]");
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.BVAssign)
+    if (foo instanceof basil_ir.Absyn.ListOutParams)
     {
-       basil_ir.Absyn.BVAssign _bvassign = (basil_ir.Absyn.BVAssign) foo;
+       basil_ir.Absyn.ListOutParams _listoutparams = (basil_ir.Absyn.ListOutParams) foo;
        render("(");
-       render("BVAssign");
-       sh(_bvassign.bvlvar_);
-       sh(_bvassign.bvexpr_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.BoolAssign)
-    {
-       basil_ir.Absyn.BoolAssign _boolassign = (basil_ir.Absyn.BoolAssign) foo;
-       render("(");
-       render("BoolAssign");
-       sh(_boolassign.boollvar_);
-       sh(_boolassign.logexpr_);
+       render("ListOutParams");
+       render("[");
+       sh(_listoutparams.listlvar_);
+       render("]");
        render(")");
     }
   }
@@ -2622,94 +2223,22 @@ public class PrettyPrinter
 
   private static void sh(basil_ir.Absyn.LVar foo)
   {
-    if (foo instanceof basil_ir.Absyn.LVarIntLVar)
+    if (foo instanceof basil_ir.Absyn.LVarDef)
     {
-       basil_ir.Absyn.LVarIntLVar _lvarintlvar = (basil_ir.Absyn.LVarIntLVar) foo;
+       basil_ir.Absyn.LVarDef _lvardef = (basil_ir.Absyn.LVarDef) foo;
        render("(");
-       render("LVarIntLVar");
-       sh(_lvarintlvar.intlvar_);
+       render("LVarDef");
+       sh(_lvardef.bident_);
+       sh(_lvardef.type_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.LVarBVLVar)
+    if (foo instanceof basil_ir.Absyn.GlobalLVar)
     {
-       basil_ir.Absyn.LVarBVLVar _lvarbvlvar = (basil_ir.Absyn.LVarBVLVar) foo;
+       basil_ir.Absyn.GlobalLVar _globallvar = (basil_ir.Absyn.GlobalLVar) foo;
        render("(");
-       render("LVarBVLVar");
-       sh(_lvarbvlvar.bvlvar_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.LVarBoolLVar)
-    {
-       basil_ir.Absyn.LVarBoolLVar _lvarboollvar = (basil_ir.Absyn.LVarBoolLVar) foo;
-       render("(");
-       render("LVarBoolLVar");
-       sh(_lvarboollvar.boollvar_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BVLVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalBVLVar)
-    {
-       basil_ir.Absyn.LocalBVLVar _localbvlvar = (basil_ir.Absyn.LocalBVLVar) foo;
-       render("(");
-       render("LocalBVLVar");
-       sh(_localbvlvar.bident_);
-       sh(_localbvlvar.bvtype_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.GlobalBVLVar)
-    {
-       basil_ir.Absyn.GlobalBVLVar _globalbvlvar = (basil_ir.Absyn.GlobalBVLVar) foo;
-       render("(");
-       render("GlobalBVLVar");
-       sh(_globalbvlvar.bident_);
-       sh(_globalbvlvar.bvtype_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.IntLVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalIntLVar)
-    {
-       basil_ir.Absyn.LocalIntLVar _localintlvar = (basil_ir.Absyn.LocalIntLVar) foo;
-       render("(");
-       render("LocalIntLVar");
-       sh(_localintlvar.bident_);
-       sh(_localintlvar.inttype_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.GlobalIntLVar)
-    {
-       basil_ir.Absyn.GlobalIntLVar _globalintlvar = (basil_ir.Absyn.GlobalIntLVar) foo;
-       render("(");
-       render("GlobalIntLVar");
-       sh(_globalintlvar.bident_);
-       sh(_globalintlvar.inttype_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BoolLVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.LocalBoolLVar)
-    {
-       basil_ir.Absyn.LocalBoolLVar _localboollvar = (basil_ir.Absyn.LocalBoolLVar) foo;
-       render("(");
-       render("LocalBoolLVar");
-       sh(_localboollvar.bident_);
-       sh(_localboollvar.booltype_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.GlobalBoolLVar)
-    {
-       basil_ir.Absyn.GlobalBoolLVar _globalboollvar = (basil_ir.Absyn.GlobalBoolLVar) foo;
-       render("(");
-       render("GlobalBoolLVar");
-       sh(_globalboollvar.bident_);
-       sh(_globalboollvar.booltype_);
+       render("GlobalLVar");
+       sh(_globallvar.bident_);
+       sh(_globallvar.type_);
        render(")");
     }
   }
@@ -2743,10 +2272,12 @@ public class PrettyPrinter
        render("B");
        sh(_b.bident_);
        sh(_b.addrattr_);
+       sh(_b.beginlist_);
        render("[");
        sh(_b.liststatement_);
        render("]");
        sh(_b.jump_);
+       sh(_b.endlist_);
        render(")");
     }
   }
@@ -2758,30 +2289,13 @@ public class PrettyPrinter
        basil_ir.Absyn.EntrySome _entrysome = (basil_ir.Absyn.EntrySome) foo;
        render("(");
        render("EntrySome");
-       sh(_entrysome.block_);
+       sh(_entrysome.str_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.EntryNone)
     {
        basil_ir.Absyn.EntryNone _entrynone = (basil_ir.Absyn.EntryNone) foo;
        render("EntryNone");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.PExit foo)
-  {
-    if (foo instanceof basil_ir.Absyn.ESome)
-    {
-       basil_ir.Absyn.ESome _esome = (basil_ir.Absyn.ESome) foo;
-       render("(");
-       render("ESome");
-       sh(_esome.block_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.ENone)
-    {
-       basil_ir.Absyn.ENone _enone = (basil_ir.Absyn.ENone) foo;
-       render("ENone");
     }
   }
 
@@ -2792,7 +2306,7 @@ public class PrettyPrinter
        basil_ir.Absyn.AddrSome _addrsome = (basil_ir.Absyn.AddrSome) foo;
        render("(");
        render("AddrSome");
-       sh(_addrsome.intlit_);
+       sh(_addrsome.intval_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.AddrNone)
@@ -2809,9 +2323,11 @@ public class PrettyPrinter
        basil_ir.Absyn.BSome _bsome = (basil_ir.Absyn.BSome) foo;
        render("(");
        render("BSome");
+       sh(_bsome.beginlist_);
        render("[");
        sh(_bsome.listblock_);
        render("]");
+       sh(_bsome.endlist_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.BNone)
@@ -2828,11 +2344,12 @@ public class PrettyPrinter
        basil_ir.Absyn.PD _pd = (basil_ir.Absyn.PD) foo;
        render("(");
        render("PD");
+       sh(_pd.beginrec_);
        sh(_pd.str_);
        sh(_pd.paddress_);
        sh(_pd.pentry_);
-       sh(_pd.pexit_);
        sh(_pd.internalblocks_);
+       sh(_pd.endrec_);
        render(")");
     }
   }
@@ -2862,51 +2379,32 @@ public class PrettyPrinter
 
   private static void sh(basil_ir.Absyn.Expr foo)
   {
-    if (foo instanceof basil_ir.Absyn.BitvectorExpr)
+    if (foo instanceof basil_ir.Absyn.RVar)
     {
-       basil_ir.Absyn.BitvectorExpr _bitvectorexpr = (basil_ir.Absyn.BitvectorExpr) foo;
+       basil_ir.Absyn.RVar _rvar = (basil_ir.Absyn.RVar) foo;
        render("(");
-       render("BitvectorExpr");
-       sh(_bitvectorexpr.bvexpr_);
+       render("RVar");
+       sh(_rvar.bident_);
+       sh(_rvar.type_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.LogicalExpr)
+    if (foo instanceof basil_ir.Absyn.BinaryExpr)
     {
-       basil_ir.Absyn.LogicalExpr _logicalexpr = (basil_ir.Absyn.LogicalExpr) foo;
+       basil_ir.Absyn.BinaryExpr _binaryexpr = (basil_ir.Absyn.BinaryExpr) foo;
        render("(");
-       render("LogicalExpr");
-       sh(_logicalexpr.logexpr_);
+       render("BinaryExpr");
+       sh(_binaryexpr.binop_);
+       sh(_binaryexpr.expr_1);
+       sh(_binaryexpr.expr_2);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.IntegerExpr)
+    if (foo instanceof basil_ir.Absyn.UnaryExpr)
     {
-       basil_ir.Absyn.IntegerExpr _integerexpr = (basil_ir.Absyn.IntegerExpr) foo;
+       basil_ir.Absyn.UnaryExpr _unaryexpr = (basil_ir.Absyn.UnaryExpr) foo;
        render("(");
-       render("IntegerExpr");
-       sh(_integerexpr.intexpr_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BVExpr foo)
-  {
-    if (foo instanceof basil_ir.Absyn.BVBinary)
-    {
-       basil_ir.Absyn.BVBinary _bvbinary = (basil_ir.Absyn.BVBinary) foo;
-       render("(");
-       render("BVBinary");
-       sh(_bvbinary.bvbinop_);
-       sh(_bvbinary.bvexpr_1);
-       sh(_bvbinary.bvexpr_2);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.BVUnary)
-    {
-       basil_ir.Absyn.BVUnary _bvunary = (basil_ir.Absyn.BVUnary) foo;
-       render("(");
-       render("BVUnary");
-       sh(_bvunary.bvunop_);
-       sh(_bvunary.bvexpr_);
+       render("UnaryExpr");
+       sh(_unaryexpr.unop_);
+       sh(_unaryexpr.expr_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.ZeroExtend)
@@ -2914,8 +2412,8 @@ public class PrettyPrinter
        basil_ir.Absyn.ZeroExtend _zeroextend = (basil_ir.Absyn.ZeroExtend) foo;
        render("(");
        render("ZeroExtend");
-       sh(_zeroextend.intlit_);
-       sh(_zeroextend.bvexpr_);
+       sh(_zeroextend.intval_);
+       sh(_zeroextend.expr_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.SignExtend)
@@ -2923,8 +2421,8 @@ public class PrettyPrinter
        basil_ir.Absyn.SignExtend _signextend = (basil_ir.Absyn.SignExtend) foo;
        render("(");
        render("SignExtend");
-       sh(_signextend.intlit_);
-       sh(_signextend.bvexpr_);
+       sh(_signextend.intval_);
+       sh(_signextend.expr_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.Extract)
@@ -2932,9 +2430,9 @@ public class PrettyPrinter
        basil_ir.Absyn.Extract _extract = (basil_ir.Absyn.Extract) foo;
        render("(");
        render("Extract");
-       sh(_extract.intlit_1);
-       sh(_extract.intlit_2);
-       sh(_extract.bvexpr_);
+       sh(_extract.intval_1);
+       sh(_extract.intval_2);
+       sh(_extract.expr_);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.Concat)
@@ -2942,8 +2440,8 @@ public class PrettyPrinter
        basil_ir.Absyn.Concat _concat = (basil_ir.Absyn.Concat) foo;
        render("(");
        render("Concat");
-       sh(_concat.bvexpr_1);
-       sh(_concat.bvexpr_2);
+       sh(_concat.expr_1);
+       sh(_concat.expr_2);
        render(")");
     }
     if (foo instanceof basil_ir.Absyn.BVLiteral)
@@ -2951,166 +2449,93 @@ public class PrettyPrinter
        basil_ir.Absyn.BVLiteral _bvliteral = (basil_ir.Absyn.BVLiteral) foo;
        render("(");
        render("BVLiteral");
-       sh(_bvliteral.intlit_);
+       sh(_bvliteral.intval_);
        sh(_bvliteral.bvtype_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.RBVVar)
-    {
-       basil_ir.Absyn.RBVVar _rbvvar = (basil_ir.Absyn.RBVVar) foo;
-       render("(");
-       render("RBVVar");
-       sh(_rbvvar.bvrvar_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.IntExpr foo)
-  {
     if (foo instanceof basil_ir.Absyn.IntLiteral)
     {
        basil_ir.Absyn.IntLiteral _intliteral = (basil_ir.Absyn.IntLiteral) foo;
        render("(");
        render("IntLiteral");
-       sh(_intliteral.intlit_);
+       sh(_intliteral.intval_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.RIntVar)
+    if (foo instanceof basil_ir.Absyn.TrueLiteral)
     {
-       basil_ir.Absyn.RIntVar _rintvar = (basil_ir.Absyn.RIntVar) foo;
+       basil_ir.Absyn.TrueLiteral _trueliteral = (basil_ir.Absyn.TrueLiteral) foo;
+       render("TrueLiteral");
+    }
+    if (foo instanceof basil_ir.Absyn.FalseLiteral)
+    {
+       basil_ir.Absyn.FalseLiteral _falseliteral = (basil_ir.Absyn.FalseLiteral) foo;
+       render("FalseLiteral");
+    }
+  }
+
+  private static void sh(basil_ir.Absyn.BinOp foo)
+  {
+    if (foo instanceof basil_ir.Absyn.BinOpBVBinOp)
+    {
+       basil_ir.Absyn.BinOpBVBinOp _binopbvbinop = (basil_ir.Absyn.BinOpBVBinOp) foo;
        render("(");
-       render("RIntVar");
-       sh(_rintvar.intrvar_);
+       render("BinOpBVBinOp");
+       sh(_binopbvbinop.bvbinop_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.IntBinary)
+    if (foo instanceof basil_ir.Absyn.BinOpBVLogicalBinOp)
     {
-       basil_ir.Absyn.IntBinary _intbinary = (basil_ir.Absyn.IntBinary) foo;
+       basil_ir.Absyn.BinOpBVLogicalBinOp _binopbvlogicalbinop = (basil_ir.Absyn.BinOpBVLogicalBinOp) foo;
        render("(");
-       render("IntBinary");
-       sh(_intbinary.intbinop_);
-       sh(_intbinary.intexpr_1);
-       sh(_intbinary.intexpr_2);
+       render("BinOpBVLogicalBinOp");
+       sh(_binopbvlogicalbinop.bvlogicalbinop_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.IntNeg)
+    if (foo instanceof basil_ir.Absyn.BinOpBoolBinOp)
     {
-       basil_ir.Absyn.IntNeg _intneg = (basil_ir.Absyn.IntNeg) foo;
+       basil_ir.Absyn.BinOpBoolBinOp _binopboolbinop = (basil_ir.Absyn.BinOpBoolBinOp) foo;
        render("(");
-       render("IntNeg");
-       sh(_intneg.intexpr_);
+       render("BinOpBoolBinOp");
+       sh(_binopboolbinop.boolbinop_);
+       render(")");
+    }
+    if (foo instanceof basil_ir.Absyn.BinOpIntLogicalBinOp)
+    {
+       basil_ir.Absyn.BinOpIntLogicalBinOp _binopintlogicalbinop = (basil_ir.Absyn.BinOpIntLogicalBinOp) foo;
+       render("(");
+       render("BinOpIntLogicalBinOp");
+       sh(_binopintlogicalbinop.intlogicalbinop_);
+       render(")");
+    }
+    if (foo instanceof basil_ir.Absyn.BinOpIntBinOp)
+    {
+       basil_ir.Absyn.BinOpIntBinOp _binopintbinop = (basil_ir.Absyn.BinOpIntBinOp) foo;
+       render("(");
+       render("BinOpIntBinOp");
+       sh(_binopintbinop.intbinop_);
        render(")");
     }
   }
 
-  private static void sh(basil_ir.Absyn.LogExpr foo)
+  private static void sh(basil_ir.Absyn.UnOp foo)
   {
-    if (foo instanceof basil_ir.Absyn.BVLogBinary)
+    if (foo instanceof basil_ir.Absyn.UnOpBVUnOp)
     {
-       basil_ir.Absyn.BVLogBinary _bvlogbinary = (basil_ir.Absyn.BVLogBinary) foo;
+       basil_ir.Absyn.UnOpBVUnOp _unopbvunop = (basil_ir.Absyn.UnOpBVUnOp) foo;
        render("(");
-       render("BVLogBinary");
-       sh(_bvlogbinary.bvlogicalbinop_);
-       sh(_bvlogbinary.bvexpr_1);
-       sh(_bvlogbinary.bvexpr_2);
+       render("UnOpBVUnOp");
+       sh(_unopbvunop.bvunop_);
        render(")");
     }
-    if (foo instanceof basil_ir.Absyn.RLogVar)
+    if (foo instanceof basil_ir.Absyn.UnOp_boolnot)
     {
-       basil_ir.Absyn.RLogVar _rlogvar = (basil_ir.Absyn.RLogVar) foo;
-       render("(");
-       render("RLogVar");
-       sh(_rlogvar.boolrvar_);
-       render(")");
+       basil_ir.Absyn.UnOp_boolnot _unop_boolnot = (basil_ir.Absyn.UnOp_boolnot) foo;
+       render("UnOp_boolnot");
     }
-    if (foo instanceof basil_ir.Absyn.BoolLit)
+    if (foo instanceof basil_ir.Absyn.UnOp_intneg)
     {
-       basil_ir.Absyn.BoolLit _boollit = (basil_ir.Absyn.BoolLit) foo;
-       render("(");
-       render("BoolLit");
-       sh(_boollit.boolliteral_);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.IntLogBinary)
-    {
-       basil_ir.Absyn.IntLogBinary _intlogbinary = (basil_ir.Absyn.IntLogBinary) foo;
-       render("(");
-       render("IntLogBinary");
-       sh(_intlogbinary.intlogicalbinop_);
-       sh(_intlogbinary.intexpr_1);
-       sh(_intlogbinary.intexpr_2);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.BoolLogBinOp)
-    {
-       basil_ir.Absyn.BoolLogBinOp _boollogbinop = (basil_ir.Absyn.BoolLogBinOp) foo;
-       render("(");
-       render("BoolLogBinOp");
-       sh(_boollogbinop.boolbinop_);
-       sh(_boollogbinop.logexpr_1);
-       sh(_boollogbinop.logexpr_2);
-       render(")");
-    }
-    if (foo instanceof basil_ir.Absyn.BoolNot)
-    {
-       basil_ir.Absyn.BoolNot _boolnot = (basil_ir.Absyn.BoolNot) foo;
-       render("(");
-       render("BoolNot");
-       sh(_boolnot.logexpr_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.IntRVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.IRV)
-    {
-       basil_ir.Absyn.IRV _irv = (basil_ir.Absyn.IRV) foo;
-       render("(");
-       render("IRV");
-       sh(_irv.bident_);
-       sh(_irv.inttype_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BVRVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.BVRV)
-    {
-       basil_ir.Absyn.BVRV _bvrv = (basil_ir.Absyn.BVRV) foo;
-       render("(");
-       render("BVRV");
-       sh(_bvrv.bident_);
-       sh(_bvrv.bvtype_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BoolRVar foo)
-  {
-    if (foo instanceof basil_ir.Absyn.BRV)
-    {
-       basil_ir.Absyn.BRV _brv = (basil_ir.Absyn.BRV) foo;
-       render("(");
-       render("BRV");
-       sh(_brv.bident_);
-       sh(_brv.booltype_);
-       render(")");
-    }
-  }
-
-  private static void sh(basil_ir.Absyn.BoolLiteral foo)
-  {
-    if (foo instanceof basil_ir.Absyn.BoolLiteral_true)
-    {
-       basil_ir.Absyn.BoolLiteral_true _boolliteral_true = (basil_ir.Absyn.BoolLiteral_true) foo;
-       render("BoolLiteral_true");
-    }
-    if (foo instanceof basil_ir.Absyn.BoolLiteral_false)
-    {
-       basil_ir.Absyn.BoolLiteral_false _boolliteral_false = (basil_ir.Absyn.BoolLiteral_false) foo;
-       render("BoolLiteral_false");
+       basil_ir.Absyn.UnOp_intneg _unop_intneg = (basil_ir.Absyn.UnOp_intneg) foo;
+       render("UnOp_intneg");
     }
   }
 
@@ -3169,6 +2594,11 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.BVBinOp_bvlshr _bvbinop_bvlshr = (basil_ir.Absyn.BVBinOp_bvlshr) foo;
        render("BVBinOp_bvlshr");
+    }
+    if (foo instanceof basil_ir.Absyn.BVBinOp_bvult)
+    {
+       basil_ir.Absyn.BVBinOp_bvult _bvbinop_bvult = (basil_ir.Absyn.BVBinOp_bvult) foo;
+       render("BVBinOp_bvult");
     }
     if (foo instanceof basil_ir.Absyn.BVBinOp_bvnand)
     {
@@ -3268,11 +2698,6 @@ public class PrettyPrinter
     {
        basil_ir.Absyn.BVLogicalBinOp_bvneq _bvlogicalbinop_bvneq = (basil_ir.Absyn.BVLogicalBinOp_bvneq) foo;
        render("BVLogicalBinOp_bvneq");
-    }
-    if (foo instanceof basil_ir.Absyn.BVLogicalBinOp_bvult)
-    {
-       basil_ir.Absyn.BVLogicalBinOp_bvult _bvlogicalbinop_bvult = (basil_ir.Absyn.BVLogicalBinOp_bvult) foo;
-       render("BVLogicalBinOp_bvult");
     }
   }
 

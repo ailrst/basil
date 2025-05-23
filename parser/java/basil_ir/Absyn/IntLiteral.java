@@ -2,23 +2,23 @@
 
 package basil_ir.Absyn;
 
-public class IntLiteral  extends IntExpr {
-  public final IntLit intlit_;
-  public IntLiteral(IntLit p1) { intlit_ = p1; }
+public class IntLiteral  extends Expr {
+  public final IntVal intval_;
+  public IntLiteral(IntVal p1) { intval_ = p1; }
 
-  public <R,A> R accept(basil_ir.Absyn.IntExpr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.IntLiteral) {
       basil_ir.Absyn.IntLiteral x = (basil_ir.Absyn.IntLiteral)o;
-      return this.intlit_.equals(x.intlit_);
+      return this.intval_.equals(x.intval_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.intlit_.hashCode();
+    return this.intval_.hashCode();
   }
 
 

@@ -4,7 +4,8 @@ package basil_ir.Absyn;
 
 public class RVar  extends Expr {
   public final String bident_;
-  public RVar(String p1) { bident_ = p1; }
+  public final Type type_;
+  public RVar(String p1, Type p2) { bident_ = p1; type_ = p2; }
 
   public <R,A> R accept(basil_ir.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +13,13 @@ public class RVar  extends Expr {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.RVar) {
       basil_ir.Absyn.RVar x = (basil_ir.Absyn.RVar)o;
-      return this.bident_.equals(x.bident_);
+      return this.bident_.equals(x.bident_) && this.type_.equals(x.type_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.bident_.hashCode();
+    return 37*(this.bident_.hashCode())+this.type_.hashCode();
   }
 
 

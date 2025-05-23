@@ -2,11 +2,11 @@
 
 package basil_ir.Absyn;
 
-public class DecInt  extends IntLit {
+public class DecInt  extends IntVal {
   public final Integer integer_;
   public DecInt(Integer p1) { integer_ = p1; }
 
-  public <R,A> R accept(basil_ir.Absyn.IntLit.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.IntVal.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;

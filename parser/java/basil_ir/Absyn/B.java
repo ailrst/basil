@@ -3,11 +3,11 @@
 package basil_ir.Absyn;
 
 public class B  extends Block {
-  public final String bident_;
+  public final String bident_, beginlist_, endlist_;
   public final AddrAttr addrattr_;
   public final ListStatement liststatement_;
   public final Jump jump_;
-  public B(String p1, AddrAttr p2, ListStatement p3, Jump p4) { bident_ = p1; addrattr_ = p2; liststatement_ = p3; jump_ = p4; }
+  public B(String p1, AddrAttr p2, String p3, ListStatement p4, Jump p5, String p6) { bident_ = p1; addrattr_ = p2; beginlist_ = p3; liststatement_ = p4; jump_ = p5; endlist_ = p6; }
 
   public <R,A> R accept(basil_ir.Absyn.Block.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -15,13 +15,13 @@ public class B  extends Block {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.B) {
       basil_ir.Absyn.B x = (basil_ir.Absyn.B)o;
-      return this.bident_.equals(x.bident_) && this.addrattr_.equals(x.addrattr_) && this.liststatement_.equals(x.liststatement_) && this.jump_.equals(x.jump_);
+      return this.bident_.equals(x.bident_) && this.addrattr_.equals(x.addrattr_) && this.beginlist_.equals(x.beginlist_) && this.liststatement_.equals(x.liststatement_) && this.jump_.equals(x.jump_) && this.endlist_.equals(x.endlist_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(37*(37*(this.bident_.hashCode())+this.addrattr_.hashCode())+this.liststatement_.hashCode())+this.jump_.hashCode();
+    return 37*(37*(37*(37*(37*(this.bident_.hashCode())+this.addrattr_.hashCode())+this.beginlist_.hashCode())+this.liststatement_.hashCode())+this.jump_.hashCode())+this.endlist_.hashCode();
   }
 
 

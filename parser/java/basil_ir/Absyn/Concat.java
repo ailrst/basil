@@ -2,23 +2,23 @@
 
 package basil_ir.Absyn;
 
-public class Concat  extends BVExpr {
-  public final BVExpr bvexpr_1, bvexpr_2;
-  public Concat(BVExpr p1, BVExpr p2) { bvexpr_1 = p1; bvexpr_2 = p2; }
+public class Concat  extends Expr {
+  public final Expr expr_1, expr_2;
+  public Concat(Expr p1, Expr p2) { expr_1 = p1; expr_2 = p2; }
 
-  public <R,A> R accept(basil_ir.Absyn.BVExpr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(basil_ir.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.Concat) {
       basil_ir.Absyn.Concat x = (basil_ir.Absyn.Concat)o;
-      return this.bvexpr_1.equals(x.bvexpr_1) && this.bvexpr_2.equals(x.bvexpr_2);
+      return this.expr_1.equals(x.expr_1) && this.expr_2.equals(x.expr_2);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(this.bvexpr_1.hashCode())+this.bvexpr_2.hashCode();
+    return 37*(this.expr_1.hashCode())+this.expr_2.hashCode();
   }
 
 

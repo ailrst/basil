@@ -71,13 +71,11 @@ public class Test
     /* The default parser is the first-defined entry point. */
     /* Other options are: */
     /* listDeclaration, listBIdent, declaration, mExpr, intType,
-       boolType, mapType, bVType, type, listExpr, intLit, addrAttr,
-       endian, listStatement, statement, assign, jump, lVar, bVLVar,
-       intLVar, boolLVar, listLVar, listBlock, block, pEntry, pExit,
-       pAddress, internalBlocks, procDef, params, listParams, expr,
-       bVExpr, intExpr, logExpr, intRVar, bVRVar, boolRVar, boolLiteral,
-       bVUnOp, bVBinOp, bVLogicalBinOp, intBinOp, intLogicalBinOp,
-       boolBinOp */
+       boolType, mapType, bVType, type, listExpr, intVal, addrAttr,
+       endian, listStatement, statement, callLVars, jump, lVar, listLVar,
+       listBlock, block, pEntry, pAddress, internalBlocks, procDef,
+       params, listParams, expr, binOp, unOp, bVUnOp, bVBinOp,
+       bVLogicalBinOp, intBinOp, intLogicalBinOp, boolBinOp */
     BasilIRParser.Start_ProgramContext pc = p.start_Program();
     basil_ir.Absyn.Program ast = pc.result;
     System.out.println();

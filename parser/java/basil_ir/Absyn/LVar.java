@@ -5,9 +5,8 @@ package basil_ir.Absyn;
 public abstract class LVar implements java.io.Serializable {
   public abstract <R,A> R accept(LVar.Visitor<R,A> v, A arg);
   public interface Visitor <R,A> {
-    public R visit(basil_ir.Absyn.LVarIntLVar p, A arg);
-    public R visit(basil_ir.Absyn.LVarBVLVar p, A arg);
-    public R visit(basil_ir.Absyn.LVarBoolLVar p, A arg);
+    public R visit(basil_ir.Absyn.LVarDef p, A arg);
+    public R visit(basil_ir.Absyn.GlobalLVar p, A arg);
 
   }
 

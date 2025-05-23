@@ -4,7 +4,8 @@ package basil_ir.Absyn;
 
 public class MapT  extends MapType {
   public final Type type_1, type_2;
-  public MapT(Type p1, Type p2) { type_1 = p1; type_2 = p2; }
+  public final String beginlist_, endlist_;
+  public MapT(Type p1, String p2, Type p3, String p4) { type_1 = p1; beginlist_ = p2; type_2 = p3; endlist_ = p4; }
 
   public <R,A> R accept(basil_ir.Absyn.MapType.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +13,13 @@ public class MapT  extends MapType {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.MapT) {
       basil_ir.Absyn.MapT x = (basil_ir.Absyn.MapT)o;
-      return this.type_1.equals(x.type_1) && this.type_2.equals(x.type_2);
+      return this.type_1.equals(x.type_1) && this.beginlist_.equals(x.beginlist_) && this.type_2.equals(x.type_2) && this.endlist_.equals(x.endlist_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(this.type_1.hashCode())+this.type_2.hashCode();
+    return 37*(37*(37*(this.type_1.hashCode())+this.beginlist_.hashCode())+this.type_2.hashCode())+this.endlist_.hashCode();
   }
 
 

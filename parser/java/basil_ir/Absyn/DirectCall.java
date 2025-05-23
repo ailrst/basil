@@ -3,9 +3,10 @@
 package basil_ir.Absyn;
 
 public class DirectCall  extends Statement {
+  public final CallLVars calllvars_;
   public final String bident_;
   public final ListExpr listexpr_;
-  public DirectCall(String p1, ListExpr p2) { bident_ = p1; listexpr_ = p2; }
+  public DirectCall(CallLVars p1, String p2, ListExpr p3) { calllvars_ = p1; bident_ = p2; listexpr_ = p3; }
 
   public <R,A> R accept(basil_ir.Absyn.Statement.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -13,13 +14,13 @@ public class DirectCall  extends Statement {
     if (this == o) return true;
     if (o instanceof basil_ir.Absyn.DirectCall) {
       basil_ir.Absyn.DirectCall x = (basil_ir.Absyn.DirectCall)o;
-      return this.bident_.equals(x.bident_) && this.listexpr_.equals(x.listexpr_);
+      return this.calllvars_.equals(x.calllvars_) && this.bident_.equals(x.bident_) && this.listexpr_.equals(x.listexpr_);
     }
     return false;
   }
 
   public int hashCode() {
-    return 37*(this.bident_.hashCode())+this.listexpr_.hashCode();
+    return 37*(37*(this.calllvars_.hashCode())+this.bident_.hashCode())+this.listexpr_.hashCode();
   }
 
 
